@@ -3,7 +3,7 @@
 import React, { useState, useMemo } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, type Client } from '@/lib/db';
-import { WILAYAS, formatDate } from '@/lib/constants';
+import { WILAYAS, formatDate, STATUS_COLORS } from '@/lib/constants';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -42,6 +42,7 @@ import {
   Phone,
   MapPin,
   ChevronLeft,
+  Briefcase,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useAppStore } from '@/lib/store';
@@ -52,6 +53,7 @@ export function Clients() {
   const [viewingClient, setViewingClient] = useState<Client | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const { setActiveSection, setSelectedCaseId } = useAppStore();
 
   const [formData, setFormData] = useState<Partial<Client>>({});
 
@@ -115,10 +117,7 @@ export function Clients() {
 
   // عرض تفاصيل الموكل
   if (viewingClient) {
-    const clientCases = cases?.filter((c) => {
-      // نبحث عن اسم الموكل في أطراف القضايا
-      return true; // عرض كل القضايا مؤقتا
-    });
+    const clientCases = cases?.filter((c) => c.clientId === viewingClient.id);
 
     const wilayaName = WILAYAS.find((w) => w.code === viewingClient.wilaya)?.name;
 
@@ -178,6 +177,41 @@ export function Clients() {
               </div>
             )}
 
+            {/* قضايا الموكل */}
+            {clientCases && clientCases.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-xs text-muted-foreground flex items-center gap-1">
+                  <Briefcase className="w-3 h-3" />
+                  قضايا الموكل ({(clientCases.length).toLocaleString('en-US')})
+                </p>
+                {clientCases.map((c) => (
+                  <div
+                    key={c.id}
+                    className="flex items-center justify-between p-2.5 rounded-lg border cursor-pointer hover:bg-muted/50 transition-colors"
+                    onClick={() => {
+                      if (c.id) {
+                        setSelectedCaseId(c.id);
+                        setActiveSection('cases');
+                      }
+                    }}
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium truncate">{c.caseNumber || '—'}</span>
+                        <Badge variant="secondary" className={`${STATUS_COLORS[c.status || ''] || ''} text-xs`}>
+                          {c.status}
+                        </Badge>
+                      </div>
+                      <p className="text-xs text-muted-foreground truncate">{c.subject || '—'}</p>
+                    </div>
+                    <div className="text-left mr-3 shrink-0">
+                      <p className="text-xs text-muted-foreground">{c.courtName || ''}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
             <Button
               variant="destructive"
               size="sm"
@@ -231,6 +265,7 @@ export function Clients() {
         {filteredClients.length > 0 ? (
           filteredClients.map((client) => {
             const wilayaName = WILAYAS.find((w) => w.code === client.wilaya)?.name;
+            const clientCasesCount = cases?.filter((c) => c.clientId === client.id).length ?? 0;
             return (
               <Card
                 key={client.id}
@@ -244,6 +279,7 @@ export function Clients() {
                       <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
                         {client.phone && <span>{client.phone}</span>}
                         {wilayaName && <span>• {wilayaName}</span>}
+                        {clientCasesCount > 0 && <span>• {clientCasesCount.toLocaleString('en-US')} قضية</span>}
                       </div>
                     </div>
                     <div className="flex items-center gap-1">

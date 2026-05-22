@@ -29,7 +29,20 @@ function SeedData() {
   const [seeded, setSeeded] = React.useState(false);
   useEffect(() => {
     if (!seeded) {
-      seedDatabase().then(() => setSeeded(true)).catch(() => setSeeded(true));
+      seedDatabase()
+        .then(() => {
+          console.log('[App] Database seeded successfully');
+          setSeeded(true);
+        })
+        .catch((err) => {
+          console.error('[App] Seed failed, will retry:', err);
+          // محاولة إعادة البذرة بعد ثانيتين
+          setTimeout(() => {
+            seedDatabase()
+              .then(() => setSeeded(true))
+              .catch(() => setSeeded(true));
+          }, 2000);
+        });
     }
   }, [seeded]);
   return null;

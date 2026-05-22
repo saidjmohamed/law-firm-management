@@ -24,12 +24,14 @@ export function Dashboard() {
   const setSelectedCaseId = useAppStore((s) => s.setSelectedCaseId);
 
   const cases = useLiveQuery(() => db.cases.toArray());
+  const clients = useLiveQuery(() => db.clients.toArray());
   const delays = useLiveQuery(() => db.delays.toArray());
   const sessions = useLiveQuery(() => db.sessions.toArray());
   const payments = useLiveQuery(() => db.payments.toArray());
   const parties = useLiveQuery(() => db.parties.toArray());
 
   const totalCases = cases?.length ?? 0;
+  const totalClients = clients?.length ?? 0;
   const activeCases = cases?.filter((c) => c.status === 'جارية').length ?? 0;
   const archivedCases = cases?.filter((c) => c.status === 'مؤرشفة').length ?? 0;
   const totalFees = cases?.reduce((sum, c) => sum + (c.totalFees || 0), 0) ?? 0;
@@ -77,6 +79,12 @@ export function Dashboard() {
           color="teal"
         />
         <StatCard
+          title="الموكلون"
+          value={(totalClients).toLocaleString('en-US')}
+          icon={Users}
+          color="blue"
+        />
+        <StatCard
           title="قضايا جارية"
           value={(activeCases).toLocaleString('en-US')}
           icon={TrendingUp}
@@ -87,12 +95,6 @@ export function Dashboard() {
           value={(archivedCases).toLocaleString('en-US')}
           icon={Clock}
           color="gray"
-        />
-        <StatCard
-          title="إجمالي الأتعاب"
-          value={formatCurrency(totalFees)}
-          icon={DollarSign}
-          color="teal"
         />
         <StatCard
           title="المدفوع"
@@ -351,6 +353,7 @@ function StatCard({
     emerald: 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400',
     amber: 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400',
     gray: 'bg-gray-100 dark:bg-gray-900/30 text-gray-700 dark:text-gray-400',
+    blue: 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400',
   };
 
   const iconClasses: Record<string, string> = {
@@ -358,6 +361,7 @@ function StatCard({
     emerald: 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400',
     amber: 'bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400',
     gray: 'bg-gray-100 dark:bg-gray-800/30 text-gray-600 dark:text-gray-400',
+    blue: 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400',
   };
 
   return (

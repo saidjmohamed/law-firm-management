@@ -27,6 +27,8 @@ export interface Case {
   customStage?: string;
   status?: string;
 
+  clientId?: number;
+
   councilName?: string;
   courtName?: string;
   chamber?: string;
@@ -128,9 +130,9 @@ class LawFirmDB extends Dexie {
   constructor() {
     super('LawFirmDB');
 
-    this.version(4).stores({
+    this.version(5).stores({
       clients: '++id, name, phone, nationalId, wilaya, createdAt',
-      cases: '++id, caseNumber, subject, caseNature, litigationStage, status, courtName, councilName, registrationDate, firstSessionDate, createdAt',
+      cases: '++id, caseNumber, subject, caseNature, litigationStage, status, courtName, councilName, clientId, registrationDate, firstSessionDate, createdAt',
       sessions: '++id, caseId, date, status, court, createdAt',
       payments: '++id, caseId, type, category, date, createdAt',
       delays: '++id, caseId, delayDate, createdAt',
@@ -144,14 +146,36 @@ class LawFirmDB extends Dexie {
 export const db = new LawFirmDB();
 
 // ============================================================================
-// بذرة البيانات - 19 قضية حقيقية
+// بذرة البيانات - 19 قضية حقيقية + 16 موكل
 // ============================================================================
+
+const CURRENT_SEED_VERSION = 5;
 
 const DEFAULT_SETTINGS: Setting[] = [
   { key: 'lawyerName', value: JSON.stringify('سايج محمد') },
   { key: 'lawyerTitle', value: JSON.stringify('محام لدى المجلس') },
   { key: 'lawyerAddress', value: JSON.stringify('الجزائر العاصمة') },
-  { key: 'lawyerPhone', value: JSON.stringify('') },
+  { key: 'lawyerPhone', value: JSON.stringify('0558873333') },
+];
+
+// الموكلون الـ 16 من ملفات القضايا
+const SEED_CLIENTS: { name: string; phone?: string }[] = [
+  { name: 'مدور كريمو', phone: '00213555390201' },
+  { name: 'بلخوجة محمد ياسر', phone: '00213542819233' },
+  { name: 'كبور صالح', phone: '00213551050488' },
+  { name: 'بدر الدين عبد الرحيم', phone: '00213551525881' },
+  { name: 'عماري سي احمد', phone: '00213698084523' },
+  { name: 'بودبة منير', phone: '00213791449280' },
+  { name: 'بن يمنية نصرالدين', phone: '00213774968339' },
+  { name: 'بوجادي محمد زكرياء', phone: '00213676169592' },
+  { name: 'عباسي رتيبة', phone: '0558367689' },
+  { name: 'بلقاسم بوزيدة اسامة', phone: '00213777250603' },
+  { name: 'خلالفة عزالدين', phone: '00213783257551' },
+  { name: 'حمزة ميباركي' },
+  { name: 'فوغالي أميمة' },
+  { name: 'فوغالي سيرين' },
+  { name: 'فوغالي ياسر' },
+  { name: 'سايج محمد', phone: '0558873333' },
 ];
 
 interface SeedCase {
@@ -161,6 +185,7 @@ interface SeedCase {
   litigationStage: string;
   origCaseNumber?: string;
   status: string;
+  clientName?: string;
   councilName?: string;
   courtName?: string;
   chamber?: string;
@@ -178,10 +203,11 @@ interface SeedCase {
 const REAL_CASES: SeedCase[] = [
   {
     caseNumber: 'طعن رقم 2018912',
-    subject: 'النصب الموجه للجمهور     النصب الثلاثي',
+    subject: 'النصب الموجه للجمهور - النصب الثلاثي',
     caseNature: 'جنحة',
     litigationStage: 'افتتاحية (ابتدائي)',
     status: 'جارية',
+    clientName: 'مدور كريمو',
     councilName: 'المحكمة العليا',
     courtName: 'المحكمة العليا',
     chamber: 'الغرفة الجزائية',
@@ -203,6 +229,7 @@ const REAL_CASES: SeedCase[] = [
     caseNature: 'مدني',
     litigationStage: 'افتتاحية (ابتدائي)',
     status: 'جارية',
+    clientName: 'بلخوجة محمد ياسر',
     councilName: 'مجلس قضاء تيزي وزو',
     courtName: 'محكمة الاربعاء ناث ايراثن',
     chamber: 'المدني',
@@ -224,6 +251,7 @@ const REAL_CASES: SeedCase[] = [
     caseNature: 'مدني',
     litigationStage: 'افتتاحية (ابتدائي)',
     status: 'جارية',
+    clientName: 'كبور صالح',
     councilName: 'مجلس قضاء الجزائر',
     courtName: 'محكمة بئرمرادراريس',
     chamber: 'مدني',
@@ -244,6 +272,7 @@ const REAL_CASES: SeedCase[] = [
     litigationStage: 'استئنافية',
     origCaseNumber: '25/03842',
     status: 'مؤرشفة',
+    clientName: 'بدر الدين عبد الرحيم',
     councilName: 'مجلس قضاء الجزائر',
     courtName: 'مجلس قضاء الجزائر',
     chamber: 'الغرفة الجزائية الخامسة',
@@ -264,6 +293,7 @@ const REAL_CASES: SeedCase[] = [
     caseNature: 'اداري استئنافي',
     litigationStage: 'افتتاحية (ابتدائي)',
     status: 'جارية',
+    clientName: 'عماري سي احمد',
     councilName: 'مجلس قضاء الجزائر',
     courtName: 'المحكمة الادارية الاستئنافية بالجزائر',
     chamber: 'الإداري العادي',
@@ -277,11 +307,12 @@ const REAL_CASES: SeedCase[] = [
   },
   {
     caseNumber: '26/00153',
-    subject: 'النصب الموجه للجمهور ( النصب الثلاثي)',
+    subject: 'النصب الموجه للجمهور (النصب الثلاثي)',
     caseNature: 'جنحة',
     litigationStage: 'استئنافية',
     origCaseNumber: '25/07238',
     status: 'جارية',
+    clientName: 'بودبة منير',
     councilName: 'مجلس قضاء الجزائر',
     courtName: 'الغرفة الجزائية السادسة',
     chamber: 'جنح',
@@ -299,12 +330,13 @@ const REAL_CASES: SeedCase[] = [
   },
   {
     caseNumber: '25/03255',
-    subject: 'النصب الموجه للجمهور   نصب ثلاثي',
+    subject: 'النصب الموجه للجمهور - نصب ثلاثي',
     caseNature: 'جنحة',
     litigationStage: 'افتتاحية (ابتدائي)',
     status: 'مؤرشفة',
+    clientName: 'بوجادي محمد زكرياء',
     councilName: 'مجلس قضاء تيبازة',
-    courtName: 'تيبازة',
+    courtName: 'محكمة تيبازة',
     chamber: 'القسم الجزائي',
     barPhone: '0562724340',
     registrationDate: '2025-02-03',
@@ -323,6 +355,7 @@ const REAL_CASES: SeedCase[] = [
     caseNature: 'مخالفة',
     litigationStage: 'افتتاحية (ابتدائي)',
     status: 'مؤرشفة',
+    clientName: 'عباسي رتيبة',
     councilName: 'مجلس قضاء الجزائر',
     courtName: 'محكمة الشراقة',
     chamber: 'جزائي',
@@ -338,10 +371,11 @@ const REAL_CASES: SeedCase[] = [
   },
   {
     caseNumber: '25/07881',
-    subject: 'النصب الموجه للجمهور ( نص ثلاثي )',
+    subject: 'النصب الموجه للجمهور (نص ثلاثي)',
     caseNature: 'جنحة',
     litigationStage: 'استئنافية',
     status: 'مؤرشفة',
+    clientName: 'بلقاسم بوزيدة اسامة',
     councilName: 'مجلس قضاء المدية',
     courtName: 'غرفة جزائية',
     chamber: 'الجزائية',
@@ -362,6 +396,7 @@ const REAL_CASES: SeedCase[] = [
     caseNature: 'مدني',
     litigationStage: 'استئنافية',
     status: 'جارية',
+    clientName: 'خلالفة عزالدين',
     councilName: 'مجلس قضاء الجزائر',
     courtName: 'الغرفة المدنية',
     chamber: 'عقاري 02',
@@ -377,10 +412,11 @@ const REAL_CASES: SeedCase[] = [
   },
   {
     caseNumber: '25/07238',
-    subject: 'النصب الموجه للجمهور ( النصب الثلاثي)',
+    subject: 'النصب الموجه للجمهور (النصب الثلاثي)',
     caseNature: 'جنحة',
     litigationStage: 'افتتاحية (ابتدائي)',
     status: 'مؤرشفة',
+    clientName: 'بودبة منير',
     councilName: 'مجلس قضاء الجزائر',
     courtName: 'محكمة بئرمرادراريس',
     chamber: 'جنح',
@@ -398,6 +434,7 @@ const REAL_CASES: SeedCase[] = [
     caseNature: 'مخالفة',
     litigationStage: 'افتتاحية (ابتدائي)',
     status: 'مؤرشفة',
+    clientName: 'عباسي رتيبة',
     councilName: 'مجلس قضاء الجزائر',
     courtName: 'محكمة الشراقة',
     chamber: 'جزائي',
@@ -414,13 +451,14 @@ const REAL_CASES: SeedCase[] = [
   },
   {
     caseNumber: '26/00618',
-    subject: 'النصب الموجه للجمهور ( نص ثلاثي)',
+    subject: 'النصب الموجه للجمهور (نص ثلاثي)',
     caseNature: 'جنحة',
     litigationStage: 'معارضة',
     origCaseNumber: '25/07238',
     status: 'مؤرشفة',
+    clientName: 'حمزة ميباركي',
     councilName: 'مجلس قضاء الجزائر',
-    courtName: 'بئرمرادراريس',
+    courtName: 'محكمة بئرمرادراريس',
     registrationDate: '2026-02-11',
     delibDate: '2026-02-25',
     judgment: 'البراءة للمتهمين',
@@ -432,11 +470,12 @@ const REAL_CASES: SeedCase[] = [
   },
   {
     caseNumber: '26/01939',
-    subject: 'النصب الموجه للجمهور   نصب ثلالثي',
+    subject: 'النصب الموجه للجمهور - نصب ثلاثي',
     caseNature: 'جنحة',
     litigationStage: 'استئنافية',
     origCaseNumber: '26/00002',
     status: 'جارية',
+    clientName: 'بودبة منير',
     councilName: 'مجلس قضاء البويرة',
     courtName: 'مجلس قضاء البويرة',
     chamber: 'الغرفة الجزائية رقم 3',
@@ -458,8 +497,9 @@ const REAL_CASES: SeedCase[] = [
     caseNature: 'جنحة',
     litigationStage: 'افتتاحية (ابتدائي)',
     status: 'مؤرشفة',
+    clientName: 'عباسي رتيبة',
     councilName: 'مجلس قضاء الجزائر',
-    courtName: 'شراقة',
+    courtName: 'محكمة الشراقة',
     chamber: 'قسم الجنح',
     totalFees: 40000,
     paidAmount: 40000,
@@ -482,8 +522,9 @@ const REAL_CASES: SeedCase[] = [
     caseNature: 'مخالفة',
     litigationStage: 'افتتاحية (ابتدائي)',
     status: 'مؤرشفة',
+    clientName: 'عباسي رتيبة',
     councilName: 'مجلس قضاء الجزائر',
-    courtName: 'شراقة',
+    courtName: 'محكمة الشراقة',
     chamber: 'قسم الجنح',
     barPhone: '0549111248',
     registrationDate: '2024-03-07',
@@ -505,8 +546,9 @@ const REAL_CASES: SeedCase[] = [
     litigationStage: 'معارضة',
     origCaseNumber: '25/02438',
     status: 'جارية',
+    clientName: 'عباسي رتيبة',
     councilName: 'مجلس قضاء الجزائر',
-    courtName: 'شراقة',
+    courtName: 'محكمة الشراقة',
     chamber: 'قسم الجنح',
     totalFees: 40000,
     paidAmount: 0,
@@ -531,8 +573,9 @@ const REAL_CASES: SeedCase[] = [
     litigationStage: 'معارضة',
     origCaseNumber: '25/01989',
     status: 'جارية',
+    clientName: 'عباسي رتيبة',
     councilName: 'مجلس قضاء الجزائر',
-    courtName: 'شراقة',
+    courtName: 'محكمة الشراقة',
     chamber: 'قسم الجنح',
     totalFees: 40000,
     paidAmount: 0,
@@ -552,10 +595,11 @@ const REAL_CASES: SeedCase[] = [
   },
   {
     caseNumber: '26/002',
-    subject: 'النصب الموجه للجمهور ( النصب الثلاثي)',
+    subject: 'النصب الموجه للجمهور (النصب الثلاثي)',
     caseNature: 'جنحة',
     litigationStage: 'معارضة',
     status: 'مؤرشفة',
+    clientName: 'بودبة منير',
     councilName: 'مجلس قضاء البويرة',
     courtName: 'محكمة امشدالة',
     chamber: 'جنح',
@@ -563,7 +607,7 @@ const REAL_CASES: SeedCase[] = [
     registrationDate: '2026-04-30',
     firstSessionDate: '2026-04-30',
     delibDate: '2026-04-30',
-    judgment: 'البراء للمتهم\nفي حق بودبة منير',
+    judgment: 'البراءة للمتهم\nفي حق بودبة منير',
     parties: [
       { role: 'متهم', name: 'بودبة منير', phone: '00213791449280', lawyerName: 'سايج محمد' },
       { role: 'طرف مدني', name: 'سحنون ليلى' },
@@ -572,67 +616,157 @@ const REAL_CASES: SeedCase[] = [
 ];
 
 export async function seedDatabase() {
-  const caseCount = await db.cases.count();
-  if (caseCount > 0) return;
+  try {
+    // تحقق من إصدار البذرة
+    const seedVersionSetting = await db.settings.get('seedVersion');
+    const currentVersion = seedVersionSetting ? JSON.parse(seedVersionSetting.value) : 0;
 
-  const now = new Date();
+    if (currentVersion >= CURRENT_SEED_VERSION) {
+      // البذرة محدثة، لا حاجة لإعادة البذرة
+      return;
+    }
 
-  // إدراج القضايا الحقيقية
-  for (const seedCase of REAL_CASES) {
-    const caseId = await db.cases.add({
-      caseNumber: seedCase.caseNumber,
-      subject: seedCase.subject,
-      caseNature: seedCase.caseNature,
-      litigationStage: seedCase.litigationStage,
-      origCaseNumber: seedCase.origCaseNumber,
-      status: seedCase.status,
-      councilName: seedCase.councilName,
-      courtName: seedCase.courtName,
-      chamber: seedCase.chamber,
-      totalFees: seedCase.totalFees,
-      paidAmount: seedCase.paidAmount,
-      registrationDate: seedCase.registrationDate,
-      firstSessionDate: seedCase.firstSessionDate,
-      delibDate: seedCase.delibDate,
-      barPhone: seedCase.barPhone,
-      lawyer: 'سايج محمد',
-      judgment: seedCase.judgment,
-      createdAt: now,
-      updatedAt: now,
-    });
+    console.log('[Seed] Starting database seed, version:', currentVersion, '->', CURRENT_SEED_VERSION);
 
-    // إدراج الأطراف
-    if (seedCase.parties) {
-      for (const party of seedCase.parties) {
-        await db.parties.add({
+    // إذا كانت هناك بيانات قديمة و الإصدار أقل، نقوم بالمسح و إعادة البذرة
+    if (currentVersion > 0 && currentVersion < CURRENT_SEED_VERSION) {
+      console.log('[Seed] Upgrading seed, clearing old data...');
+      await db.transaction('rw', [db.clients, db.cases, db.sessions, db.payments, db.delays, db.parties, db.archives, db.settings], async () => {
+        await db.clients.clear();
+        await db.cases.clear();
+        await db.sessions.clear();
+        await db.payments.clear();
+        await db.delays.clear();
+        await db.parties.clear();
+        await db.archives.clear();
+        await db.settings.clear();
+      });
+    }
+
+    const now = new Date();
+
+    // إدراج الموكلين أولاً
+    const clientIdMap: Record<string, number> = {};
+    for (const seedClient of SEED_CLIENTS) {
+      const clientId = await db.clients.add({
+        name: seedClient.name,
+        phone: seedClient.phone || '',
+        createdAt: now,
+        updatedAt: now,
+      });
+      clientIdMap[seedClient.name] = clientId as number;
+    }
+    console.log('[Seed] Created', SEED_CLIENTS.length, 'clients');
+
+    // إدراج القضايا
+    for (const seedCase of REAL_CASES) {
+      // البحث عن clientId المناسب
+      let clientId: number | undefined;
+      if (seedCase.clientName && clientIdMap[seedCase.clientName]) {
+        clientId = clientIdMap[seedCase.clientName];
+      }
+
+      const caseId = await db.cases.add({
+        caseNumber: seedCase.caseNumber,
+        subject: seedCase.subject,
+        caseNature: seedCase.caseNature,
+        litigationStage: seedCase.litigationStage,
+        origCaseNumber: seedCase.origCaseNumber,
+        status: seedCase.status,
+        clientId: clientId,
+        councilName: seedCase.councilName,
+        courtName: seedCase.courtName,
+        chamber: seedCase.chamber,
+        totalFees: seedCase.totalFees,
+        paidAmount: seedCase.paidAmount,
+        registrationDate: seedCase.registrationDate,
+        firstSessionDate: seedCase.firstSessionDate,
+        delibDate: seedCase.delibDate,
+        barPhone: seedCase.barPhone,
+        lawyer: 'سايج محمد',
+        judgment: seedCase.judgment,
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      // إدراج الأطراف
+      if (seedCase.parties) {
+        for (const party of seedCase.parties) {
+          await db.parties.add({
+            caseId: caseId as number,
+            role: party.role,
+            name: party.name,
+            phone: party.phone,
+            lawyerName: party.lawyerName,
+            lawyerPhone: party.lawyerPhone,
+            createdAt: now,
+            updatedAt: now,
+          });
+        }
+      }
+
+      // إدراج التأجيلات
+      if (seedCase.delays) {
+        for (const delay of seedCase.delays) {
+          await db.delays.add({
+            caseId: caseId as number,
+            delayDate: delay.delayDate,
+            reason: delay.reason,
+            createdAt: now,
+            updatedAt: now,
+          });
+        }
+      }
+
+      // أرشفة القضايا المؤرشفة
+      if (seedCase.status === 'مؤرشفة') {
+        const cParties = seedCase.parties || [];
+        const cDelays = seedCase.delays || [];
+        await db.archives.add({
           caseId: caseId as number,
-          role: party.role,
-          name: party.name,
-          phone: party.phone,
-          lawyerName: party.lawyerName,
-          lawyerPhone: party.lawyerPhone,
+          caseData: JSON.stringify({
+            caseNumber: seedCase.caseNumber,
+            subject: seedCase.subject,
+            caseNature: seedCase.caseNature,
+            litigationStage: seedCase.litigationStage,
+            status: seedCase.status,
+            councilName: seedCase.councilName,
+            courtName: seedCase.courtName,
+            chamber: seedCase.chamber,
+            totalFees: seedCase.totalFees,
+            paidAmount: seedCase.paidAmount,
+            judgment: seedCase.judgment,
+            parties: cParties,
+            delays: cDelays,
+          }),
+          archiveDate: now.toISOString(),
+          reason: 'أرشفة تلقائية',
           createdAt: now,
-          updatedAt: now,
         });
       }
     }
+    console.log('[Seed] Created', REAL_CASES.length, 'cases');
 
-    // إدراج التأجيلات
-    if (seedCase.delays) {
-      for (const delay of seedCase.delays) {
-        await db.delays.add({
-          caseId: caseId as number,
-          delayDate: delay.delayDate,
-          reason: delay.reason,
-          createdAt: now,
-          updatedAt: now,
-        });
-      }
-    }
+    // إدراج الإعدادات
+    await db.settings.bulkAdd(DEFAULT_SETTINGS);
+    await db.settings.put({ key: 'seedVersion', value: JSON.stringify(CURRENT_SEED_VERSION) });
+
+    console.log('[Seed] Database seeded successfully');
+  } catch (error) {
+    console.error('[Seed] Error seeding database:', error);
+    // محاولة إعادة البذرة بإصدار جديد
+    throw error;
   }
+}
 
-  // إدراج الإعدادات
-  await db.settings.bulkAdd(DEFAULT_SETTINGS);
+/** إعادة تعيين قاعدة البيانات بالكامل */
+export async function resetDatabase() {
+  console.log('[DB] Resetting database...');
+  await db.delete();
+  // إعادة فتح قاعدة البيانات
+  await db.open();
+  await seedDatabase();
+  console.log('[DB] Database reset complete');
 }
 
 // ============================================================================

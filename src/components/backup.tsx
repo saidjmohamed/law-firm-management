@@ -2,7 +2,7 @@
 
 import React, { useState, useRef } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { db, getSetting } from '@/lib/db';
+import { db, getSetting, resetDatabase } from '@/lib/db';
 import { exportBackup, importBackup, importFromTxtFiles } from '@/lib/backup';
 import { formatDate } from '@/lib/constants';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -34,6 +34,8 @@ export function BackupManager() {
   const [importConfirm, setImportConfirm] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [txtImporting, setTxtImporting] = useState(false);
+  const [resetConfirm, setResetConfirm] = useState(false);
+  const [resetting, setResetting] = useState(false);
   const jsonInputRef = useRef<HTMLInputElement>(null);
   const txtInputRef = useRef<HTMLInputElement>(null);
 
@@ -87,6 +89,21 @@ export function BackupManager() {
       console.error(err);
     } finally {
       setTxtImporting(false);
+    }
+  }
+
+  async function handleReset() {
+    try {
+      setResetting(true);
+      await resetDatabase();
+      toast.success('تم إعادة تعيين قاعدة البيانات بنجاح');
+      setResetConfirm(false);
+      window.location.reload();
+    } catch (err) {
+      toast.error('حدث خطأ أثناء إعادة التعيين');
+      console.error(err);
+    } finally {
+      setResetting(false);
     }
   }
 
@@ -226,6 +243,54 @@ export function BackupManager() {
               disabled={importing}
             >
               {importing ? 'جاري الاستيراد...' : 'استيراد'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* إعادة تعيين قاعدة البيانات */}
+      <Card className="border-destructive/30">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2 text-destructive">
+            <AlertTriangle className="w-4 h-4" />
+            إعادة تعيين قاعدة البيانات
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground mb-3">
+            حذف جميع البيانات وإعادة تحميل البيانات الأولية (19 قضية + 16 موكل). استخدم هذا الخيار إذا كانت البيانات مفقودة أو تالفة.
+          </p>
+          <Button
+            variant="destructive"
+            onClick={() => setResetConfirm(true)}
+            disabled={resetting}
+          >
+            <AlertTriangle className="w-4 h-4 ml-2" />
+            {resetting ? 'جاري إعادة التعيين...' : 'إعادة تعيين قاعدة البيانات'}
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* تأكيد إعادة التعيين */}
+      <AlertDialog open={resetConfirm} onOpenChange={setResetConfirm}>
+        <AlertDialogContent dir="rtl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-destructive" />
+              تأكيد إعادة التعيين
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              سيتم حذف جميع البيانات الحالية وإعادة تحميل البيانات الأولية. هل أنت متأكد؟
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>إلغاء</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleReset}
+              disabled={resetting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {resetting ? 'جاري إعادة التعيين...' : 'إعادة تعيين'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { db, formatCurrency, type Case, type Party, type Delay } from '@/lib/db';
+import { db, formatCurrency, type Case, type Client } from '@/lib/db';
 import { STATUS_COLORS, CASE_NATURES, CASE_STATUSES, LITIGATION_STAGES, PARTY_ROLES, JUDICIAL_CHAMBERS, formatDate } from '@/lib/constants';
 import { useAppStore } from '@/lib/store';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -94,6 +94,7 @@ export function Cases() {
   const [delays, setDelays] = useState<DelayRow[]>([]);
 
   const cases = useLiveQuery(() => db.cases.toArray());
+  const clients = useLiveQuery(() => db.clients.toArray());
   const allParties = useLiveQuery(() => db.parties.toArray());
   const allDelays = useLiveQuery(() => db.delays.toArray());
 
@@ -104,20 +105,29 @@ export function Cases() {
     }
   }, [selectedCaseId]);
 
+  // خريطة الموكلين
+  const clientMap = useMemo(() => {
+    const map: Record<number, Client> = {};
+    clients?.forEach((c) => { if (c.id) map[c.id] = c; });
+    return map;
+  }, [clients]);
+
   // تصفية القضايا
   const filteredCases = useMemo(() => {
     if (!cases) return [];
     return cases.filter((c) => {
+      const clientName = c.clientId ? clientMap[c.clientId]?.name : '';
       const matchSearch = !searchTerm ||
         c.caseNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         c.subject?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         c.courtName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        c.councilName?.toLowerCase().includes(searchTerm.toLowerCase());
+        c.councilName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        clientName?.toLowerCase().includes(searchTerm.toLowerCase());
       const matchStatus = filterStatus === 'all' || c.status === filterStatus;
       const matchNature = filterNature === 'all' || c.caseNature === filterNature;
       return matchSearch && matchStatus && matchNature;
     });
-  }, [cases, searchTerm, filterStatus, filterNature]);
+  }, [cases, clients, searchTerm, filterStatus, filterNature]);
 
   const selectedCase = cases?.find((c) => c.id === selectedCaseId);
   const caseParties = allParties?.filter((p) => p.caseId === selectedCaseId);
@@ -331,6 +341,9 @@ export function Cases() {
           <CardContent className="space-y-3">
             <p className="text-sm font-medium">{selectedCase.subject || '—'}</p>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
+              {selectedCase.clientId && clientMap[selectedCase.clientId] && (
+                <DetailField label="الموكل" value={clientMap[selectedCase.clientId].name} />
+              )}
               <DetailField label="طبيعة القضية" value={selectedCase.caseNature} />
               <DetailField label="مرحلة التقاضي" value={selectedCase.litigationStage} />
               <DetailField label="رقم القضية الأصلية" value={selectedCase.origCaseNumber} />
@@ -576,6 +589,7 @@ export function Cases() {
                         </div>
                         <p className="text-sm text-muted-foreground mt-1 truncate">{c.subject || '—'}</p>
                         <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground flex-wrap">
+                          {c.clientId && clientMap[c.clientId] && <span className="text-teal-600 dark:text-teal-400 font-medium">{clientMap[c.clientId].name}</span>}
                           {c.courtName && <span>{c.courtName}</span>}
                           {c.chamber && <span>• {c.chamber}</span>}
                           {c.registrationDate && <span>• {formatDate(c.registrationDate)}</span>}
@@ -677,6 +691,18 @@ export function Cases() {
                     onChange={(e) => setFormData({ ...formData, origCaseNumber: e.target.value })}
                     placeholder="للاستئناف/المعارضة"
                   />
+                </div>
+                <div>
+                  <Label className="text-xs">الموكل</Label>
+                  <Select value={formData.clientId?.toString() || '_empty'} onValueChange={(v) => setFormData({ ...formData, clientId: v === '_empty' ? undefined : Number(v) })}>
+                    <SelectTrigger><SelectValue placeholder="اختر الموكل" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="_empty">— بدون موكل —</SelectItem>
+                      {clients?.sort((a, b) => (a.name || '').localeCompare(b.name || '')).map((cl) => (
+                        <SelectItem key={cl.id} value={cl.id!.toString()}>{cl.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
             </div>
