@@ -5,8 +5,10 @@ type Section =
   | 'clients'
   | 'cases'
   | 'sessions'
+  | 'calendar'
   | 'payments'
   | 'delays'
+  | 'courts'
   | 'archives'
   | 'backup'
   | 'settings';

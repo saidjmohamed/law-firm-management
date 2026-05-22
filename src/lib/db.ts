@@ -29,9 +29,16 @@ export interface Case {
 
   clientId?: number;
 
+  // الهيئة القضائية
+  wilayaId?: number;
+  judiciaryType?: string; // 'supreme' | 'ordinary' | 'admin'
+  courtLevel?: string; // 'council' | 'court' | 'admin_appeal' | 'admin_first' | 'commercial'
+  courtId?: number; // مرجع للهيئة القضائية
+  chamber?: string;
+  chamberNumber?: number; // رقم الغرفة 1-10 أو بدون
+
   councilName?: string;
   courtName?: string;
-  chamber?: string;
 
   totalFees?: number;
   paidAmount?: number;
@@ -109,6 +116,17 @@ export interface Archive {
   createdAt: Date;
 }
 
+export interface JudicialBody {
+  id?: number;
+  name: string;
+  type: string; // 'supreme' | 'council' | 'court' | 'admin_appeal' | 'admin_first' | 'commercial'
+  wilayaId?: number; // الولاية
+  parentCouncilId?: number; // المحكمة تابعة لمجلس
+  chambers?: string; // JSON string - array of {name, number}
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 export interface Setting {
   key: string;
   value: string;
@@ -125,19 +143,21 @@ class LawFirmDB extends Dexie {
   delays!: Table<Delay>;
   parties!: Table<Party>;
   archives!: Table<Archive>;
+  judicialBodies!: Table<JudicialBody>;
   settings!: Table<Setting>;
 
   constructor() {
     super('LawFirmDB');
 
-    this.version(5).stores({
+    this.version(6).stores({
       clients: '++id, name, phone, nationalId, wilaya, createdAt',
-      cases: '++id, caseNumber, subject, caseNature, litigationStage, status, courtName, councilName, clientId, registrationDate, firstSessionDate, createdAt',
+      cases: '++id, caseNumber, subject, caseNature, litigationStage, status, courtName, councilName, clientId, courtId, wilayaId, registrationDate, firstSessionDate, createdAt',
       sessions: '++id, caseId, date, status, court, createdAt',
       payments: '++id, caseId, type, category, date, createdAt',
       delays: '++id, caseId, delayDate, createdAt',
       parties: '++id, caseId, role, name, createdAt',
       archives: '++id, caseId, archiveDate, createdAt',
+      judicialBodies: '++id, name, type, wilayaId, parentCouncilId, createdAt',
       settings: 'key',
     });
   }
@@ -156,7 +176,6 @@ function getDb(): LawFirmDB {
 // Export a proxy that lazily initializes the database
 export const db = new Proxy({} as LawFirmDB, {
   get(_target, prop: string | symbol) {
-    // During SSR, return a no-op for any property access
     if (typeof window === 'undefined') {
       return undefined;
     }
@@ -170,19 +189,20 @@ export const db = new Proxy({} as LawFirmDB, {
 });
 
 // ============================================================================
-// بذرة البيانات - 19 قضية حقيقية + 16 موكل
+// بذرة البيانات - 19 قضية حقيقية + 16 موكل + الهيئات القضائية
 // ============================================================================
 
-const CURRENT_SEED_VERSION = 6;
+const CURRENT_SEED_VERSION = 7;
 
 const DEFAULT_SETTINGS: Setting[] = [
   { key: 'lawyerName', value: JSON.stringify('سايج محمد') },
   { key: 'lawyerTitle', value: JSON.stringify('محام لدى المجلس') },
-  { key: 'lawyerAddress', value: JSON.stringify('الجزائر العاصمة') },
-  { key: 'lawyerPhone', value: JSON.stringify('0558873333') },
+  { key: 'lawyerAddress', value: JSON.stringify('12 شارع الإخوة بوعدو - بئر مراد رايس - الجزائر') },
+  { key: 'lawyerPhone', value: JSON.stringify('0558357689') },
+  { key: 'lawyerEmail', value: JSON.stringify('SAIDJ.MOHAMED@GMAIL.COM') },
 ];
 
-// الموكلون الـ 16 من ملفات القضايا
+// الموكلون الـ 16
 const SEED_CLIENTS: { name: string; phone?: string }[] = [
   { name: 'مدور كريمو', phone: '00213555390201' },
   { name: 'بلخوجة محمد ياسر', phone: '00213542819233' },
@@ -202,6 +222,45 @@ const SEED_CLIENTS: { name: string; phone?: string }[] = [
   { name: 'سايج محمد', phone: '0558873333' },
 ];
 
+// الهيئات القضائية الأولية
+const SEED_COURTS: { name: string; type: string; wilayaId?: number; parentCouncilId?: number; chambers?: string }[] = [
+  // المحكمة العليا
+  { name: 'المحكمة العليا', type: 'supreme', chambers: JSON.stringify([
+    { name: 'الغرفة المدنية', number: null },
+    { name: 'الغرفة العقارية', number: null },
+    { name: 'غرفة شؤون الأسرة والمواريث', number: null },
+    { name: 'الغرفة التجارية والبحرية', number: null },
+    { name: 'الغرفة الاجتماعية', number: null },
+    { name: 'الغرفة الجنائية', number: null },
+    { name: 'غرفة الجنح والمخالفات', number: null },
+  ])},
+  // مجالس قضائية
+  { name: 'مجلس قضاء الجزائر', type: 'council', wilayaId: 16, chambers: JSON.stringify([
+    { name: 'الغرفة المدنية', number: null },
+    { name: 'الغرفة الجزائية', number: null },
+    { name: 'غرفة الاتهام', number: null },
+    { name: 'الغرفة الاستعجالية', number: null },
+    { name: 'غرفة شؤون الأسرة', number: null },
+    { name: 'غرفة الأحداث', number: null },
+    { name: 'الغرفة الاجتماعية', number: null },
+    { name: 'الغرفة العقارية', number: null },
+    { name: 'الغرفة البحرية', number: null },
+    { name: 'الغرفة التجارية', number: null },
+  ])},
+  { name: 'مجلس قضاء البويرة', type: 'council', wilayaId: 10 },
+  { name: 'مجلس قضاء تيبازة', type: 'council', wilayaId: 42 },
+  { name: 'مجلس قضاء المدية', type: 'council', wilayaId: 26 },
+  { name: 'مجلس قضاء تيزي وزو', type: 'council', wilayaId: 15 },
+  // محاكم عادية
+  { name: 'محكمة بئرمرادراريس', type: 'court', wilayaId: 16 },
+  { name: 'محكمة الشراقة', type: 'court', wilayaId: 16 },
+  { name: 'محكمة تيبازة', type: 'court', wilayaId: 42 },
+  { name: 'محكمة امشدالة', type: 'court', wilayaId: 10 },
+  { name: 'محكمة الاربعاء ناث ايراثن', type: 'court', wilayaId: 15 },
+  // محاكم إدارية
+  { name: 'المحكمة الإدارية الاستئنافية بالجزائر', type: 'admin_appeal', wilayaId: 16 },
+];
+
 interface SeedCase {
   caseNumber: string;
   subject: string;
@@ -212,7 +271,10 @@ interface SeedCase {
   clientName?: string;
   councilName?: string;
   courtName?: string;
+  courtLevel?: string;
   chamber?: string;
+  chamberNumber?: number;
+  wilayaId?: number;
   totalFees?: number;
   paidAmount?: number;
   registrationDate?: string;
@@ -232,8 +294,9 @@ const REAL_CASES: SeedCase[] = [
     litigationStage: 'افتتاحية (ابتدائي)',
     status: 'جارية',
     clientName: 'مدور كريمو',
-    councilName: 'المحكمة العليا',
     courtName: 'المحكمة العليا',
+    courtLevel: 'supreme',
+    councilName: 'المحكمة العليا',
     chamber: 'الغرفة الجزائية',
     totalFees: 150000,
     paidAmount: 100000,
@@ -256,7 +319,9 @@ const REAL_CASES: SeedCase[] = [
     clientName: 'بلخوجة محمد ياسر',
     councilName: 'مجلس قضاء تيزي وزو',
     courtName: 'محكمة الاربعاء ناث ايراثن',
+    courtLevel: 'court',
     chamber: 'المدني',
+    wilayaId: 15,
     totalFees: 700000,
     paidAmount: 300000,
     registrationDate: '2026-04-08',
@@ -278,7 +343,9 @@ const REAL_CASES: SeedCase[] = [
     clientName: 'كبور صالح',
     councilName: 'مجلس قضاء الجزائر',
     courtName: 'محكمة بئرمرادراريس',
+    courtLevel: 'court',
     chamber: 'مدني',
+    wilayaId: 16,
     totalFees: 60000,
     paidAmount: 60000,
     registrationDate: '2026-02-08',
@@ -299,7 +366,9 @@ const REAL_CASES: SeedCase[] = [
     clientName: 'بدر الدين عبد الرحيم',
     councilName: 'مجلس قضاء الجزائر',
     courtName: 'مجلس قضاء الجزائر',
+    courtLevel: 'council',
     chamber: 'الغرفة الجزائية الخامسة',
+    wilayaId: 16,
     totalFees: 100000,
     paidAmount: 100000,
     barPhone: '023716257',
@@ -320,7 +389,9 @@ const REAL_CASES: SeedCase[] = [
     clientName: 'عماري سي احمد',
     councilName: 'مجلس قضاء الجزائر',
     courtName: 'المحكمة الادارية الاستئنافية بالجزائر',
+    courtLevel: 'admin_appeal',
     chamber: 'الإداري العادي',
+    wilayaId: 16,
     totalFees: 80000,
     paidAmount: 60000,
     registrationDate: '2026-03-02',
@@ -339,7 +410,9 @@ const REAL_CASES: SeedCase[] = [
     clientName: 'بودبة منير',
     councilName: 'مجلس قضاء الجزائر',
     courtName: 'الغرفة الجزائية السادسة',
+    courtLevel: 'council',
     chamber: 'جنح',
+    wilayaId: 16,
     barPhone: '023716257',
     registrationDate: '2026-03-15',
     firstSessionDate: '2026-05-10',
@@ -361,7 +434,9 @@ const REAL_CASES: SeedCase[] = [
     clientName: 'بوجادي محمد زكرياء',
     councilName: 'مجلس قضاء تيبازة',
     courtName: 'محكمة تيبازة',
+    courtLevel: 'court',
     chamber: 'القسم الجزائي',
+    wilayaId: 42,
     barPhone: '0562724340',
     registrationDate: '2025-02-03',
     firstSessionDate: '2026-03-10',
@@ -382,7 +457,9 @@ const REAL_CASES: SeedCase[] = [
     clientName: 'عباسي رتيبة',
     councilName: 'مجلس قضاء الجزائر',
     courtName: 'محكمة الشراقة',
+    courtLevel: 'court',
     chamber: 'جزائي',
+    wilayaId: 16,
     totalFees: 40000,
     paidAmount: 40000,
     barPhone: '0549111248',
@@ -402,7 +479,9 @@ const REAL_CASES: SeedCase[] = [
     clientName: 'بلقاسم بوزيدة اسامة',
     councilName: 'مجلس قضاء المدية',
     courtName: 'غرفة جزائية',
+    courtLevel: 'council',
     chamber: 'الجزائية',
+    wilayaId: 26,
     totalFees: 80000,
     paidAmount: 80000,
     registrationDate: '2026-01-01',
@@ -423,7 +502,9 @@ const REAL_CASES: SeedCase[] = [
     clientName: 'خلالفة عزالدين',
     councilName: 'مجلس قضاء الجزائر',
     courtName: 'الغرفة المدنية',
+    courtLevel: 'council',
     chamber: 'عقاري 02',
+    wilayaId: 16,
     totalFees: 100000,
     paidAmount: 90000,
     registrationDate: '2025-10-16',
@@ -443,7 +524,9 @@ const REAL_CASES: SeedCase[] = [
     clientName: 'بودبة منير',
     councilName: 'مجلس قضاء الجزائر',
     courtName: 'محكمة بئرمرادراريس',
+    courtLevel: 'court',
     chamber: 'جنح',
+    wilayaId: 16,
     registrationDate: '2026-05-01',
     judgment: 'الحكم ببراءة كل من بودبة منير\nبن يمينة نصر الدين\nو الادانة لكل من\nحمزة ميباركي\nخطاطبة محمد الامين ب عامين حبس نافذ و 400 الف دينار تعويض',
     parties: [
@@ -461,7 +544,9 @@ const REAL_CASES: SeedCase[] = [
     clientName: 'عباسي رتيبة',
     councilName: 'مجلس قضاء الجزائر',
     courtName: 'محكمة الشراقة',
+    courtLevel: 'court',
     chamber: 'جزائي',
+    wilayaId: 16,
     totalFees: 40000,
     paidAmount: 40000,
     registrationDate: '2024-12-18',
@@ -483,6 +568,9 @@ const REAL_CASES: SeedCase[] = [
     clientName: 'حمزة ميباركي',
     councilName: 'مجلس قضاء الجزائر',
     courtName: 'محكمة بئرمرادراريس',
+    courtLevel: 'court',
+    chamber: 'جنح',
+    wilayaId: 16,
     registrationDate: '2026-02-11',
     delibDate: '2026-02-25',
     judgment: 'البراءة للمتهمين',
@@ -502,7 +590,9 @@ const REAL_CASES: SeedCase[] = [
     clientName: 'بودبة منير',
     councilName: 'مجلس قضاء البويرة',
     courtName: 'مجلس قضاء البويرة',
+    courtLevel: 'council',
     chamber: 'الغرفة الجزائية رقم 3',
+    wilayaId: 10,
     totalFees: 100000,
     paidAmount: 15000,
     barPhone: '0655572657',
@@ -524,7 +614,9 @@ const REAL_CASES: SeedCase[] = [
     clientName: 'عباسي رتيبة',
     councilName: 'مجلس قضاء الجزائر',
     courtName: 'محكمة الشراقة',
+    courtLevel: 'court',
     chamber: 'قسم الجنح',
+    wilayaId: 16,
     totalFees: 40000,
     paidAmount: 40000,
     barPhone: '0549111248',
@@ -549,7 +641,9 @@ const REAL_CASES: SeedCase[] = [
     clientName: 'عباسي رتيبة',
     councilName: 'مجلس قضاء الجزائر',
     courtName: 'محكمة الشراقة',
+    courtLevel: 'court',
     chamber: 'قسم الجنح',
+    wilayaId: 16,
     barPhone: '0549111248',
     registrationDate: '2024-03-07',
     firstSessionDate: '2025-03-03',
@@ -573,7 +667,9 @@ const REAL_CASES: SeedCase[] = [
     clientName: 'عباسي رتيبة',
     councilName: 'مجلس قضاء الجزائر',
     courtName: 'محكمة الشراقة',
+    courtLevel: 'court',
     chamber: 'قسم الجنح',
+    wilayaId: 16,
     totalFees: 40000,
     paidAmount: 0,
     barPhone: '0549111248',
@@ -600,7 +696,9 @@ const REAL_CASES: SeedCase[] = [
     clientName: 'عباسي رتيبة',
     councilName: 'مجلس قضاء الجزائر',
     courtName: 'محكمة الشراقة',
+    courtLevel: 'court',
     chamber: 'قسم الجنح',
+    wilayaId: 16,
     totalFees: 40000,
     paidAmount: 0,
     barPhone: '0549111248',
@@ -626,7 +724,9 @@ const REAL_CASES: SeedCase[] = [
     clientName: 'بودبة منير',
     councilName: 'مجلس قضاء البويرة',
     courtName: 'محكمة امشدالة',
+    courtLevel: 'court',
     chamber: 'جنح',
+    wilayaId: 10,
     barPhone: '0655572567',
     registrationDate: '2026-04-30',
     firstSessionDate: '2026-04-30',
@@ -640,53 +740,60 @@ const REAL_CASES: SeedCase[] = [
 ];
 
 export async function seedDatabase() {
-  // Guard: don't run during SSR
   if (typeof window === 'undefined') {
-    console.log('[Seed] Skipping seed during SSR');
     return;
   }
 
   try {
-    // تحقق من إصدار البذرة
     const seedVersionSetting = await db.settings.get('seedVersion');
     const currentVersion = seedVersionSetting ? JSON.parse(seedVersionSetting.value) : 0;
 
-    // Data existence check: even if seedVersion is current, re-seed if no data
     let needsReseed = currentVersion < CURRENT_SEED_VERSION;
     if (!needsReseed && currentVersion >= CURRENT_SEED_VERSION) {
       const caseCount = await db.cases.count();
       const clientCount = await db.clients.count();
       if (caseCount === 0 && clientCount === 0) {
-        console.log('[Seed] Seed version is current but database is empty. Force re-seeding...');
         needsReseed = true;
       }
     }
 
     if (!needsReseed) {
-      // البذرة محدثة، لا حاجة لإعادة البذرة
       return;
     }
 
     console.log('[Seed] Starting database seed, version:', currentVersion, '->', CURRENT_SEED_VERSION);
 
-    // إذا كانت هناك بيانات قديمة و الإصدار أقل، نقوم بالمسح و إعادة البذرة
-    if (currentVersion > 0 || (await db.cases.count()) > 0 || (await db.clients.count()) > 0) {
-      console.log('[Seed] Clearing old data before re-seeding...');
-      await db.transaction('rw', [db.clients, db.cases, db.sessions, db.payments, db.delays, db.parties, db.archives, db.settings], async () => {
-        await db.clients.clear();
-        await db.cases.clear();
-        await db.sessions.clear();
-        await db.payments.clear();
-        await db.delays.clear();
-        await db.parties.clear();
-        await db.archives.clear();
-        await db.settings.clear();
-      });
-    }
+    // مسح البيانات القديمة
+    await db.transaction('rw', [db.clients, db.cases, db.sessions, db.payments, db.delays, db.parties, db.archives, db.judicialBodies, db.settings], async () => {
+      await db.clients.clear();
+      await db.cases.clear();
+      await db.sessions.clear();
+      await db.payments.clear();
+      await db.delays.clear();
+      await db.parties.clear();
+      await db.archives.clear();
+      await db.judicialBodies.clear();
+      await db.settings.clear();
+    });
 
     const now = new Date();
 
-    // إدراج الموكلين أولاً
+    // إدراج الهيئات القضائية
+    const courtIdMap: Record<string, number> = {};
+    for (const seedCourt of SEED_COURTS) {
+      const courtId = await db.judicialBodies.add({
+        name: seedCourt.name,
+        type: seedCourt.type,
+        wilayaId: seedCourt.wilayaId,
+        chambers: seedCourt.chambers,
+        createdAt: now,
+        updatedAt: now,
+      });
+      courtIdMap[seedCourt.name] = courtId as number;
+    }
+    console.log('[Seed] Created', SEED_COURTS.length, 'judicial bodies');
+
+    // إدراج الموكلين
     const clientIdMap: Record<string, number> = {};
     for (const seedClient of SEED_CLIENTS) {
       const clientId = await db.clients.add({
@@ -701,10 +808,16 @@ export async function seedDatabase() {
 
     // إدراج القضايا
     for (const seedCase of REAL_CASES) {
-      // البحث عن clientId المناسب
       let clientId: number | undefined;
       if (seedCase.clientName && clientIdMap[seedCase.clientName]) {
         clientId = clientIdMap[seedCase.clientName];
+      }
+
+      // البحث عن courtId
+      let courtId: number | undefined;
+      const courtName = seedCase.courtName || '';
+      if (courtIdMap[courtName]) {
+        courtId = courtIdMap[courtName];
       }
 
       const caseId = await db.cases.add({
@@ -715,6 +828,9 @@ export async function seedDatabase() {
         origCaseNumber: seedCase.origCaseNumber,
         status: seedCase.status,
         clientId: clientId,
+        wilayaId: seedCase.wilayaId,
+        courtLevel: seedCase.courtLevel,
+        courtId: courtId,
         councilName: seedCase.councilName,
         courtName: seedCase.courtName,
         chamber: seedCase.chamber,
@@ -730,7 +846,6 @@ export async function seedDatabase() {
         updatedAt: now,
       });
 
-      // إدراج الأطراف
       if (seedCase.parties) {
         for (const party of seedCase.parties) {
           await db.parties.add({
@@ -746,7 +861,6 @@ export async function seedDatabase() {
         }
       }
 
-      // إدراج التأجيلات
       if (seedCase.delays) {
         for (const delay of seedCase.delays) {
           await db.delays.add({
@@ -759,7 +873,6 @@ export async function seedDatabase() {
         }
       }
 
-      // أرشفة القضايا المؤرشفة
       if (seedCase.status === 'مؤرشفة') {
         const cParties = seedCase.parties || [];
         const cDelays = seedCase.delays || [];
@@ -788,20 +901,16 @@ export async function seedDatabase() {
     }
     console.log('[Seed] Created', REAL_CASES.length, 'cases');
 
-    // إدراج الإعدادات
     await db.settings.bulkAdd(DEFAULT_SETTINGS);
     await db.settings.put({ key: 'seedVersion', value: JSON.stringify(CURRENT_SEED_VERSION) });
 
     console.log('[Seed] Database seeded successfully');
   } catch (error) {
     console.error('[Seed] Error seeding database:', error);
-    // Try to recover: delete and recreate the database
     try {
-      console.log('[Seed] Attempting recovery - deleting database...');
       const actualDb = getDb();
       await actualDb.delete();
       await actualDb.open();
-      console.log('[Seed] Database recreated, will retry on next load');
     } catch (recoveryError) {
       console.error('[Seed] Recovery also failed:', recoveryError);
     }
@@ -811,20 +920,16 @@ export async function seedDatabase() {
 
 /** إعادة تعيين قاعدة البيانات بالكامل */
 export async function resetDatabase() {
-  console.log('[DB] Resetting database...');
   const actualDb = getDb();
   await actualDb.delete();
-  // إعادة فتح قاعدة البيانات
   await actualDb.open();
   await seedDatabase();
-  console.log('[DB] Database reset complete');
 }
 
 // ============================================================================
 // دوال مساعدة
 // ============================================================================
 
-/** جلب إعداد من قاعدة البيانات */
 export async function getSetting<T = string>(key: string): Promise<T | null> {
   const setting = await db.settings.get(key);
   if (!setting) return null;
@@ -835,12 +940,10 @@ export async function getSetting<T = string>(key: string): Promise<T | null> {
   }
 }
 
-/** حفظ إعداد في قاعدة البيانات */
 export async function setSetting(key: string, value: unknown): Promise<void> {
   await db.settings.put({ key, value: JSON.stringify(value) });
 }
 
-/** تنسيق المبلغ بالدينار الجزائري */
 export function formatCurrency(amount: number | undefined | null): string {
   if (amount == null) return '0 د.ج';
   return `${amount.toLocaleString('en-US')} د.ج`;

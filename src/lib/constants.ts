@@ -119,29 +119,78 @@ export const PARTY_ROLES = [
   'معارض ضده',
 ] as const;
 
-/** أنواع المحاكم */
-export const COURT_TYPES = [
-  'محكمة عادية',
-  'مجلس قضاء',
-  'محكمة إدارية',
-  'محكمة إدارية استئنافية',
-  'محكمة تجارية',
-  'المحكمة العليا',
+/** أنواع القضاء */
+export const JUDICIARY_TYPES = [
+  { value: 'supreme', label: 'المحكمة العليا' },
+  { value: 'ordinary', label: 'القضاء العادي' },
+  { value: 'admin', label: 'القضاء الإداري' },
 ] as const;
 
-/** الغرف/الأقسام */
-export const JUDICIAL_CHAMBERS = [
-  'الغرفة الجزائية',
+/** مستويات القضاء العادي */
+export const ORDINARY_COURT_LEVELS = [
+  { value: 'council', label: 'مجلس قضائي' },
+  { value: 'court', label: 'محكمة' },
+] as const;
+
+/** مستويات القضاء الإداري */
+export const ADMIN_COURT_LEVELS = [
+  { value: 'admin_appeal', label: 'المحكمة الإدارية الاستئنافية' },
+  { value: 'admin_first', label: 'المحكمة الإدارية الابتدائية' },
+  { value: 'commercial', label: 'المحكمة التجارية المتخصصة' },
+] as const;
+
+/** غرف المحكمة العليا */
+export const SUPREME_CHAMBERS = [
   'الغرفة المدنية',
-  'قسم الأحوال الشخصية',
   'الغرفة العقارية',
-  'الغرفة التجارية',
-  'الغرفة البحرية',
-  'الغرفة العمالية',
-  'الغرفة الإدارية',
+  'غرفة شؤون الأسرة والمواريث',
+  'الغرفة التجارية والبحرية',
+  'الغرفة الاجتماعية',
+  'الغرفة الجنائية',
+  'غرفة الجنح والمخالفات',
+] as const;
+
+/** غرف المجالس القضائية */
+export const COUNCIL_CHAMBERS = [
+  'الغرفة المدنية',
+  'الغرفة الجزائية',
   'غرفة الاتهام',
+  'الغرفة الاستعجالية',
+  'غرفة شؤون الأسرة',
+  'غرفة الأحداث',
+  'الغرفة الاجتماعية',
+  'الغرفة العقارية',
+  'الغرفة البحرية',
+  'الغرفة التجارية',
+] as const;
+
+/** أقسام المحاكم */
+export const COURT_SECTIONS = [
+  'القسم المدني',
   'قسم الجنح',
   'قسم المخالفات',
+  'القسم الاستعجالي',
+  'قسم شؤون الأسرة',
+  'قسم الأحداث',
+  'القسم الاجتماعي',
+  'القسم العقاري',
+  'القسم البحري',
+  'القسم التجاري',
+] as const;
+
+/** أرقام الغرف */
+export const CHAMBER_NUMBERS = [
+  { value: 0, label: 'بدون رقم' },
+  { value: 1, label: '01' },
+  { value: 2, label: '02' },
+  { value: 3, label: '03' },
+  { value: 4, label: '04' },
+  { value: 5, label: '05' },
+  { value: 6, label: '06' },
+  { value: 7, label: '07' },
+  { value: 8, label: '08' },
+  { value: 9, label: '09' },
+  { value: 10, label: '10' },
 ] as const;
 
 /** فئات المدفوعات */
@@ -185,3 +234,46 @@ export function formatDate(date: string | undefined | null): string {
     return date;
   }
 }
+
+/** تنسيق التاريخ والوقت */
+export function formatDateTime(date: string | undefined | null): string {
+  if (!date) return '—';
+  try {
+    return new Date(date).toLocaleDateString('ar-DZ', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  } catch {
+    return date;
+  }
+}
+
+/** الأيام بالعربية */
+export const ARABIC_DAYS = [
+  'الأحد',
+  'الإثنين',
+  'الثلاثاء',
+  'الأربعاء',
+  'الخميس',
+  'الجمعة',
+  'السبت',
+] as const;
+
+/** الأشهر بالعربية */
+export const ARABIC_MONTHS = [
+  'جانفي',
+  'فيفري',
+  'مارس',
+  'أفريل',
+  'ماي',
+  'جوان',
+  'جويلية',
+  'أوت',
+  'سبتمبر',
+  'أكتوبر',
+  'نوفمبر',
+  'ديسمبر',
+] as const;
