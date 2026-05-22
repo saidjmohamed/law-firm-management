@@ -15,8 +15,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "إدارة مكتب المحاماة",
-  description: "تطبيق إدارة مكتب محاماة - يعمل أوفلاين",
+  title: "مكتب الاستاذ سايج محمد محمد محام لدى المجلس",
+  description: "نظام إدارة مكتب محاماة جزائري",
   manifest: "/manifest.json",
   icons: {
     icon: "/icon-192.svg",

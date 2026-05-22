@@ -1,6 +1,15 @@
 import { create } from 'zustand';
 
-export type Section = 'dashboard' | 'clients' | 'cases' | 'sessions' | 'finance' | 'documents';
+type Section = 
+  | 'dashboard'
+  | 'clients'
+  | 'cases'
+  | 'sessions'
+  | 'payments'
+  | 'delays'
+  | 'archives'
+  | 'backup'
+  | 'settings';
 
 interface AppState {
   activeSection: Section;
@@ -15,3 +24,5 @@ export const useAppStore = create<AppState>((set) => ({
   sidebarOpen: false,
   setSidebarOpen: (open) => set({ sidebarOpen: open }),
 }));
+
+export type { Section };

@@ -8,8 +8,11 @@ import { Dashboard } from '@/components/dashboard';
 import { Clients } from '@/components/clients';
 import { Cases } from '@/components/cases';
 import { Sessions } from '@/components/sessions';
-import { Finance } from '@/components/finance';
-import { Documents } from '@/components/documents';
+import { PaymentsManager } from '@/components/payments';
+import { DelaysManager } from '@/components/delays';
+import { ArchivesManager } from '@/components/archives';
+import { BackupManager } from '@/components/backup';
+import { SettingsManager } from '@/components/settings';
 
 function RegisterSW() {
   useEffect(() => {
@@ -35,30 +38,23 @@ function SeedData() {
 export default function Home() {
   const activeSection = useAppStore((s) => s.activeSection);
 
-  const renderSection = () => {
-    switch (activeSection) {
-      case 'dashboard':
-        return <Dashboard />;
-      case 'clients':
-        return <Clients />;
-      case 'cases':
-        return <Cases />;
-      case 'sessions':
-        return <Sessions />;
-      case 'finance':
-        return <Finance />;
-      case 'documents':
-        return <Documents />;
-      default:
-        return <Dashboard />;
-    }
+  const sections: Record<string, React.ReactNode> = {
+    dashboard: <Dashboard />,
+    clients: <Clients />,
+    cases: <Cases />,
+    sessions: <Sessions />,
+    payments: <PaymentsManager />,
+    delays: <DelaysManager />,
+    archives: <ArchivesManager />,
+    backup: <BackupManager />,
+    settings: <SettingsManager />,
   };
 
   return (
     <>
       <RegisterSW />
       <SeedData />
-      <AppShell>{renderSection()}</AppShell>
+      <AppShell>{sections[activeSection] ?? <Dashboard />}</AppShell>
     </>
   );
 }

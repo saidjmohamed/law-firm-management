@@ -1,14 +1,15 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, type Session } from '@/lib/db';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
+import { Separator } from '@/components/ui/separator';
 import {
   Dialog,
   DialogContent,
@@ -45,18 +46,24 @@ import {
   Search,
   Pencil,
   Trash2,
+  Eye,
   CalendarDays,
   Clock,
   MapPin,
   ChevronDown,
   Check,
+  Gavel,
+  FileText,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
+// ============================================================================
+// ثوابت
+// ============================================================================
 const statusLabels: Record<string, string> = {
   scheduled: 'مجدولة',
-  completed: 'مكتملة',
+  completed: 'منجزة',
   postponed: 'مؤجلة',
   cancelled: 'ملغاة',
 };
@@ -68,6 +75,45 @@ const statusColors: Record<string, string> = {
   cancelled: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
 };
 
+const formatDate = (date: string) => {
+  if (!date) return '—';
+  try {
+    return new Date(date).toLocaleDateString('ar-DZ', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+  } catch {
+    return '—';
+  }
+};
+
+const formatDay = (date: string) => {
+  if (!date) return '';
+  try {
+    return new Date(date).toLocaleDateString('ar-DZ', { weekday: 'long' });
+  } catch {
+    return '';
+  }
+};
+
+const emptyFormData = (): Partial<Session> => ({
+  caseId: 0,
+  caseNumber: '',
+  caseSubject: '',
+  date: new Date().toISOString().split('T')[0],
+  time: '09:00',
+  court: '',
+  hall: '',
+  judgeName: '',
+  notes: '',
+  status: 'scheduled',
+  result: '',
+});
+
+// ============================================================================
+// مكون الجلسات
+// ============================================================================
 export function Sessions() {
   const sessions = useLiveQuery(() => db.sessions.orderBy('date').reverse().toArray());
   const cases = useLiveQuery(() => db.cases.toArray());
@@ -76,57 +122,71 @@ export function Sessions() {
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [viewOpen, setViewOpen] = useState(false);
   const [selectedSession, setSelectedSession] = useState<Session | null>(null);
   const [casePickerOpen, setCasePickerOpen] = useState(false);
-  const [formData, setFormData] = useState<Partial<Session>>({
-    caseId: 0,
-    caseTitle: '',
-    caseNumber: '',
-    date: new Date().toISOString().split('T')[0],
-    time: '09:00',
-    court: '',
-    hall: '',
-    judgeName: '',
-    notes: '',
-    status: 'scheduled',
-    result: '',
-  });
+  const [formData, setFormData] = useState<Partial<Session>>(emptyFormData());
 
-  const filteredSessions = sessions?.filter((s) => {
-    const matchSearch =
-      !search ||
-      s.caseTitle.includes(search) ||
-      s.caseNumber.includes(search) ||
-      s.court.includes(search);
-    const matchStatus = filterStatus === 'all' || s.status === filterStatus;
-    return matchSearch && matchStatus;
-  });
-
-  const openAdd = () => {
-    setFormData({
-      caseId: 0,
-      caseTitle: '',
-      caseNumber: '',
-      date: new Date().toISOString().split('T')[0],
-      time: '09:00',
-      court: '',
-      hall: '',
-      judgeName: '',
-      notes: '',
-      status: 'scheduled',
-      result: '',
+  // Filter sessions
+  const filteredSessions = useMemo(() => {
+    if (!sessions) return [];
+    return sessions.filter((s) => {
+      const q = search.trim().toLowerCase();
+      const matchSearch =
+        !q ||
+        (s.caseNumber && s.caseNumber.toLowerCase().includes(q)) ||
+        (s.caseSubject && s.caseSubject.toLowerCase().includes(q)) ||
+        (s.court && s.court.toLowerCase().includes(q)) ||
+        (s.hall && s.hall.toLowerCase().includes(q)) ||
+        (s.judgeName && s.judgeName.toLowerCase().includes(q)) ||
+        (s.notes && s.notes.toLowerCase().includes(q)) ||
+        (s.result && s.result.toLowerCase().includes(q));
+      const matchStatus = filterStatus === 'all' || s.status === filterStatus;
+      return matchSearch && matchStatus;
     });
+  }, [sessions, search, filterStatus]);
+
+  // Group sessions by date
+  const groupedSessions = useMemo(() => {
+    if (!filteredSessions) return {};
+    const groups: Record<string, Session[]> = {};
+    filteredSessions.forEach((s) => {
+      const key = s.date || 'غير محدد';
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(s);
+    });
+    // Sort groups by date desc
+    const sorted = Object.entries(groups).sort(([a], [b]) => b.localeCompare(a));
+    return Object.fromEntries(sorted);
+  }, [filteredSessions]);
+
+  const isUpcoming = (date: string) => {
+    if (!date) return false;
+    return new Date(date) >= new Date(new Date().toDateString());
+  };
+
+  // Get case info for view dialog
+  const viewCaseInfo = useMemo(() => {
+    if (!selectedSession) return null;
+    return cases?.find((c) => c.id === selectedSession.caseId) ?? null;
+  }, [selectedSession, cases]);
+
+  // Handlers
+  const openAdd = () => {
+    setFormData(emptyFormData());
     setSelectedSession(null);
     setDialogOpen(true);
   };
 
   const openEdit = (s: Session) => {
-    setFormData({
-      ...s,
-      date: s.date ? new Date(s.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
-    });
+    setFormData({ ...s });
     setSelectedSession(s);
     setDialogOpen(true);
+  };
+
+  const openView = (s: Session) => {
+    setSelectedSession(s);
+    setViewOpen(true);
   };
 
   const openDelete = (s: Session) => {
@@ -144,26 +204,38 @@ export function Sessions() {
       return;
     }
     try {
+      const now = new Date();
       if (selectedSession?.id) {
         await db.sessions.update(selectedSession.id, {
-          ...formData,
-          date: new Date(formData.date),
+          caseId: formData.caseId!,
+          caseNumber: formData.caseNumber || '',
+          caseSubject: formData.caseSubject || '',
+          date: formData.date!,
+          time: formData.time || undefined,
+          court: formData.court || undefined,
+          hall: formData.hall || undefined,
+          judgeName: formData.judgeName || undefined,
+          notes: formData.notes || undefined,
+          status: (formData.status as Session['status']) || 'scheduled',
+          result: formData.status === 'completed' ? formData.result || undefined : undefined,
+          updatedAt: now,
         } as Session);
         toast.success('تم تحديث الجلسة بنجاح');
       } else {
         await db.sessions.add({
           caseId: formData.caseId!,
-          caseTitle: formData.caseTitle || '',
           caseNumber: formData.caseNumber || '',
-          date: new Date(formData.date!),
-          time: formData.time || '09:00',
-          court: formData.court || '',
-          hall: formData.hall || '',
-          judgeName: formData.judgeName || '',
-          notes: formData.notes || '',
+          caseSubject: formData.caseSubject || '',
+          date: formData.date!,
+          time: formData.time || undefined,
+          court: formData.court || undefined,
+          hall: formData.hall || undefined,
+          judgeName: formData.judgeName || undefined,
+          notes: formData.notes || undefined,
           status: (formData.status as Session['status']) || 'scheduled',
-          result: formData.result || undefined,
-          createdAt: new Date(),
+          result: formData.status === 'completed' ? formData.result || undefined : undefined,
+          createdAt: now,
+          updatedAt: now,
         });
         toast.success('تم إضافة الجلسة بنجاح');
       }
@@ -185,36 +257,6 @@ export function Sessions() {
     }
   };
 
-  const formatDate = (date: Date) => {
-    return new Date(date).toLocaleDateString('ar-SA', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    });
-  };
-
-  const formatDay = (date: Date) => {
-    return new Date(date).toLocaleDateString('ar-SA', { weekday: 'long' });
-  };
-
-  const isUpcoming = (date: Date) => {
-    return new Date(date) >= new Date(new Date().toDateString());
-  };
-
-  // Group sessions by date
-  const groupedSessions = React.useMemo(() => {
-    if (!filteredSessions) return {};
-    const groups: Record<string, Session[]> = {};
-    filteredSessions.forEach((s) => {
-      const key = new Date(s.date).toISOString().split('T')[0];
-      if (!groups[key]) groups[key] = [];
-      groups[key].push(s);
-    });
-    // Sort groups by date desc
-    const sorted = Object.entries(groups).sort(([a], [b]) => b.localeCompare(a));
-    return Object.fromEntries(sorted);
-  }, [filteredSessions]);
-
   return (
     <div className="space-y-4">
       {/* Toolbar */}
@@ -222,7 +264,7 @@ export function Sessions() {
         <div className="relative flex-1">
           <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
-            placeholder="بحث بالقضية أو المحكمة..."
+            placeholder="بحث بالقضية، المحكمة، القاضي..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pr-9"
@@ -235,7 +277,7 @@ export function Sessions() {
           <SelectContent>
             <SelectItem value="all">كل الحالات</SelectItem>
             <SelectItem value="scheduled">مجدولة</SelectItem>
-            <SelectItem value="completed">مكتملة</SelectItem>
+            <SelectItem value="completed">منجزة</SelectItem>
             <SelectItem value="postponed">مؤجلة</SelectItem>
             <SelectItem value="cancelled">ملغاة</SelectItem>
           </SelectContent>
@@ -246,23 +288,31 @@ export function Sessions() {
         </Button>
       </div>
 
+      {/* Count */}
+      <div className="flex items-center gap-2">
+        <Badge variant="outline" className="text-sm">
+          <CalendarDays className="w-3.5 h-3.5 ml-1" />
+          {filteredSessions.length} جلسة
+        </Badge>
+      </div>
+
       {/* Sessions grouped by date */}
-      <div className="space-y-4 max-h-[calc(100vh-280px)] overflow-y-auto">
+      <div className="space-y-4 max-h-[calc(100vh-320px)] overflow-y-auto">
         {Object.keys(groupedSessions).length > 0 ? (
           Object.entries(groupedSessions).map(([dateKey, dateSessions]) => {
-            const dateObj = new Date(dateKey);
-            const upcoming = isUpcoming(dateObj);
+            const upcoming = isUpcoming(dateKey);
             return (
               <div key={dateKey}>
-                <div className="flex items-center gap-2 mb-3">
+                <div className="flex items-center gap-2 mb-3 sticky top-0 bg-background/95 backdrop-blur-sm py-1 z-10">
                   <CalendarDays className={`w-4 h-4 ${upcoming ? 'text-amber-500' : 'text-muted-foreground'}`} />
                   <span className={`font-semibold text-sm ${upcoming ? 'text-amber-600 dark:text-amber-400' : ''}`}>
-                    {formatDate(dateObj)}
+                    {formatDate(dateKey)}
                   </span>
-                  <span className="text-sm text-muted-foreground">({formatDay(dateObj)})</span>
+                  <span className="text-sm text-muted-foreground">({formatDay(dateKey)})</span>
                   {upcoming && (
                     <Badge className="text-xs bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">قادمة</Badge>
                   )}
+                  <Badge variant="outline" className="text-xs">{dateSessions.length}</Badge>
                 </div>
                 <div className="grid gap-3">
                   {dateSessions.map((session) => (
@@ -276,18 +326,25 @@ export function Sessions() {
                               </Badge>
                               <span className="font-mono text-xs text-muted-foreground">{session.caseNumber}</span>
                             </div>
-                            <p className="font-medium text-sm mb-1">{session.caseTitle}</p>
+                            <p className="font-medium text-sm mb-1">{session.caseSubject || '—'}</p>
                             <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                              <span className="flex items-center gap-1">
-                                <Clock className="w-3 h-3" />
-                                {session.time}
-                              </span>
-                              <span className="flex items-center gap-1">
-                                <MapPin className="w-3 h-3" />
-                                {session.court}{session.hall ? ` - ${session.hall}` : ''}
-                              </span>
+                              {session.time && (
+                                <span className="flex items-center gap-1">
+                                  <Clock className="w-3 h-3" />
+                                  {session.time}
+                                </span>
+                              )}
+                              {session.court && (
+                                <span className="flex items-center gap-1">
+                                  <MapPin className="w-3 h-3" />
+                                  {session.court}{session.hall ? ` - ${session.hall}` : ''}
+                                </span>
+                              )}
                               {session.judgeName && (
-                                <span>القاضي: {session.judgeName}</span>
+                                <span className="flex items-center gap-1">
+                                  <Gavel className="w-3 h-3" />
+                                  {session.judgeName}
+                                </span>
                               )}
                             </div>
                             {session.notes && (
@@ -299,11 +356,14 @@ export function Sessions() {
                               </p>
                             )}
                           </div>
-                          <div className="flex items-center gap-1 mr-2">
-                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(session)}>
+                          <div className="flex items-center gap-1 mr-2 shrink-0">
+                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openView(session)} title="عرض">
+                              <Eye className="w-4 h-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(session)} title="تعديل">
                               <Pencil className="w-4 h-4" />
                             </Button>
-                            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => openDelete(session)}>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => openDelete(session)} title="حذف">
                               <Trash2 className="w-4 h-4" />
                             </Button>
                           </div>
@@ -318,11 +378,129 @@ export function Sessions() {
         ) : (
           <Card className="border-0 shadow-sm">
             <CardContent className="py-12 text-center text-muted-foreground">
-              {search ? 'لا توجد نتائج للبحث' : 'لا توجد جلسات بعد'}
+              {search || filterStatus !== 'all' ? 'لا توجد نتائج للبحث' : 'لا توجد جلسات بعد'}
             </CardContent>
           </Card>
         )}
       </div>
+
+      {/* View Session Dialog */}
+      <Dialog open={viewOpen} onOpenChange={setViewOpen}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto" dir="rtl">
+          <DialogHeader>
+            <DialogTitle>تفاصيل الجلسة</DialogTitle>
+            <DialogDescription>معلومات الجلسة والقضية المرتبطة</DialogDescription>
+          </DialogHeader>
+          {selectedSession && (
+            <div className="space-y-4">
+              {/* Session Header */}
+              <div className="flex items-center gap-3 p-4 rounded-lg bg-muted/50">
+                <div className="w-12 h-12 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center shrink-0">
+                  <CalendarDays className="w-6 h-6 text-amber-700 dark:text-amber-400" />
+                </div>
+                <div className="min-w-0">
+                  <p className="font-bold">{selectedSession.caseSubject || '—'}</p>
+                  <p className="text-sm text-muted-foreground font-mono">{selectedSession.caseNumber}</p>
+                </div>
+                <Badge variant="secondary" className={`text-xs shrink-0 mr-auto ${statusColors[selectedSession.status]}`}>
+                  {statusLabels[selectedSession.status]}
+                </Badge>
+              </div>
+
+              {/* Session Details */}
+              <div className="grid gap-3">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="text-sm">
+                    <span className="text-muted-foreground">التاريخ: </span>
+                    <span className="font-medium">{formatDate(selectedSession.date)}</span>
+                  </div>
+                  {selectedSession.time && (
+                    <div className="text-sm">
+                      <span className="text-muted-foreground">الوقت: </span>
+                      <span className="font-medium" dir="ltr">{selectedSession.time}</span>
+                    </div>
+                  )}
+                </div>
+                {selectedSession.court && (
+                  <div className="text-sm">
+                    <span className="text-muted-foreground">المحكمة: </span>
+                    <span className="font-medium">{selectedSession.court}</span>
+                  </div>
+                )}
+                {selectedSession.hall && (
+                  <div className="text-sm">
+                    <span className="text-muted-foreground">القاعة: </span>
+                    <span className="font-medium">{selectedSession.hall}</span>
+                  </div>
+                )}
+                {selectedSession.judgeName && (
+                  <div className="text-sm">
+                    <span className="text-muted-foreground">القاضي: </span>
+                    <span className="font-medium">{selectedSession.judgeName}</span>
+                  </div>
+                )}
+                {selectedSession.notes && (
+                  <div className="text-sm p-3 rounded-lg bg-muted/50">
+                    <span className="text-muted-foreground">ملاحظات: </span>
+                    {selectedSession.notes}
+                  </div>
+                )}
+                {selectedSession.result && (
+                  <div className="text-sm p-3 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800">
+                    <span className="text-emerald-700 dark:text-emerald-400 font-medium">النتيجة: </span>
+                    {selectedSession.result}
+                  </div>
+                )}
+              </div>
+
+              {/* Case Info */}
+              {viewCaseInfo && (
+                <>
+                  <Separator />
+                  <div>
+                    <h4 className="font-semibold text-sm mb-2 flex items-center gap-2">
+                      <FileText className="w-4 h-4 text-teal-600" />
+                      معلومات القضية
+                    </h4>
+                    <div className="p-3 rounded-lg bg-teal-50 dark:bg-teal-900/10 space-y-1 text-sm">
+                      <div><span className="text-muted-foreground">الموضوع: </span>{viewCaseInfo.subject}</div>
+                      <div><span className="text-muted-foreground">الموكل: </span>{viewCaseInfo.clientName || '—'}</div>
+                      <div><span className="text-muted-foreground">المحكمة: </span>{viewCaseInfo.courtName || '—'}</div>
+                      <div><span className="text-muted-foreground">الطبيعة: </span>{viewCaseInfo.caseNature}</div>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* Actions */}
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => {
+                    setViewOpen(false);
+                    setTimeout(() => openEdit(selectedSession), 200);
+                  }}
+                >
+                  <Pencil className="w-4 h-4 ml-2" />
+                  تعديل
+                </Button>
+                <Button
+                  variant="outline"
+                  className="flex-1 text-destructive hover:text-destructive"
+                  onClick={() => {
+                    setViewOpen(false);
+                    setTimeout(() => openDelete(selectedSession), 200);
+                  }}
+                >
+                  <Trash2 className="w-4 h-4 ml-2" />
+                  حذف
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Add/Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
@@ -334,12 +512,13 @@ export function Sessions() {
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
+            {/* Case Picker */}
             <div className="grid gap-2">
               <Label>القضية *</Label>
               <Popover open={casePickerOpen} onOpenChange={setCasePickerOpen}>
                 <PopoverTrigger asChild>
                   <Button variant="outline" className="justify-between font-normal">
-                    {formData.caseTitle || 'اختر القضية'}
+                    {formData.caseSubject || 'اختر القضية'}
                     <ChevronDown className="w-4 h-4 mr-2 opacity-50" />
                   </Button>
                 </PopoverTrigger>
@@ -356,9 +535,9 @@ export function Sessions() {
                               setFormData({
                                 ...formData,
                                 caseId: c.id!,
-                                caseTitle: c.title,
                                 caseNumber: c.caseNumber,
-                                court: c.court || formData.court,
+                                caseSubject: c.subject,
+                                court: c.courtName || formData.court,
                               });
                               setCasePickerOpen(false);
                             }}
@@ -369,7 +548,7 @@ export function Sessions() {
                                 formData.caseId === c.id ? 'opacity-100' : 'opacity-0'
                               )}
                             />
-                            <span>{c.title}</span>
+                            <span>{c.subject}</span>
                             <span className="text-xs text-muted-foreground mr-2">({c.caseNumber})</span>
                           </CommandItem>
                         ))}
@@ -379,12 +558,14 @@ export function Sessions() {
                 </PopoverContent>
               </Popover>
             </div>
+
+            {/* Date + Time */}
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
                 <Label>التاريخ *</Label>
                 <Input
                   type="date"
-                  value={formData.date ? (typeof formData.date === 'string' ? formData.date : new Date(formData.date).toISOString().split('T')[0]) : ''}
+                  value={formData.date || ''}
                   onChange={(e) => setFormData({ ...formData, date: e.target.value })}
                 />
               </div>
@@ -397,6 +578,8 @@ export function Sessions() {
                 />
               </div>
             </div>
+
+            {/* Court + Hall */}
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
                 <Label>المحكمة</Label>
@@ -415,6 +598,8 @@ export function Sessions() {
                 />
               </div>
             </div>
+
+            {/* Judge Name */}
             <div className="grid gap-2">
               <Label>اسم القاضي</Label>
               <Input
@@ -423,6 +608,8 @@ export function Sessions() {
                 placeholder="اسم القاضي"
               />
             </div>
+
+            {/* Status */}
             <div className="grid gap-2">
               <Label>الحالة</Label>
               <Select
@@ -434,12 +621,14 @@ export function Sessions() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="scheduled">مجدولة</SelectItem>
-                  <SelectItem value="completed">مكتملة</SelectItem>
+                  <SelectItem value="completed">منجزة</SelectItem>
                   <SelectItem value="postponed">مؤجلة</SelectItem>
                   <SelectItem value="cancelled">ملغاة</SelectItem>
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Result (shown when completed) */}
             {formData.status === 'completed' && (
               <div className="grid gap-2">
                 <Label>النتيجة</Label>
@@ -451,6 +640,8 @@ export function Sessions() {
                 />
               </div>
             )}
+
+            {/* Notes */}
             <div className="grid gap-2">
               <Label>ملاحظات</Label>
               <Textarea

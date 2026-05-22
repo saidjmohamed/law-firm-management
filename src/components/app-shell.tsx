@@ -6,14 +6,17 @@ import { useTheme } from 'next-themes';
 import {
   LayoutDashboard,
   Users,
+  Briefcase,
+  Calendar,
+  Banknote,
+  Clock,
+  Archive,
+  HardDrive,
+  Settings,
   Scale,
-  CalendarDays,
-  Wallet,
-  FileText,
   Menu,
   Moon,
   Sun,
-  X,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -24,23 +27,26 @@ import { cn } from '@/lib/utils';
 
 const navItems: { id: Section; label: string; icon: React.ElementType }[] = [
   { id: 'dashboard', label: 'لوحة التحكم', icon: LayoutDashboard },
-  { id: 'clients', label: 'العملاء', icon: Users },
-  { id: 'cases', label: 'القضايا', icon: Scale },
-  { id: 'sessions', label: 'الجلسات', icon: CalendarDays },
-  { id: 'finance', label: 'المالية', icon: Wallet },
-  { id: 'documents', label: 'المستندات', icon: FileText },
+  { id: 'clients', label: 'الموكلون', icon: Users },
+  { id: 'cases', label: 'القضايا', icon: Briefcase },
+  { id: 'sessions', label: 'الجلسات', icon: Calendar },
+  { id: 'payments', label: 'المدفوعات', icon: Banknote },
+  { id: 'delays', label: 'التأجيلات', icon: Clock },
+  { id: 'archives', label: 'الأرشيف', icon: Archive },
+  { id: 'backup', label: 'النسخ الاحتياطي', icon: HardDrive },
+  { id: 'settings', label: 'الإعدادات', icon: Settings },
 ];
 
 function SidebarContent({ activeSection, onNavigate }: { activeSection: Section; onNavigate: (s: Section) => void }) {
   return (
     <div className="flex flex-col h-full">
       <div className="p-4 flex items-center gap-3">
-        <div className="w-10 h-10 rounded-lg bg-teal-600 flex items-center justify-center">
+        <div className="w-10 h-10 rounded-lg bg-teal-600 flex items-center justify-center shrink-0">
           <Scale className="w-5 h-5 text-white" />
         </div>
-        <div>
-          <h2 className="font-bold text-sidebar-foreground text-sm">مكتب المحاماة</h2>
-          <p className="text-xs text-sidebar-foreground/60">نظام الإدارة</p>
+        <div className="min-w-0">
+          <h2 className="font-bold text-sidebar-foreground text-sm leading-tight truncate">مكتب الاستاذ سايج محمد محمد محام لدى المجلس</h2>
+          <p className="text-xs text-sidebar-foreground/60 mt-0.5">إدارة مكتب المحاماة</p>
         </div>
       </div>
       <Separator className="bg-sidebar-border" />
@@ -70,7 +76,7 @@ function SidebarContent({ activeSection, onNavigate }: { activeSection: Section;
       <Separator className="bg-sidebar-border" />
       <div className="p-4">
         <Badge variant="outline" className="text-xs border-sidebar-border text-sidebar-foreground/50">
-          الإصدار 1.0
+          الإصدار 2.0
         </Badge>
       </div>
     </div>
@@ -112,7 +118,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <div className="w-8 h-8 rounded-lg bg-teal-700 flex items-center justify-center">
                 <Scale className="w-4 h-4 text-white" />
               </div>
-              <span className="font-bold text-sm">مكتب المحاماة</span>
+              <span className="font-bold text-sm">مكتب الاستاذ سايج محمد محمد</span>
             </div>
           </div>
           <div className="flex items-center gap-1">
@@ -133,18 +139,18 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         {/* Desktop sidebar */}
         <aside className="hidden lg:flex lg:w-64 lg:flex-col lg:fixed lg:inset-y-0 lg:right-0 bg-sidebar z-30">
           <div className="flex items-center justify-between h-14 px-4">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-teal-600 flex items-center justify-center">
+            <div className="flex items-center gap-2 min-w-0">
+              <div className="w-8 h-8 rounded-lg bg-teal-600 flex items-center justify-center shrink-0">
                 <Scale className="w-4 h-4 text-white" />
               </div>
-              <span className="font-bold text-sm text-sidebar-foreground">مكتب المحاماة</span>
+              <span className="font-bold text-sm text-sidebar-foreground truncate">مكتب الاستاذ سايج محمد محمد</span>
             </div>
             {mounted && (
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-                className="text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/50"
+                className="text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/50 shrink-0"
               >
                 {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
               </Button>
@@ -177,7 +183,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <Separator className="bg-sidebar-border" />
           <div className="p-4">
             <Badge variant="outline" className="text-xs border-sidebar-border text-sidebar-foreground/50">
-              الإصدار 1.0
+              الإصدار 2.0
             </Badge>
           </div>
         </aside>
