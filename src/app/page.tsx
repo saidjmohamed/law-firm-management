@@ -15,7 +15,7 @@ import { DelaysManager } from '@/components/delays';
 import { ArchivesManager } from '@/components/archives';
 import { BackupManager } from '@/components/backup';
 import { SettingsManager } from '@/components/settings';
-import { Converter } from '@/components/converter';
+
 
 // ============================================================================
 // Error Boundary
@@ -207,7 +207,7 @@ function AppContent() {
     courts: <CourtsManager />,
     payments: <PaymentsManager />,
     delays: <DelaysManager />,
-    converter: <Converter />,
+
     archives: <ArchivesManager />,
     backup: <BackupManager />,
     settings: <SettingsManager />,

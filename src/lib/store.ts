@@ -9,7 +9,6 @@ type Section =
   | 'payments'
   | 'delays'
   | 'courts'
-  | 'converter'
   | 'archives'
   | 'backup'
   | 'settings';

@@ -33,7 +33,7 @@ import {
   MapPin,
   Pencil,
   Trash2,
-  ChevronLeft,
+  Filter,
 } from 'lucide-react';
 
 const STATUS_LABELS: Record<string, string> = {
@@ -55,30 +55,44 @@ export function Sessions() {
   const [showForm, setShowForm] = useState(false);
   const [editingSession, setEditingSession] = useState<Session | null>(null);
   const [formData, setFormData] = useState<Partial<Session>>({});
-  const [filterDate, setFilterDate] = useState('');
+  const [showAll, setShowAll] = useState(false);
 
   const sessions = useLiveQuery(() => db.sessions.toArray());
   const cases = useLiveQuery(() => db.cases.toArray());
 
-  const filteredSessions = useMemo(() => {
+  // الجلسات القادمة فقط (تاريخها في المستقبل وحالتها ليست مكتملة أو ملغاة)
+  const upcomingSessions = useMemo(() => {
     if (!sessions) return [];
-    let filtered = [...sessions];
-    if (filterDate) {
-      filtered = filtered.filter((s) => s.date === filterDate);
-    }
-    return filtered.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
-  }, [sessions, filterDate]);
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    return sessions
+      .filter((s) => {
+        if (!s.date) return false;
+        const sessionDate = new Date(s.date);
+        sessionDate.setHours(0, 0, 0, 0);
+        return sessionDate >= now && s.status !== 'completed' && s.status !== 'cancelled';
+      })
+      .sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+  }, [sessions]);
+
+  // كل الجلسات (عند تفعيل "عرض الكل")
+  const allSessionsSorted = useMemo(() => {
+    if (!sessions) return [];
+    return [...sessions].sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+  }, [sessions]);
+
+  const displaySessions = showAll ? allSessionsSorted : upcomingSessions;
 
   // تجميع حسب التاريخ
   const groupedSessions = useMemo(() => {
-    const groups: Record<string, typeof filteredSessions> = {};
-    for (const session of filteredSessions) {
+    const groups: Record<string, typeof displaySessions> = {};
+    for (const session of displaySessions) {
       const key = session.date || 'بدون تاريخ';
       if (!groups[key]) groups[key] = [];
       groups[key].push(session);
     }
     return groups;
-  }, [filteredSessions]);
+  }, [displaySessions]);
 
   function resetForm() {
     setFormData({});
@@ -123,124 +137,139 @@ export function Sessions() {
     toast.success('تم حذف الجلسة');
   }
 
-  // الجلسات القادمة
-  const now = new Date();
-  const upcomingSessions = filteredSessions.filter(
-    (s) => s.date && new Date(s.date) >= now && s.status !== 'completed' && s.status !== 'cancelled'
-  );
+  // حساب الجلسات القادمة اليوم
+  const todayStr = new Date().toISOString().split('T')[0];
+  const todaySessions = upcomingSessions.filter(s => s.date === todayStr);
 
   return (
     <div className="space-y-4">
       {/* شريط الأدوات */}
-      <div className="flex flex-col sm:flex-row gap-3">
-        <Input
-          type="date"
-          value={filterDate}
-          onChange={(e) => setFilterDate(e.target.value)}
-          className="w-full sm:w-48"
-        />
-        {filterDate && (
-          <Button variant="ghost" size="sm" onClick={() => setFilterDate('')}>
-            مسح الفلتر
+      <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+        <div className="flex items-center gap-2">
+          <Button onClick={openAddForm} className="bg-teal-600 hover:bg-teal-700 shrink-0 h-10">
+            <Plus className="w-4 h-4 ml-1" />
+            إضافة جلسة
           </Button>
-        )}
+          <Button
+            variant={showAll ? "default" : "outline"}
+            size="sm"
+            onClick={() => setShowAll(!showAll)}
+            className="h-10"
+          >
+            <Filter className="w-3 h-3 ml-1" />
+            {showAll ? 'القادمة فقط' : 'عرض الكل'}
+          </Button>
+        </div>
         <div className="flex-1" />
-        <Button onClick={openAddForm} className="bg-teal-600 hover:bg-teal-700 shrink-0">
-          <Plus className="w-4 h-4 ml-1" />
-          إضافة جلسة
-        </Button>
+        <div className="text-sm text-muted-foreground">
+          {showAll
+            ? `${(sessions?.length ?? 0).toLocaleString('en-US')} جلسة`
+            : `${upcomingSessions.length.toLocaleString('en-US')} جلسة قادمة`
+          }
+        </div>
       </div>
 
-      {/* الجلسات القادمة */}
-      {upcomingSessions.length > 0 && !filterDate && (
-        <div>
-          <h3 className="text-sm font-semibold mb-2 text-teal-700 dark:text-teal-400">الجلسات القادمة</h3>
-          <div className="grid gap-2">
-            {upcomingSessions.slice(0, 5).map((session) => (
-              <Card
-                key={session.id}
-                className="cursor-pointer hover:shadow-md transition-shadow"
-                onClick={() => {
-                  if (session.caseId) {
-                    setSelectedCaseId(session.caseId);
-                    setActiveSection('cases');
-                  }
-                }}
-              >
-                <CardContent className="p-3">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium">{session.caseNumber || '—'}</span>
-                        <Badge className={`${STATUS_BADGE_CLASSES[session.status || 'scheduled'] || ''} text-xs`}>
-                          {STATUS_LABELS[session.status || 'scheduled']}
-                        </Badge>
-                      </div>
-                      <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
-                        {session.court && <span>{session.court}</span>}
-                        {session.chamber && <span>• {session.chamber}</span>}
-                        {session.time && <span>• {session.time}</span>}
-                      </div>
-                    </div>
-                    <div className="text-left">
-                      <Badge variant="outline" className="text-xs">{formatDate(session.date)}</Badge>
+      {/* تنبيه جلسات اليوم */}
+      {todaySessions.length > 0 && !showAll && (
+        <Card className="border-teal-300 dark:border-teal-700 bg-teal-50/50 dark:bg-teal-900/20">
+          <CardContent className="p-3">
+            <div className="flex items-center gap-2 mb-2">
+              <Calendar className="w-4 h-4 text-teal-600 dark:text-teal-400" />
+              <span className="text-sm font-bold text-teal-700 dark:text-teal-300">جلسات اليوم ({todaySessions.length.toLocaleString('en-US')})</span>
+            </div>
+            <div className="space-y-1.5">
+              {todaySessions.map((session) => (
+                <div
+                  key={session.id}
+                  className="flex items-center justify-between p-2 rounded-lg bg-white dark:bg-background cursor-pointer hover:shadow-sm transition-shadow"
+                  onClick={() => {
+                    if (session.caseId) {
+                      setSelectedCaseId(session.caseId);
+                      setActiveSection('cases');
+                    }
+                  }}
+                >
+                  <div className="min-w-0 flex-1">
+                    <span className="text-sm font-medium">{session.caseNumber || '—'}</span>
+                    <div className="text-xs text-muted-foreground flex items-center gap-2 mt-0.5">
+                      {session.court && <span>{session.court}</span>}
+                      {session.chamber && <span>• {session.chamber}</span>}
+                      {session.time && <span>• {session.time}</span>}
                     </div>
                   </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* كل الجلسات مج.grouped */}
-      <div className="space-y-4">
-        {Object.entries(groupedSessions).map(([date, dateSessions]) => (
-          <div key={date}>
-            <h3 className="text-sm font-semibold mb-2 text-muted-foreground">{date}</h3>
-            <div className="space-y-2">
-              {dateSessions.map((session) => (
-                <Card key={session.id} className="hover:shadow-sm transition-shadow">
-                  <CardContent className="p-3">
-                    <div className="flex items-center justify-between">
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-sm font-medium">{session.caseNumber || '—'}</span>
-                          <Badge className={`${STATUS_BADGE_CLASSES[session.status || 'scheduled'] || ''} text-xs`}>
-                            {STATUS_LABELS[session.status || 'scheduled']}
-                          </Badge>
-                        </div>
-                        <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground flex-wrap">
-                          {session.court && <span>{session.court}</span>}
-                          {session.chamber && <span>• {session.chamber}</span>}
-                          {session.time && <span>• {session.time}</span>}
-                          {session.roomNumber && <span>• قاعة {(session.roomNumber).toLocaleString('en-US')}</span>}
-                        </div>
-                        {session.result && (
-                          <p className="text-xs mt-1 text-muted-foreground">النتيجة: {session.result}</p>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-1 mr-2">
-                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEditForm(session)}>
-                          <Pencil className="w-3 h-3" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => session.id && deleteSession(session.id)}>
-                          <Trash2 className="w-3 h-3" />
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                  <Badge className={`${STATUS_BADGE_CLASSES[session.status || 'scheduled'] || ''} text-xs`}>
+                    {STATUS_LABELS[session.status || 'scheduled']}
+                  </Badge>
+                </div>
               ))}
             </div>
-          </div>
-        ))}
+          </CardContent>
+        </Card>
+      )}
 
-        {filteredSessions.length === 0 && (
+      {/* الجلسات مج.grouped */}
+      <div className="space-y-4">
+        {Object.entries(groupedSessions).map(([date, dateSessions]) => {
+          const sessionDate = new Date(date);
+          const isToday = date === todayStr;
+          const isPast = sessionDate < new Date(todayStr);
+          return (
+            <div key={date}>
+              <h3 className={`text-sm font-semibold mb-2 flex items-center gap-2 ${isToday ? 'text-teal-700 dark:text-teal-400' : isPast ? 'text-muted-foreground' : 'text-foreground'}`}>
+                <span>{isToday ? 'اليوم' : formatDate(date)}</span>
+                <Badge variant="outline" className="text-[10px]">{dateSessions.length.toLocaleString('en-US')}</Badge>
+              </h3>
+              <div className="space-y-2">
+                {dateSessions.map((session) => (
+                  <Card key={session.id} className={`hover:shadow-sm transition-shadow ${isToday ? 'border-teal-200 dark:border-teal-800' : ''}`}>
+                    <CardContent className="p-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-sm font-medium">{session.caseNumber || '—'}</span>
+                            <Badge className={`${STATUS_BADGE_CLASSES[session.status || 'scheduled'] || ''} text-xs`}>
+                              {STATUS_LABELS[session.status || 'scheduled']}
+                            </Badge>
+                          </div>
+                          <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground flex-wrap">
+                            {session.court && <span>{session.court}</span>}
+                            {session.chamber && <span>• {session.chamber}</span>}
+                            {session.time && <span>• {session.time}</span>}
+                            {session.roomNumber && <span>• قاعة {(session.roomNumber).toLocaleString('en-US')}</span>}
+                          </div>
+                          {session.result && (
+                            <p className="text-xs mt-1 text-muted-foreground">النتيجة: {session.result}</p>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEditForm(session)}>
+                            <Pencil className="w-3 h-3" />
+                          </Button>
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => session.id && deleteSession(session.id)}>
+                            <Trash2 className="w-3 h-3" />
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+
+        {displaySessions.length === 0 && (
           <Card>
             <CardContent className="p-8 text-center">
               <Calendar className="w-12 h-12 mx-auto text-muted-foreground/30 mb-3" />
-              <p className="text-muted-foreground">لا توجد جلسات مسجلة</p>
+              <p className="text-muted-foreground">
+                {showAll ? 'لا توجد جلسات مسجلة' : 'لا توجد جلسات قادمة'}
+              </p>
+              {!showAll && (
+                <Button variant="link" className="mt-2" onClick={() => setShowAll(true)}>
+                  عرض كل الجلسات
+                </Button>
+              )}
             </CardContent>
           </Card>
         )}
