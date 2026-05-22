@@ -84,7 +84,7 @@ function SidebarContent({ activeSection, onNavigate }: { activeSection: Section;
                 key={item.id}
                 onClick={() => onNavigate(item.id)}
                 className={cn(
-                  'w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm font-medium transition-all duration-200 text-right',
+                  'w-full flex items-center gap-2.5 px-2 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 text-right',
                   isActive
                     ? 'bg-teal-100 dark:bg-teal-900/40 text-teal-800 dark:text-teal-300 font-bold'
                     : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground'
@@ -151,7 +151,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               </SheetTrigger>
               <SheetContent
                 side="right"
-                className="w-64 p-0 bg-background border-l"
+                className="w-60 p-0 bg-background border-l"
               >
                 <SheetTitle className="sr-only">القائمة الرئيسية</SheetTitle>
                 <SidebarContent

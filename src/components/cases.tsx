@@ -49,6 +49,7 @@ import {
   ChevronRight,
   X,
   UserPlus,
+  Building2,
   Clock,
   Wallet,
 } from 'lucide-react';
@@ -131,6 +132,15 @@ export function Cases() {
   const [cumulativeMode, setCumulativeMode] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
   const [archiveConfirm, setArchiveConfirm] = useState<number | null>(null);
+  const [deletePartyConfirm, setDeletePartyConfirm] = useState<number | null>(null);
+
+  // حوار إنشاء موكل جديد
+  const [showNewClientDialog, setShowNewClientDialog] = useState(false);
+  const [newClientData, setNewClientData] = useState<Partial<Client>>({});
+
+  // حوار إنشاء هيئة قضائية جديدة
+  const [showNewCourtDialog, setShowNewCourtDialog] = useState(false);
+  const [newCourtData, setNewCourtData] = useState<Partial<JudicialBody>>({});
 
   // فلاتر
   const [searchTerm, setSearchTerm] = useState('');
@@ -383,6 +393,56 @@ export function Cases() {
     }
   }
 
+  async function deleteParty(id: number) {
+    await db.parties.delete(id);
+    setDeletePartyConfirm(null);
+    toast.success('تم حذف الطرف');
+  }
+
+  async function saveNewClient() {
+    if (!newClientData.name) {
+      toast.error('اسم الموكل مطلوب');
+      return;
+    }
+    const now = new Date();
+    const clientId = await db.clients.add({
+      name: newClientData.name,
+      phone: newClientData.phone || '',
+      createdAt: now,
+      updatedAt: now,
+    });
+    setFormData({ ...formData, clientId: clientId as number });
+    setNewClientData({});
+    setShowNewClientDialog(false);
+    toast.success('تم إضافة الموكل بنجاح');
+  }
+
+  async function saveNewCourt() {
+    if (!newCourtData.name) {
+      toast.error('اسم الهيئة مطلوب');
+      return;
+    }
+    const now = new Date();
+    const bodyId = await db.judicialBodies.add({
+      name: newCourtData.name!,
+      type: newCourtData.type || formData.courtLevel || '',
+      wilayaId: newCourtData.wilayaId,
+      createdAt: now,
+      updatedAt: now,
+    });
+    const bodyType = newCourtData.type || formData.courtLevel || '';
+    setFormData({
+      ...formData,
+      courtId: bodyId as number,
+      courtName: newCourtData.name!,
+      councilName: bodyType === 'council' ? newCourtData.name! : formData.councilName,
+      chamber: '',
+    });
+    setNewCourtData({});
+    setShowNewCourtDialog(false);
+    toast.success('تم إضافة الهيئة القضائية بنجاح');
+  }
+
   async function deleteCase(id: number) {
     await db.parties.where('caseId').equals(id).delete();
     await db.delays.where('caseId').equals(id).delete();
@@ -526,7 +586,7 @@ export function Cases() {
               <div className="space-y-2">
                 {caseParties.map((p) => (
                   <div key={p.id} className="flex items-center justify-between p-2.5 rounded-lg border">
-                    <div>
+                    <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
                         <Badge variant="outline" className="text-xs">{p.role || '—'}</Badge>
                         <span className="text-sm font-medium">{p.name || '—'}</span>
@@ -537,6 +597,16 @@ export function Cases() {
                         {p.lawyerPhone && <span>هاتف المحامي: {p.lawyerPhone}</span>}
                       </div>
                     </div>
+                    {caseParties.length > 1 && p.id && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 shrink-0 text-muted-foreground hover:text-destructive"
+                        onClick={() => setDeletePartyConfirm(p.id!)}
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </Button>
+                    )}
                   </div>
                 ))}
               </div>
@@ -596,6 +666,24 @@ export function Cases() {
             </Button>
           )}
         </div>
+
+        {/* تأكيد حذف الطرف */}
+        <AlertDialog open={deletePartyConfirm !== null} onOpenChange={() => setDeletePartyConfirm(null)}>
+          <AlertDialogContent dir="rtl">
+            <AlertDialogHeader>
+              <AlertDialogTitle>تأكيد حذف الطرف</AlertDialogTitle>
+              <AlertDialogDescription>
+                هل أنت متأكد من حذف هذا الطرف من أطراف النزاع؟
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>إلغاء</AlertDialogCancel>
+              <AlertDialogAction onClick={() => deletePartyConfirm && deleteParty(deletePartyConfirm)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                حذف
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
 
         {/* تأكيد الحذف */}
         <AlertDialog open={deleteConfirm !== null} onOpenChange={() => setDeleteConfirm(null)}>
@@ -756,7 +844,7 @@ export function Cases() {
 
       {/* نافذة إضافة/تعديل القضية */}
       <Dialog open={showForm} onOpenChange={(open) => { setShowForm(open); if (!open) resetForm(); }}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto smooth-scroll" dir="rtl">
+        <DialogContent className="w-full max-w-3xl max-h-[90vh] overflow-y-auto smooth-scroll" dir="rtl">
           <DialogHeader>
             <DialogTitle className="text-lg font-extrabold">{editingCase ? 'تعديل القضية' : 'إضافة قضية جديدة'}</DialogTitle>
           </DialogHeader>
@@ -830,7 +918,18 @@ export function Cases() {
                   />
                 </div>
                 <div>
-                  <Label className="text-xs">الموكل</Label>
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs">الموكل</Label>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 text-xs text-teal-600 hover:text-teal-700 px-1"
+                      onClick={() => { setNewClientData({}); setShowNewClientDialog(true); }}
+                    >
+                      <UserPlus className="w-3 h-3 ml-0.5" />
+                      موكل جديد
+                    </Button>
+                  </div>
                   <Select value={formData.clientId?.toString() || '_empty'} onValueChange={(v) => setFormData({ ...formData, clientId: v === '_empty' ? undefined : Number(v) })}>
                     <SelectTrigger className="h-11"><SelectValue placeholder="اختر الموكل" /></SelectTrigger>
                     <SelectContent>
@@ -927,7 +1026,24 @@ export function Cases() {
                 {/* الهيئة القضائية */}
                 {filteredBodies.length > 0 && formData.judiciaryType !== 'supreme' && (
                   <div>
-                    <Label className="text-xs">الهيئة القضائية</Label>
+                    <div className="flex items-center justify-between">
+                      <Label className="text-xs">الهيئة القضائية</Label>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 text-xs text-teal-600 hover:text-teal-700 px-1"
+                        onClick={() => {
+                          setNewCourtData({
+                            type: formData.courtLevel || '',
+                            wilayaId: formData.wilayaId,
+                          });
+                          setShowNewCourtDialog(true);
+                        }}
+                      >
+                        <Building2 className="w-3 h-3 ml-0.5" />
+                        هيئة جديدة
+                      </Button>
+                    </div>
                     <Select value={formData.courtId?.toString() || ''} onValueChange={(v) => {
                       const body = judicialBodies?.find(b => b.id === Number(v));
                       setFormData({
@@ -1254,6 +1370,86 @@ export function Cases() {
             <Button onClick={saveCase} className="bg-teal-600 hover:bg-teal-700">
               {editingCase ? 'تحديث' : 'حفظ'}
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* حوار إنشاء موكل جديد */}
+      <Dialog open={showNewClientDialog} onOpenChange={setShowNewClientDialog}>
+        <DialogContent className="max-w-sm" dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="text-base font-bold">موكل جديد</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <Label className="text-xs">الاسم <span className="text-destructive">*</span></Label>
+              <Input
+                value={newClientData.name || ''}
+                onChange={(e) => setNewClientData({ ...newClientData, name: e.target.value })}
+                placeholder="اسم الموكل"
+                className="h-11"
+              />
+            </div>
+            <div>
+              <Label className="text-xs">الهاتف</Label>
+              <Input
+                value={newClientData.phone || ''}
+                onChange={(e) => setNewClientData({ ...newClientData, phone: e.target.value })}
+                placeholder="رقم الهاتف"
+                className="h-11"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowNewClientDialog(false)}>إلغاء</Button>
+            <Button onClick={saveNewClient} className="bg-teal-600 hover:bg-teal-700">حفظ</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* حوار إنشاء هيئة قضائية جديدة */}
+      <Dialog open={showNewCourtDialog} onOpenChange={setShowNewCourtDialog}>
+        <DialogContent className="max-w-sm" dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="text-base font-bold">هيئة قضائية جديدة</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <Label className="text-xs">الاسم <span className="text-destructive">*</span></Label>
+              <Input
+                value={newCourtData.name || ''}
+                onChange={(e) => setNewCourtData({ ...newCourtData, name: e.target.value })}
+                placeholder="اسم الهيئة القضائية"
+                className="h-11"
+              />
+            </div>
+            <div>
+              <Label className="text-xs">النوع</Label>
+              <Select value={newCourtData.type || ''} onValueChange={(v) => setNewCourtData({ ...newCourtData, type: v })}>
+                <SelectTrigger className="h-11"><SelectValue placeholder="اختر النوع" /></SelectTrigger>
+                <SelectContent>
+                  {[...ORDINARY_COURT_LEVELS, ...ADMIN_COURT_LEVELS, { value: 'supreme', label: 'المحكمة العليا' }].map((cl) => (
+                    <SelectItem key={cl.value} value={cl.value}>{cl.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-xs">الولاية</Label>
+              <Select value={newCourtData.wilayaId?.toString() || ''} onValueChange={(v) => setNewCourtData({ ...newCourtData, wilayaId: v ? Number(v) : undefined })}>
+                <SelectTrigger className="h-11"><SelectValue placeholder="اختر الولاية" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="_empty">—</SelectItem>
+                  {WILAYAS.map((w) => (
+                    <SelectItem key={w.code} value={w.code.toString()}>{w.code} - {w.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowNewCourtDialog(false)}>إلغاء</Button>
+            <Button onClick={saveNewCourt} className="bg-teal-600 hover:bg-teal-700">حفظ</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
