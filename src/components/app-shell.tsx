@@ -8,6 +8,7 @@ import {
   Users,
   Briefcase,
   Calendar,
+  CalendarDays,
   Banknote,
   Clock,
   Archive,
@@ -19,6 +20,7 @@ import {
   Sun,
   Wifi,
   WifiOff,
+  FileOutput,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -34,8 +36,11 @@ const navItems: { id: Section; label: string; icon: React.ElementType }[] = [
   { id: 'clients', label: 'الموكلون', icon: Users },
   { id: 'cases', label: 'القضايا', icon: Briefcase },
   { id: 'sessions', label: 'الجلسات', icon: Calendar },
+  { id: 'calendar', label: 'التقويم', icon: CalendarDays },
+  { id: 'courts', label: 'الهيئات القضائية', icon: Scale },
   { id: 'payments', label: 'المدفوعات', icon: Banknote },
   { id: 'delays', label: 'التأجيلات', icon: Clock },
+  { id: 'converter', label: 'أدوات التحويل', icon: FileOutput },
   { id: 'archives', label: 'الأرشيف', icon: Archive },
   { id: 'backup', label: 'النسخ الاحتياطي', icon: HardDrive },
   { id: 'settings', label: 'الإعدادات', icon: Settings },

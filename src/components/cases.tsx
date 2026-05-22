@@ -2,8 +2,9 @@
 
 import React, { useState, useMemo } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { db, formatCurrency, type Case, type Client } from '@/lib/db';
-import { STATUS_COLORS, CASE_NATURES, CASE_STATUSES, LITIGATION_STAGES, PARTY_ROLES, JUDICIAL_CHAMBERS, formatDate } from '@/lib/constants';
+import { db, formatCurrency, type Case, type Client, type JudicialBody } from '@/lib/db';
+import { STATUS_COLORS, CASE_NATURES, CASE_STATUSES, LITIGATION_STAGES, PARTY_ROLES, JUDICIAL_CHAMBERS, WILAYAS, JUDICIARY_TYPES, ORDINARY_COURT_LEVELS, ADMIN_COURT_LEVELS, CHAMBER_NUMBERS, formatDate } from '@/lib/constants';
+import { CasePrintButton } from '@/components/case-print';
 import { useAppStore } from '@/lib/store';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -145,6 +146,53 @@ export function Cases() {
   const clients = useLiveQuery(() => db.clients.toArray());
   const allParties = useLiveQuery(() => db.parties.toArray());
   const allDelays = useLiveQuery(() => db.delays.toArray());
+  const judicialBodies = useLiveQuery(() => db.judicialBodies.toArray());
+  const allSessions = useLiveQuery(() => db.sessions.toArray());
+
+  // الهيئات القضائية المفلترة حسب النوع والولاية
+  const filteredBodies = useMemo(() => {
+    if (!judicialBodies) return [];
+    let bodies = [...judicialBodies];
+    if (formData.judiciaryType === 'supreme') {
+      bodies = bodies.filter(b => b.type === 'supreme');
+    } else if (formData.judiciaryType === 'ordinary') {
+      if (formData.courtLevel === 'council') {
+        bodies = bodies.filter(b => b.type === 'council');
+      } else if (formData.courtLevel === 'court') {
+        bodies = bodies.filter(b => b.type === 'court');
+      } else {
+        bodies = bodies.filter(b => b.type === 'council' || b.type === 'court');
+      }
+    } else if (formData.judiciaryType === 'admin') {
+      if (formData.courtLevel === 'admin_appeal') {
+        bodies = bodies.filter(b => b.type === 'admin_appeal');
+      } else if (formData.courtLevel === 'admin_first') {
+        bodies = bodies.filter(b => b.type === 'admin_first');
+      } else if (formData.courtLevel === 'commercial') {
+        bodies = bodies.filter(b => b.type === 'commercial');
+      } else {
+        bodies = bodies.filter(b => ['admin_appeal', 'admin_first', 'commercial'].includes(b.type));
+      }
+    }
+    if (formData.wilayaId) {
+      bodies = bodies.filter(b => b.wilayaId === formData.wilayaId);
+    }
+    return bodies;
+  }, [judicialBodies, formData.judiciaryType, formData.courtLevel, formData.wilayaId]);
+
+  // الغرف المتاحة من الهيئة المختارة
+  const availableChambers = useMemo(() => {
+    if (!formData.courtId || !judicialBodies) return JUDICIAL_CHAMBERS;
+    const body = judicialBodies.find(b => b.id === formData.courtId);
+    if (!body || !body.chambers) return JUDICIAL_CHAMBERS;
+    try {
+      const parsed = JSON.parse(body.chambers) as { name: string; number: number | null }[];
+      if (parsed.length > 0) {
+        return parsed.map(ch => ch.number && ch.number > 0 ? `${ch.name} رقم ${String(ch.number).padStart(2, '0')}` : ch.name);
+      }
+    } catch { /* fallback */ }
+    return JUDICIAL_CHAMBERS;
+  }, [formData.courtId, judicialBodies]);
 
   // عند اختيار قضية من المتجر
   React.useEffect(() => {
@@ -191,6 +239,7 @@ export function Cases() {
   const selectedCase = cases?.find((c) => c.id === selectedCaseId);
   const caseParties = allParties?.filter((p) => p.caseId === selectedCaseId);
   const caseDelays = allDelays?.filter((d) => d.caseId === selectedCaseId);
+  const caseSessions = allSessions?.filter((s) => s.caseId === selectedCaseId);
 
   function resetForm() {
     setFormData({});
@@ -367,7 +416,7 @@ export function Cases() {
   }
 
   // Loading state
-  if (!cases || !clients) {
+  if (!cases || !clients || !judicialBodies) {
     return <CasesSkeleton />;
   }
 
@@ -391,10 +440,16 @@ export function Cases() {
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between flex-wrap gap-2">
               <CardTitle className="text-lg font-extrabold">{selectedCase.caseNumber || '—'}</CardTitle>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <Badge className={`${STATUS_COLORS[selectedCase.status || ''] || ''}`}>
                   {selectedCase.status}
                 </Badge>
+                <CasePrintButton
+                  caseData={selectedCase}
+                  parties={caseParties || []}
+                  delays={caseDelays || []}
+                  sessions={caseSessions || []}
+                />
                 <Button variant="outline" size="sm" onClick={() => openEditForm(selectedCase)} className="touch-target">
                   <Pencil className="w-3 h-3 ml-1" />
                   تعديل
@@ -793,6 +848,122 @@ export function Cases() {
             <div>
               <h3 className="text-sm font-bold mb-3 text-teal-700 dark:text-teal-400">التسلسل القضائي</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {/* نوع القضاء */}
+                <div>
+                  <Label className="text-xs">نوع القضاء</Label>
+                  <Select value={formData.judiciaryType || ''} onValueChange={(v) => {
+                    const newData = { ...formData, judiciaryType: v, courtLevel: undefined, courtId: undefined, wilayaId: undefined, chamber: '', councilName: '', courtName: '' };
+                    if (v === 'supreme') {
+                      newData.courtLevel = 'supreme';
+                      newData.councilName = 'المحكمة العليا';
+                      newData.courtName = 'المحكمة العليا';
+                      const supreme = judicialBodies?.find(b => b.type === 'supreme');
+                      if (supreme?.id) newData.courtId = supreme.id;
+                    }
+                    setFormData(newData);
+                  }}>
+                    <SelectTrigger className="h-11"><SelectValue placeholder="اختر نوع القضاء" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="_empty">—</SelectItem>
+                      {JUDICIARY_TYPES.map((jt) => (
+                        <SelectItem key={jt.value} value={jt.value}>{jt.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* مستوى المحكمة - يظهر فقط للقضاء العادي أو الإداري */}
+                {formData.judiciaryType === 'ordinary' && (
+                  <div>
+                    <Label className="text-xs">مستوى المحكمة</Label>
+                    <Select value={formData.courtLevel || ''} onValueChange={(v) => {
+                      setFormData({ ...formData, courtLevel: v, courtId: undefined, chamber: '', councilName: '', courtName: '' });
+                    }}>
+                      <SelectTrigger className="h-11"><SelectValue placeholder="اختر المستوى" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="_empty">—</SelectItem>
+                        {ORDINARY_COURT_LEVELS.map((cl) => (
+                          <SelectItem key={cl.value} value={cl.value}>{cl.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+                {formData.judiciaryType === 'admin' && (
+                  <div>
+                    <Label className="text-xs">نوع المحكمة الإدارية</Label>
+                    <Select value={formData.courtLevel || ''} onValueChange={(v) => {
+                      setFormData({ ...formData, courtLevel: v, courtId: undefined, chamber: '', councilName: '', courtName: '' });
+                    }}>
+                      <SelectTrigger className="h-11"><SelectValue placeholder="اختر النوع" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="_empty">—</SelectItem>
+                        {ADMIN_COURT_LEVELS.map((cl) => (
+                          <SelectItem key={cl.value} value={cl.value}>{cl.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                {/* الولاية */}
+                {formData.judiciaryType && formData.judiciaryType !== 'supreme' && (
+                  <div>
+                    <Label className="text-xs">الولاية</Label>
+                    <Select value={formData.wilayaId?.toString() || ''} onValueChange={(v) => {
+                      setFormData({ ...formData, wilayaId: v ? Number(v) : undefined, courtId: undefined, chamber: '', councilName: '', courtName: '' });
+                    }}>
+                      <SelectTrigger className="h-11"><SelectValue placeholder="اختر الولاية" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="_empty">—</SelectItem>
+                        {WILAYAS.map((w) => (
+                          <SelectItem key={w.code} value={w.code.toString()}>{w.code} - {w.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                {/* الهيئة القضائية */}
+                {filteredBodies.length > 0 && formData.judiciaryType !== 'supreme' && (
+                  <div>
+                    <Label className="text-xs">الهيئة القضائية</Label>
+                    <Select value={formData.courtId?.toString() || ''} onValueChange={(v) => {
+                      const body = judicialBodies?.find(b => b.id === Number(v));
+                      setFormData({
+                        ...formData,
+                        courtId: Number(v),
+                        courtName: body?.name || '',
+                        councilName: body?.type === 'council' ? body.name : formData.councilName,
+                        chamber: '',
+                      });
+                    }}>
+                      <SelectTrigger className="h-11"><SelectValue placeholder="اختر الهيئة" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="_empty">—</SelectItem>
+                        {filteredBodies.map((b) => (
+                          <SelectItem key={b.id} value={b.id!.toString()}>{b.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                {/* الغرفة/القسم */}
+                <div>
+                  <Label className="text-xs">الغرفة/القسم</Label>
+                  <Select value={formData.chamber || ''} onValueChange={(v) => setFormData({ ...formData, chamber: v === '_empty' ? '' : v })}>
+                    <SelectTrigger className="h-11"><SelectValue placeholder="اختر الغرفة" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="_empty">—</SelectItem>
+                      {availableChambers.map((c) => (
+                        <SelectItem key={c} value={c}>{c}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* المجلس - يدوياً أو من الهيئة */}
                 <div>
                   <Label className="text-xs">المجلس</Label>
                   <Input
@@ -802,6 +973,8 @@ export function Cases() {
                     className="h-11"
                   />
                 </div>
+
+                {/* المحكمة - يدوياً أو من الهيئة */}
                 <div>
                   <Label className="text-xs">المحكمة</Label>
                   <Input
@@ -811,18 +984,7 @@ export function Cases() {
                     className="h-11"
                   />
                 </div>
-                <div>
-                  <Label className="text-xs">الغرفة/القسم</Label>
-                  <Select value={formData.chamber || ''} onValueChange={(v) => setFormData({ ...formData, chamber: v === '_empty' ? '' : v })}>
-                    <SelectTrigger className="h-11"><SelectValue placeholder="اختر الغرفة" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="_empty">—</SelectItem>
-                      {JUDICIAL_CHAMBERS.map((c) => (
-                        <SelectItem key={c} value={c}>{c}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+
                 <div>
                   <Label className="text-xs">هاتف قاعة المحامين</Label>
                   <Input

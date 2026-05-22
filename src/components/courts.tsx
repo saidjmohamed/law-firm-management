@@ -3,7 +3,7 @@
 import React, { useState, useMemo } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, type JudicialBody } from '@/lib/db';
-import { WILAYAS, SUPREME_CHAMBERS, COUNCIL_CHAMBERS, COURT_SECTIONS, CHAMBER_NUMBERS } from '@/lib/constants';
+import { WILAYAS, SUPREME_CHAMBERS, COUNCIL_CHAMBERS, COURT_SECTIONS, CHAMBER_NUMBERS, JUDICIARY_TYPES, ORDINARY_COURT_LEVELS, ADMIN_COURT_LEVELS } from '@/lib/constants';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -34,7 +34,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
 import {
   Plus,
@@ -45,7 +44,8 @@ import {
   Gavel,
   ChevronDown,
   ChevronUp,
-  X,
+  ChevronLeft,
+  AlertCircle,
 } from 'lucide-react';
 
 interface ChamberItem {
@@ -90,9 +90,12 @@ export function CourtsManager() {
   const [filterType, setFilterType] = useState<string>('all');
   const [filterWilaya, setFilterWilaya] = useState<string>('all');
 
-  // بيانات النموذج
+  // بيانات النموذج - خطوة بخطوة
+  const [formStep, setFormStep] = useState(1);
+  const [judiciaryGroup, setJudiciaryGroup] = useState<string>(''); // supreme / ordinary / admin
   const [formData, setFormData] = useState<Partial<JudicialBody>>({});
   const [chambers, setChambers] = useState<ChamberItem[]>([]);
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
   const courts = useLiveQuery(() => db.judicialBodies.toArray());
   const cases = useLiveQuery(() => db.cases.toArray());
@@ -106,7 +109,6 @@ export function CourtsManager() {
     });
   }, [courts, filterType, filterWilaya]);
 
-  // تجميع الهيئات حسب النوع
   const groupedCourts = useMemo(() => {
     const groups: Record<string, typeof filteredCourts> = {
       supreme: [],
@@ -124,28 +126,34 @@ export function CourtsManager() {
     return groups;
   }, [filteredCourts]);
 
+  const councils = courts?.filter((c) => c.type === 'council') || [];
+
   function resetForm() {
     setFormData({});
     setChambers([]);
     setEditingCourt(null);
+    setFormStep(1);
+    setJudiciaryGroup('');
+    setFormErrors({});
   }
 
-  function openAddForm(type?: string) {
+  function openAddForm() {
     resetForm();
-    if (type) {
-      setFormData({ type });
-      if (type === 'supreme') {
-        setChambers(SUPREME_CHAMBERS.map(name => ({ name, number: null })));
-      } else if (type === 'council') {
-        setChambers(COUNCIL_CHAMBERS.map(name => ({ name, number: null })));
-      }
-    }
     setShowForm(true);
   }
 
   function openEditForm(court: JudicialBody) {
     setEditingCourt(court);
     setFormData({ ...court });
+
+    // تحديد مجموعة القضاء
+    if (court.type === 'supreme') {
+      setJudiciaryGroup('supreme');
+    } else if (court.type === 'council' || court.type === 'court') {
+      setJudiciaryGroup('ordinary');
+    } else {
+      setJudiciaryGroup('admin');
+    }
 
     // تحميل الغرف
     try {
@@ -165,7 +173,72 @@ export function CourtsManager() {
       setChambers([]);
     }
 
+    setFormStep(3); // Skip to final step for editing
     setShowForm(true);
+  }
+
+  // عند اختيار مجموعة القضاء
+  function handleJudiciaryGroupChange(group: string) {
+    setJudiciaryGroup(group);
+    setFormData({ type: undefined, wilayaId: undefined, parentCouncilId: undefined, name: '' });
+    setChambers([]);
+    setFormErrors({});
+
+    if (group === 'supreme') {
+      setFormData({ type: 'supreme' });
+      setChambers(SUPREME_CHAMBERS.map(name => ({ name, number: null })));
+    }
+  }
+
+  // عند اختيار نوع الهيئة ضمن المجموعة
+  function handleCourtTypeChange(type: string) {
+    setFormData(prev => ({ ...prev, type, parentCouncilId: undefined }));
+    setFormErrors({});
+
+    if (type === 'council') {
+      setChambers(COUNCIL_CHAMBERS.map(name => ({ name, number: null })));
+    } else if (type === 'court') {
+      setChambers(COURT_SECTIONS.map(name => ({ name, number: null })));
+    } else {
+      setChambers([]);
+    }
+  }
+
+  function validateStep2(): boolean {
+    const errors: Record<string, string> = {};
+
+    if (!formData.type) {
+      errors.type = 'يرجى اختيار نوع الهيئة';
+    }
+
+    if (formData.type !== 'supreme' && !formData.wilayaId) {
+      errors.wilayaId = 'الولاية مطلوبة';
+    }
+
+    if (formData.type === 'court' && !formData.parentCouncilId) {
+      errors.parentCouncilId = 'المحكمة يجب أن تكون تابعة لمجلس قضائي';
+    }
+
+    if (!formData.name?.trim()) {
+      errors.name = 'اسم الهيئة مطلوب';
+    }
+
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  }
+
+  function goToStep2() {
+    if (!judiciaryGroup) {
+      setFormErrors({ judiciaryGroup: 'يرجى اختيار نوع القضاء' });
+      return;
+    }
+    setFormErrors({});
+    setFormStep(2);
+  }
+
+  function goToStep3() {
+    if (!validateStep2()) return;
+    setFormStep(3);
   }
 
   async function saveCourt() {
@@ -197,7 +270,6 @@ export function CourtsManager() {
   }
 
   async function deleteCourt(id: number) {
-    // التحقق من عدم وجود قضايا مرتبطة
     const linkedCases = cases?.filter((c) => c.courtId === id).length ?? 0;
     if (linkedCases > 0) {
       toast.error(`لا يمكن حذف هذه الهيئة لأنها مرتبطة بـ ${linkedCases.toLocaleString('en-US')} قضية`);
@@ -210,42 +282,11 @@ export function CourtsManager() {
     toast.success('تم حذف الهيئة القضائية');
   }
 
-  // تحديث الغرف عند تغيير النوع
-  function handleTypeChange(type: string) {
-    setFormData({ ...formData, type, parentCouncilId: undefined });
-    if (type === 'supreme') {
-      setChambers(SUPREME_CHAMBERS.map(name => ({ name, number: null })));
-      setFormData(prev => ({ ...prev, wilayaId: undefined, type }));
-    } else if (type === 'council') {
-      setChambers(COUNCIL_CHAMBERS.map(name => ({ name, number: null })));
-      setFormData(prev => ({ ...prev, type }));
-    } else if (type === 'court') {
-      setChambers(COURT_SECTIONS.map(name => ({ name, number: null })));
-      setFormData(prev => ({ ...prev, type }));
-    } else {
-      setChambers([]);
-      setFormData(prev => ({ ...prev, type }));
-    }
-  }
-
   function updateChamberNumber(index: number, number: number | null) {
     const updated = [...chambers];
     updated[index] = { ...updated[index], number };
     setChambers(updated);
   }
-
-  function toggleChamber(index: number) {
-    const updated = [...chambers];
-    if (updated[index].number === null) {
-      updated[index] = { ...updated[index], number: 0 };
-    } else {
-      updated[index] = { ...updated[index], number: null };
-    }
-    setChambers(updated);
-  }
-
-  // المجالس القضائية للاختيار كأب
-  const councils = courts?.filter((c) => c.type === 'council') || [];
 
   if (!courts) {
     return (
@@ -291,7 +332,7 @@ export function CourtsManager() {
           </SelectContent>
         </Select>
         <div className="flex-1" />
-        <Button onClick={() => openAddForm()} className="bg-teal-600 hover:bg-teal-700 shrink-0 h-11">
+        <Button onClick={openAddForm} className="bg-teal-600 hover:bg-teal-700 shrink-0 h-11 touch-target">
           <Plus className="w-4 h-4 ml-1" />
           إضافة هيئة قضائية
         </Button>
@@ -465,13 +506,25 @@ export function CourtsManager() {
                       </div>
                     </div>
                     {isExpanded && (
-                      <div className="mt-2 pt-2 border-t flex items-center gap-1">
-                        <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => openEditForm(court)}>
-                          <Pencil className="w-3 h-3 ml-1" /> تعديل
-                        </Button>
-                        <Button variant="ghost" size="sm" className="h-7 text-xs text-destructive" onClick={() => court.id && setDeleteConfirm(court.id)}>
-                          <Trash2 className="w-3 h-3 ml-1" /> حذف
-                        </Button>
+                      <div className="mt-2 pt-2 border-t">
+                        {parsedChambers.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mb-2">
+                            {parsedChambers.map((ch, i) => (
+                              <Badge key={i} variant="secondary" className="text-[10px]">
+                                {ch.name}
+                                {ch.number && ch.number > 0 && ` ${String(ch.number).padStart(2, '0')}`}
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
+                        <div className="flex items-center gap-1">
+                          <Button variant="ghost" size="sm" className="h-7 text-xs touch-target" onClick={() => openEditForm(court)}>
+                            <Pencil className="w-3 h-3 ml-1" /> تعديل
+                          </Button>
+                          <Button variant="ghost" size="sm" className="h-7 text-xs text-destructive touch-target" onClick={() => court.id && setDeleteConfirm(court.id)}>
+                            <Trash2 className="w-3 h-3 ml-1" /> حذف
+                          </Button>
+                        </div>
                       </div>
                     )}
                   </CardContent>
@@ -533,131 +586,291 @@ export function CourtsManager() {
         </Card>
       )}
 
-      {/* نافذة إضافة/تعديل */}
+      {/* نافذة إضافة/تعديل - خطوة بخطوة */}
       <Dialog open={showForm} onOpenChange={(open) => { setShowForm(open); if (!open) resetForm(); }}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" dir="rtl">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto smooth-scroll" dir="rtl">
           <DialogHeader>
             <DialogTitle className="text-lg font-extrabold">
               {editingCourt ? 'تعديل الهيئة القضائية' : 'إضافة هيئة قضائية جديدة'}
             </DialogTitle>
           </DialogHeader>
 
-          <div className="space-y-4">
-            {/* اختيار نوع القضاء */}
-            <div>
-              <Label className="text-xs font-semibold">نوع القضاء</Label>
-              <Select
-                value={formData.type || ''}
-                onValueChange={handleTypeChange}
-                disabled={!!editingCourt}
-              >
-                <SelectTrigger className="h-11">
-                  <SelectValue placeholder="اختر نوع القضاء" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="supreme">المحكمة العليا</SelectItem>
-                  <SelectItem value="council">مجلس قضائي (القضاء العادي)</SelectItem>
-                  <SelectItem value="court">محكمة (القضاء العادي)</SelectItem>
-                  <SelectItem value="admin_appeal">محكمة إدارية استئنافية</SelectItem>
-                  <SelectItem value="admin_first">محكمة إدارية ابتدائية</SelectItem>
-                  <SelectItem value="commercial">محكمة تجارية متخصصة</SelectItem>
-                </SelectContent>
-              </Select>
+          {/* مؤشر الخطوات */}
+          <div className="flex items-center gap-2 mb-4">
+            <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold ${
+              formStep >= 1 ? 'bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-400' : 'bg-muted text-muted-foreground'
+            }`}>
+              <span className="w-5 h-5 rounded-full bg-current text-white flex items-center justify-center text-[10px]">1</span>
+              نوع القضاء
             </div>
-
-            {/* اسم الهيئة */}
-            <div>
-              <Label className="text-xs font-semibold">اسم الهيئة القضائية</Label>
-              <Input
-                value={formData.name || ''}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="اسم الهيئة"
-                className="h-11"
-              />
+            <ChevronLeft className="w-4 h-4 text-muted-foreground" />
+            <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold ${
+              formStep >= 2 ? 'bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-400' : 'bg-muted text-muted-foreground'
+            }`}>
+              <span className="w-5 h-5 rounded-full bg-current text-white flex items-center justify-center text-[10px]">2</span>
+              بيانات الهيئة
             </div>
-
-            {/* الولاية - لا تظهر للمحكمة العليا */}
-            {formData.type !== 'supreme' && (
-              <div>
-                <Label className="text-xs font-semibold">الولاية</Label>
-                <Select
-                  value={formData.wilayaId?.toString() || ''}
-                  onValueChange={(v) => setFormData({ ...formData, wilayaId: v ? Number(v) : undefined })}
-                >
-                  <SelectTrigger className="h-11">
-                    <SelectValue placeholder="اختر الولاية" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="0">—</SelectItem>
-                    {WILAYAS.map((w) => (
-                      <SelectItem key={w.code} value={w.code.toString()}>
-                        {w.code} - {w.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-
-            {/* المحكمة تابعة لمجلس */}
-            {formData.type === 'court' && (
-              <div>
-                <Label className="text-xs font-semibold">تابعة للمجلس القضائي</Label>
-                <Select
-                  value={formData.parentCouncilId?.toString() || ''}
-                  onValueChange={(v) => setFormData({ ...formData, parentCouncilId: v ? Number(v) : undefined })}
-                >
-                  <SelectTrigger className="h-11">
-                    <SelectValue placeholder="اختر المجلس القضائي" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="0">—</SelectItem>
-                    {councils.map((c) => (
-                      <SelectItem key={c.id} value={c.id!.toString()}>
-                        {c.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-
-            {/* الغرف/الأقسام */}
-            {(formData.type === 'supreme' || formData.type === 'council' || formData.type === 'court') && chambers.length > 0 && (
-              <div>
-                <Label className="text-xs font-semibold mb-2 block">
-                  {formData.type === 'court' ? 'الأقسام وأرقامها' : 'الغرف وأرقامها'}
-                </Label>
-                <div className="space-y-2 max-h-64 overflow-y-auto">
-                  {chambers.map((ch, idx) => (
-                    <div key={idx} className="flex items-center gap-2 p-2 rounded-lg border">
-                      <span className="text-sm flex-1 min-w-0 truncate">{ch.name}</span>
-                      <Select
-                        value={ch.number === null ? 'none' : ch.number?.toString() || 'none'}
-                        onValueChange={(v) => updateChamberNumber(idx, v === 'none' ? null : Number(v))}
-                      >
-                        <SelectTrigger className="w-28 h-8 text-xs">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">بدون رقم</SelectItem>
-                          {CHAMBER_NUMBERS.filter(n => n.value > 0).map((n) => (
-                            <SelectItem key={n.value} value={n.value.toString()}>
-                              رقم {n.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+            <ChevronLeft className="w-4 h-4 text-muted-foreground" />
+            <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold ${
+              formStep >= 3 ? 'bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-400' : 'bg-muted text-muted-foreground'
+            }`}>
+              <span className="w-5 h-5 rounded-full bg-current text-white flex items-center justify-center text-[10px]">3</span>
+              الغرف/الأقسام
+            </div>
           </div>
 
-          <DialogFooter>
+          {/* الخطوة 1: اختيار نوع القضاء */}
+          {formStep === 1 && (
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">اختر نوع القضاء الذي تنتمي إليه الهيئة</p>
+              {formErrors.judiciaryGroup && (
+                <div className="flex items-center gap-2 text-sm text-destructive">
+                  <AlertCircle className="w-4 h-4" />
+                  {formErrors.judiciaryGroup}
+                </div>
+              )}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {JUDICIARY_TYPES.map((jt) => {
+                  const isActive = judiciaryGroup === jt.value;
+                  let icon = Building2;
+                  if (jt.value === 'supreme') icon = Gavel;
+                  else if (jt.value === 'ordinary') icon = Landmark;
+                  const Icon = icon;
+                  return (
+                    <Card
+                      key={jt.value}
+                      className={`cursor-pointer transition-all duration-200 ${
+                        isActive ? 'border-teal-500 ring-2 ring-teal-500/20 shadow-md' : 'hover:shadow-md hover:border-teal-300'
+                      }`}
+                      onClick={() => handleJudiciaryGroupChange(jt.value)}
+                    >
+                      <CardContent className="p-4 text-center">
+                        <div className={`w-12 h-12 mx-auto rounded-xl flex items-center justify-center mb-2 ${
+                          isActive ? 'bg-teal-100 dark:bg-teal-900/30' : 'bg-muted'
+                        }`}>
+                          <Icon className={`w-6 h-6 ${isActive ? 'text-teal-600 dark:text-teal-400' : 'text-muted-foreground'}`} />
+                        </div>
+                        <h3 className="font-bold text-sm">{jt.label}</h3>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+
+              {/* معاينة النوع المختار */}
+              {judiciaryGroup && (
+                <div className="p-3 bg-teal-50 dark:bg-teal-900/10 rounded-lg">
+                  <p className="text-xs font-semibold text-teal-700 dark:text-teal-400 mb-2">الأنواع المتاحة:</p>
+                  <div className="flex flex-wrap gap-2">
+                    {judiciaryGroup === 'supreme' && (
+                      <Badge className="bg-rose-100 text-rose-800 text-xs">المحكمة العليا</Badge>
+                    )}
+                    {judiciaryGroup === 'ordinary' && ORDINARY_COURT_LEVELS.map((cl) => (
+                      <Badge key={cl.value} className="bg-indigo-100 text-indigo-800 text-xs">{cl.label}</Badge>
+                    ))}
+                    {judiciaryGroup === 'admin' && ADMIN_COURT_LEVELS.map((cl) => (
+                      <Badge key={cl.value} className="bg-amber-100 text-amber-800 text-xs">{cl.label}</Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* الخطوة 2: بيانات الهيئة */}
+          {formStep === 2 && (
+            <div className="space-y-4">
+              {/* اختيار نوع الهيئة ضمن المجموعة */}
+              {judiciaryGroup !== 'supreme' && (
+                <div>
+                  <Label className="text-xs font-semibold">نوع الهيئة</Label>
+                  <Select
+                    value={formData.type || ''}
+                    onValueChange={handleCourtTypeChange}
+                    disabled={!!editingCourt}
+                  >
+                    <SelectTrigger className="h-11">
+                      <SelectValue placeholder="اختر نوع الهيئة" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {judiciaryGroup === 'ordinary' && ORDINARY_COURT_LEVELS.map((cl) => (
+                        <SelectItem key={cl.value} value={cl.value}>{cl.label}</SelectItem>
+                      ))}
+                      {judiciaryGroup === 'admin' && ADMIN_COURT_LEVELS.map((cl) => (
+                        <SelectItem key={cl.value} value={cl.value}>{cl.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {formErrors.type && (
+                    <p className="text-xs text-destructive mt-1 flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3" /> {formErrors.type}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* اسم الهيئة */}
+              <div>
+                <Label className="text-xs font-semibold">اسم الهيئة القضائية</Label>
+                <Input
+                  value={formData.name || ''}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  placeholder="اسم الهيئة"
+                  className="h-11"
+                />
+                {formErrors.name && (
+                  <p className="text-xs text-destructive mt-1 flex items-center gap-1">
+                    <AlertCircle className="w-3 h-3" /> {formErrors.name}
+                  </p>
+                )}
+              </div>
+
+              {/* الولاية */}
+              {formData.type !== 'supreme' && (
+                <div>
+                  <Label className="text-xs font-semibold">الولاية</Label>
+                  <Select
+                    value={formData.wilayaId?.toString() || ''}
+                    onValueChange={(v) => setFormData({ ...formData, wilayaId: v && v !== '0' ? Number(v) : undefined })}
+                  >
+                    <SelectTrigger className="h-11">
+                      <SelectValue placeholder="اختر الولاية" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="0">—</SelectItem>
+                      {WILAYAS.map((w) => (
+                        <SelectItem key={w.code} value={w.code.toString()}>
+                          {w.code} - {w.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {formErrors.wilayaId && (
+                    <p className="text-xs text-destructive mt-1 flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3" /> {formErrors.wilayaId}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* المحكمة تابعة لمجلس - مطلوب */}
+              {formData.type === 'court' && (
+                <div>
+                  <Label className="text-xs font-semibold">تابعة للمجلس القضائي <span className="text-destructive">*</span></Label>
+                  <Select
+                    value={formData.parentCouncilId?.toString() || ''}
+                    onValueChange={(v) => setFormData({ ...formData, parentCouncilId: v && v !== '0' ? Number(v) : undefined })}
+                  >
+                    <SelectTrigger className={`h-11 ${formErrors.parentCouncilId ? 'border-destructive' : ''}`}>
+                      <SelectValue placeholder="اختر المجلس القضائي" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="0">—</SelectItem>
+                      {councils.map((c) => (
+                        <SelectItem key={c.id} value={c.id!.toString()}>
+                          {c.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {formErrors.parentCouncilId && (
+                    <p className="text-xs text-destructive mt-1 flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3" /> {formErrors.parentCouncilId}
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* الخطوة 3: الغرف/الأقسام */}
+          {formStep === 3 && (
+            <div className="space-y-4">
+              {(formData.type === 'supreme' || formData.type === 'council' || formData.type === 'court') && chambers.length > 0 ? (
+                <div>
+                  <Label className="text-xs font-semibold mb-2 block">
+                    {formData.type === 'court' ? 'الأقسام وأرقامها' : 'الغرف وأرقامها'}
+                  </Label>
+                  <p className="text-xs text-muted-foreground mb-3">
+                    حدد أرقام الغرف/الأقسام المتاحة في هذه الهيئة. اختر &quot;بدون رقم&quot; إذا لم يكن لها رقم.
+                  </p>
+                  <div className="space-y-2 max-h-64 overflow-y-auto smooth-scroll">
+                    {chambers.map((ch, idx) => (
+                      <div key={idx} className="flex items-center gap-2 p-2 rounded-lg border">
+                        <span className="text-sm flex-1 min-w-0 truncate">{ch.name}</span>
+                        <Select
+                          value={ch.number === null ? 'none' : ch.number?.toString() || 'none'}
+                          onValueChange={(v) => updateChamberNumber(idx, v === 'none' ? null : Number(v))}
+                        >
+                          <SelectTrigger className="w-28 h-8 text-xs">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">بدون رقم</SelectItem>
+                            {CHAMBER_NUMBERS.filter(n => n.value > 0).map((n) => (
+                              <SelectItem key={n.value} value={n.value.toString()}>
+                                رقم {n.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="p-4 text-center text-muted-foreground">
+                  <p className="text-sm">لا توجد غرف/أقسام محددة لهذا النوع من الهيئات</p>
+                </div>
+              )}
+
+              {/* ملخص */}
+              <div className="p-3 bg-muted/50 rounded-lg space-y-1">
+                <p className="text-xs font-semibold text-muted-foreground mb-2">ملخص الهيئة:</p>
+                <div className="grid grid-cols-2 gap-1 text-xs">
+                  <span className="text-muted-foreground">النوع:</span>
+                  <span className="font-medium">{TYPE_LABELS[formData.type || ''] || '—'}</span>
+                  <span className="text-muted-foreground">الاسم:</span>
+                  <span className="font-medium">{formData.name || '—'}</span>
+                  {formData.wilayaId && (
+                    <>
+                      <span className="text-muted-foreground">الولاية:</span>
+                      <span className="font-medium">{WILAYAS.find(w => w.code === formData.wilayaId)?.name || '—'}</span>
+                    </>
+                  )}
+                  {formData.parentCouncilId && (
+                    <>
+                      <span className="text-muted-foreground">المجلس:</span>
+                      <span className="font-medium">{councils.find(c => c.id === formData.parentCouncilId)?.name || '—'}</span>
+                    </>
+                  )}
+                  <span className="text-muted-foreground">عدد الغرف:</span>
+                  <span className="font-medium">{chambers.length.toLocaleString('en-US')}</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="flex gap-2">
+            {formStep > 1 && (
+              <Button variant="outline" onClick={() => setFormStep(formStep - 1)}>
+                السابق
+              </Button>
+            )}
+            {formStep < 3 && (
+              <Button
+                onClick={formStep === 1 ? goToStep2 : goToStep3}
+                className="bg-teal-600 hover:bg-teal-700"
+              >
+                التالي
+              </Button>
+            )}
+            {formStep === 3 && (
+              <Button onClick={saveCourt} className="bg-teal-600 hover:bg-teal-700">
+                حفظ
+              </Button>
+            )}
             <Button variant="outline" onClick={() => { setShowForm(false); resetForm(); }}>إلغاء</Button>
-            <Button onClick={saveCourt} className="bg-teal-600 hover:bg-teal-700">حفظ</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

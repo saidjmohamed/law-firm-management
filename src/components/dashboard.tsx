@@ -336,7 +336,7 @@ export function Dashboard() {
                 const colors: Record<string, string> = {
                   'جارية': 'bg-emerald-500',
                   'للجدولة': 'bg-amber-500',
-                  'مفصل فيها': 'bg-blue-500',
+                  'مفصول فيها': 'bg-blue-500',
                   'مؤرشفة': 'bg-gray-400',
                 };
                 return (
