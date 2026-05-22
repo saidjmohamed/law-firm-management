@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
 import {
   Dialog,
   DialogContent,
@@ -116,6 +117,8 @@ export function PaymentsManager() {
   const [filterType, setFilterType] = useState<string>('all');
   const [filterCategory, setFilterCategory] = useState<string>('all');
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [cumulativeMode, setCumulativeMode] = useState(false);
+  const [cumulativeCount, setCumulativeCount] = useState(0);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
   const [casePickerOpen, setCasePickerOpen] = useState(false);
@@ -183,6 +186,8 @@ export function PaymentsManager() {
   const openAdd = () => {
     setFormData(emptyFormData());
     setSelectedPayment(null);
+    setCumulativeMode(false);
+    setCumulativeCount(0);
     setDialogOpen(true);
   };
 
@@ -198,23 +203,15 @@ export function PaymentsManager() {
   };
 
   const handleSave = async () => {
-    if (!formData.amount || formData.amount <= 0) {
-      toast.error('يرجى إدخال المبلغ');
-      return;
-    }
-    if (!formData.date) {
-      toast.error('يرجى تحديد التاريخ');
-      return;
-    }
     try {
       const now = new Date();
       if (selectedPayment?.id) {
         await db.payments.update(selectedPayment.id, {
           type: (formData.type as 'income' | 'expense') || 'income',
           category: formData.category || 'أخرى',
-          amount: formData.amount!,
+          amount: formData.amount || 0,
           description: formData.description?.trim() || undefined,
-          date: formData.date!,
+          date: formData.date || new Date().toISOString().split('T')[0],
           caseId: formData.caseId || undefined,
           caseNumber: formData.caseNumber || undefined,
           caseSubject: formData.caseSubject || undefined,
@@ -223,13 +220,14 @@ export function PaymentsManager() {
           updatedAt: now,
         } as Payment);
         toast.success('تم تحديث المعاملة بنجاح');
+        setDialogOpen(false);
       } else {
         await db.payments.add({
           type: (formData.type as 'income' | 'expense') || 'income',
           category: formData.category || 'أخرى',
-          amount: formData.amount!,
+          amount: formData.amount || 0,
           description: formData.description?.trim() || undefined,
-          date: formData.date!,
+          date: formData.date || new Date().toISOString().split('T')[0],
           caseId: formData.caseId || undefined,
           caseNumber: formData.caseNumber || undefined,
           caseSubject: formData.caseSubject || undefined,
@@ -238,9 +236,15 @@ export function PaymentsManager() {
           createdAt: now,
           updatedAt: now,
         });
-        toast.success('تم إضافة المعاملة بنجاح');
+        if (cumulativeMode) {
+          setCumulativeCount((c) => c + 1);
+          setFormData(emptyFormData());
+          toast.success(`تم إضافة المعاملة بنجاح (${cumulativeCount + 1} معاملات في هذه الجلسة)`);
+        } else {
+          toast.success('تم إضافة المعاملة بنجاح');
+          setDialogOpen(false);
+        }
       }
-      setDialogOpen(false);
     } catch {
       toast.error('حدث خطأ أثناء الحفظ');
     }
@@ -494,10 +498,20 @@ export function PaymentsManager() {
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto" dir="rtl">
           <DialogHeader>
-            <DialogTitle>{selectedPayment ? 'تعديل المعاملة' : 'إضافة معاملة جديدة'}</DialogTitle>
+            <DialogTitle>{selectedPayment ? 'تعديل المعاملة' : 'إضافة معاملة جديدة'} {cumulativeMode && cumulativeCount > 0 && <Badge className="mr-2 bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">{cumulativeCount} تمت إضافتها</Badge>}</DialogTitle>
             <DialogDescription>
-              {selectedPayment ? 'قم بتعديل بيانات المعاملة' : 'أدخل بيانات المعاملة الجديدة'}
+              {selectedPayment ? 'قم بتعديل بيانات المعاملة' : cumulativeMode ? 'الادخال التراكمي: أضف معاملات متعددة دون إغلاق النافذة' : 'أدخل بيانات المعاملة الجديدة'}
             </DialogDescription>
+            {!selectedPayment && (
+              <div className="flex items-center gap-2 mt-2">
+                <Switch
+                  id="cumulative-mode"
+                  checked={cumulativeMode}
+                  onCheckedChange={setCumulativeMode}
+                />
+                <Label htmlFor="cumulative-mode" className="text-sm cursor-pointer">الادخال التراكمي</Label>
+              </div>
+            )}
           </DialogHeader>
           <div className="grid gap-4 py-4">
             {/* Type Toggle */}
@@ -544,7 +558,7 @@ export function PaymentsManager() {
                 </Select>
               </div>
               <div className="grid gap-2">
-                <Label>المبلغ (د.ج) *</Label>
+                <Label>المبلغ (د.ج)</Label>
                 <Input
                   type="number"
                   min="0"
@@ -570,7 +584,7 @@ export function PaymentsManager() {
 
             {/* Date */}
             <div className="grid gap-2">
-              <Label>التاريخ *</Label>
+              <Label>التاريخ</Label>
               <Input
                 type="date"
                 value={formData.date || ''}

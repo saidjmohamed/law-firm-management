@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { db, type Case, type Party, type Delay, type Payment } from '@/lib/db';
+import { db, type Case, type Party, type Delay, type Payment, type Archive } from '@/lib/db';
 import { WILAYAS } from '@/components/clients';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
+import { Switch } from '@/components/ui/switch';
 import {
   Dialog,
   DialogContent,
@@ -64,6 +65,7 @@ import {
   Users,
   Clock,
   Banknote,
+  Archive as ArchiveIcon,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -185,6 +187,8 @@ export function Cases() {
   const PAGE_SIZE = 15;
 
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [cumulativeMode, setCumulativeMode] = useState(false);
+  const [cumulativeCount, setCumulativeCount] = useState(0);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [viewOpen, setViewOpen] = useState(false);
   const [selectedCase, setSelectedCase] = useState<Case | null>(null);
@@ -266,6 +270,8 @@ export function Cases() {
   const openAdd = () => {
     setFormData(emptyCaseForm());
     setSelectedCase(null);
+    setCumulativeMode(false);
+    setCumulativeCount(0);
     setDialogOpen(true);
   };
 
@@ -286,14 +292,6 @@ export function Cases() {
   };
 
   const handleSave = async () => {
-    if (!formData.caseNumber?.trim()) {
-      toast.error('يرجى إدخال رقم القضية');
-      return;
-    }
-    if (!formData.subject?.trim()) {
-      toast.error('يرجى إدخال موضوع القضية');
-      return;
-    }
     try {
       const now = new Date();
       const data: Partial<Case> = {
@@ -327,15 +325,22 @@ export function Cases() {
       if (selectedCase?.id) {
         await db.cases.update(selectedCase.id, data as Case);
         toast.success('تم تحديث القضية بنجاح');
+        setDialogOpen(false);
       } else {
         await db.cases.add({
           ...data,
           createdAt: now,
           updatedAt: now,
         } as Case);
-        toast.success('تم إضافة القضية بنجاح');
+        if (cumulativeMode) {
+          setCumulativeCount((c) => c + 1);
+          setFormData(emptyCaseForm());
+          toast.success(`تم إضافة القضية بنجاح (${cumulativeCount + 1} قضايا في هذه الجلسة)`);
+        } else {
+          toast.success('تم إضافة القضية بنجاح');
+          setDialogOpen(false);
+        }
       }
-      setDialogOpen(false);
     } catch {
       toast.error('حدث خطأ أثناء الحفظ');
     }
@@ -425,6 +430,39 @@ export function Cases() {
       toast.success('تم حذف التأجيل بنجاح');
     } catch {
       toast.error('حدث خطأ أثناء حذف التأجيل');
+    }
+  };
+
+  // Archive Case
+  const [archiveOpen, setArchiveOpen] = useState(false);
+
+  const openArchive = (c: Case) => {
+    setSelectedCase(c);
+    setArchiveOpen(true);
+  };
+
+  const handleArchive = async () => {
+    if (!selectedCase?.id) return;
+    try {
+      const now = new Date();
+      // Create archive record with JSON snapshot of the case
+      await db.archives.add({
+        caseId: selectedCase.id,
+        caseData: JSON.stringify(selectedCase),
+        archiveDate: now.toISOString().split('T')[0],
+        reason: 'أرشفة من قبل المستخدم',
+        createdAt: now,
+      } as Archive);
+      // Mark the case as archived
+      await db.cases.update(selectedCase.id, {
+        status: 'archived',
+        updatedAt: now,
+      } as Case);
+      toast.success('تم أرشفة القضية بنجاح');
+      setArchiveOpen(false);
+      setViewOpen(false);
+    } catch {
+      toast.error('حدث خطأ أثناء الأرشفة');
     }
   };
 
@@ -644,10 +682,20 @@ export function Cases() {
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" dir="rtl">
           <DialogHeader>
-            <DialogTitle>{selectedCase ? 'تعديل القضية' : 'إضافة قضية جديدة'}</DialogTitle>
+            <DialogTitle>{selectedCase ? 'تعديل القضية' : 'إضافة قضية جديدة'} {cumulativeMode && cumulativeCount > 0 && <Badge className="mr-2 bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400">{cumulativeCount} تمت إضافتها</Badge>}</DialogTitle>
             <DialogDescription>
-              {selectedCase ? 'قم بتعديل بيانات القضية' : 'أدخل بيانات القضية الجديدة'}
+              {selectedCase ? 'قم بتعديل بيانات القضية' : cumulativeMode ? 'الادخال التراكمي: أضف قضايا متعددة دون إغلاق النافذة' : 'أدخل بيانات القضية الجديدة'}
             </DialogDescription>
+            {!selectedCase && (
+              <div className="flex items-center gap-2 mt-2">
+                <Switch
+                  id="cumulative-mode"
+                  checked={cumulativeMode}
+                  onCheckedChange={setCumulativeMode}
+                />
+                <Label htmlFor="cumulative-mode" className="text-sm cursor-pointer">الادخال التراكمي</Label>
+              </div>
+            )}
           </DialogHeader>
           <div className="grid gap-6 py-4">
             {/* Section 1 - معلومات أساسية */}
@@ -659,7 +707,7 @@ export function Cases() {
               <div className="grid gap-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="grid gap-2">
-                    <Label>رقم القضية *</Label>
+                    <Label>رقم القضية</Label>
                     <Input
                       value={formData.caseNumber || ''}
                       onChange={(e) => setFormData({ ...formData, caseNumber: e.target.value })}
@@ -710,7 +758,7 @@ export function Cases() {
                   </div>
                 </div>
                 <div className="grid gap-2">
-                  <Label>الموضوع *</Label>
+                  <Label>الموضوع</Label>
                   <Input
                     value={formData.subject || ''}
                     onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
@@ -1320,6 +1368,16 @@ export function Cases() {
 
               {/* Actions */}
               <div className="flex gap-2 pt-2">
+                {selectedCase.status !== 'archived' && (
+                  <Button
+                    variant="outline"
+                    className="flex-1 text-gray-600 hover:text-gray-700 hover:bg-gray-50 dark:text-gray-400 dark:hover:bg-gray-900/20"
+                    onClick={() => openArchive(selectedCase)}
+                  >
+                    <ArchiveIcon className="w-4 h-4 ml-2" />
+                    أرشفة
+                  </Button>
+                )}
                 <Button
                   variant="outline"
                   className="flex-1"
@@ -1361,6 +1419,25 @@ export function Cases() {
             <AlertDialogCancel>إلغاء</AlertDialogCancel>
             <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90">
               حذف
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Archive Confirmation */}
+      <AlertDialog open={archiveOpen} onOpenChange={setArchiveOpen}>
+        <AlertDialogContent dir="rtl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>تأكيد الأرشفة</AlertDialogTitle>
+            <AlertDialogDescription>
+              هل تريد أرشفة القضية &quot;{selectedCase?.subject}&quot;؟ سيتم نقلها إلى الأرشيف مع حفظ نسخة من بياناتها. يمكنك استعادتها لاحقاً من قسم الأرشيف.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>إلغاء</AlertDialogCancel>
+            <AlertDialogAction onClick={handleArchive} className="bg-gray-600 hover:bg-gray-700">
+              <ArchiveIcon className="w-4 h-4 ml-2" />
+              أرشفة
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

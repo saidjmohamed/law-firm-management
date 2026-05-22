@@ -257,20 +257,12 @@ export function Clients() {
   };
 
   const handleSave = async () => {
-    if (!formData.name?.trim()) {
-      toast.error('يرجى إدخال الاسم واللقب');
-      return;
-    }
-    if (!formData.phone?.trim()) {
-      toast.error('يرجى إدخال رقم الهاتف');
-      return;
-    }
     try {
       const now = new Date();
       if (selectedClient?.id) {
         await db.clients.update(selectedClient.id, {
-          name: formData.name.trim(),
-          phone: formData.phone.trim(),
+          name: formData.name?.trim() || '',
+          phone: formData.phone?.trim() || '',
           phone2: formData.phone2?.trim() || undefined,
           email: formData.email?.trim() || undefined,
           address: formData.address?.trim() || undefined,
@@ -283,8 +275,8 @@ export function Clients() {
         toast.success('تم تحديث بيانات الموكل بنجاح');
       } else {
         await db.clients.add({
-          name: formData.name.trim(),
-          phone: formData.phone.trim(),
+          name: formData.name?.trim() || '',
+          phone: formData.phone?.trim() || '',
           phone2: formData.phone2?.trim() || undefined,
           email: formData.email?.trim() || undefined,
           address: formData.address?.trim() || undefined,
@@ -499,7 +491,7 @@ export function Clients() {
           <div className="grid gap-4 py-4">
             {/* الاسم واللقب */}
             <div className="grid gap-2">
-              <Label htmlFor="client-name">الاسم واللقب *</Label>
+              <Label htmlFor="client-name">الاسم واللقب</Label>
               <Input
                 id="client-name"
                 value={formData.name || ''}
@@ -511,7 +503,7 @@ export function Clients() {
             {/* الهاتف + هاتف ثاني */}
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
-                <Label htmlFor="client-phone">الهاتف *</Label>
+                <Label htmlFor="client-phone">الهاتف</Label>
                 <Input
                   id="client-phone"
                   value={formData.phone || ''}

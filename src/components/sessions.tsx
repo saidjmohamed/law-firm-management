@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
+import { Switch } from '@/components/ui/switch';
 import {
   Dialog,
   DialogContent,
@@ -121,6 +122,8 @@ export function Sessions() {
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [cumulativeMode, setCumulativeMode] = useState(false);
+  const [cumulativeCount, setCumulativeCount] = useState(0);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [viewOpen, setViewOpen] = useState(false);
   const [selectedSession, setSelectedSession] = useState<Session | null>(null);
@@ -175,6 +178,8 @@ export function Sessions() {
   const openAdd = () => {
     setFormData(emptyFormData());
     setSelectedSession(null);
+    setCumulativeMode(false);
+    setCumulativeCount(0);
     setDialogOpen(true);
   };
 
@@ -195,22 +200,14 @@ export function Sessions() {
   };
 
   const handleSave = async () => {
-    if (!formData.caseId) {
-      toast.error('يرجى اختيار القضية');
-      return;
-    }
-    if (!formData.date) {
-      toast.error('يرجى تحديد التاريخ');
-      return;
-    }
     try {
       const now = new Date();
       if (selectedSession?.id) {
         await db.sessions.update(selectedSession.id, {
-          caseId: formData.caseId!,
+          caseId: formData.caseId || 0,
           caseNumber: formData.caseNumber || '',
           caseSubject: formData.caseSubject || '',
-          date: formData.date!,
+          date: formData.date || new Date().toISOString().split('T')[0],
           time: formData.time || undefined,
           court: formData.court || undefined,
           hall: formData.hall || undefined,
@@ -221,12 +218,13 @@ export function Sessions() {
           updatedAt: now,
         } as Session);
         toast.success('تم تحديث الجلسة بنجاح');
+        setDialogOpen(false);
       } else {
         await db.sessions.add({
-          caseId: formData.caseId!,
+          caseId: formData.caseId || 0,
           caseNumber: formData.caseNumber || '',
           caseSubject: formData.caseSubject || '',
-          date: formData.date!,
+          date: formData.date || new Date().toISOString().split('T')[0],
           time: formData.time || undefined,
           court: formData.court || undefined,
           hall: formData.hall || undefined,
@@ -237,9 +235,15 @@ export function Sessions() {
           createdAt: now,
           updatedAt: now,
         });
-        toast.success('تم إضافة الجلسة بنجاح');
+        if (cumulativeMode) {
+          setCumulativeCount((c) => c + 1);
+          setFormData(emptyFormData());
+          toast.success(`تم إضافة الجلسة بنجاح (${cumulativeCount + 1} جلسات في هذه الجلسة)`);
+        } else {
+          toast.success('تم إضافة الجلسة بنجاح');
+          setDialogOpen(false);
+        }
       }
-      setDialogOpen(false);
     } catch {
       toast.error('حدث خطأ أثناء الحفظ');
     }
@@ -506,15 +510,25 @@ export function Sessions() {
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto" dir="rtl">
           <DialogHeader>
-            <DialogTitle>{selectedSession ? 'تعديل الجلسة' : 'إضافة جلسة جديدة'}</DialogTitle>
+            <DialogTitle>{selectedSession ? 'تعديل الجلسة' : 'إضافة جلسة جديدة'} {cumulativeMode && cumulativeCount > 0 && <Badge className="mr-2 bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">{cumulativeCount} تمت إضافتها</Badge>}</DialogTitle>
             <DialogDescription>
-              {selectedSession ? 'قم بتعديل بيانات الجلسة' : 'أدخل بيانات الجلسة الجديدة'}
+              {selectedSession ? 'قم بتعديل بيانات الجلسة' : cumulativeMode ? 'الادخال التراكمي: أضف جلسات متعددة دون إغلاق النافذة' : 'أدخل بيانات الجلسة الجديدة'}
             </DialogDescription>
+            {!selectedSession && (
+              <div className="flex items-center gap-2 mt-2">
+                <Switch
+                  id="cumulative-mode"
+                  checked={cumulativeMode}
+                  onCheckedChange={setCumulativeMode}
+                />
+                <Label htmlFor="cumulative-mode" className="text-sm cursor-pointer">الادخال التراكمي</Label>
+              </div>
+            )}
           </DialogHeader>
           <div className="grid gap-4 py-4">
             {/* Case Picker */}
             <div className="grid gap-2">
-              <Label>القضية *</Label>
+              <Label>القضية</Label>
               <Popover open={casePickerOpen} onOpenChange={setCasePickerOpen}>
                 <PopoverTrigger asChild>
                   <Button variant="outline" className="justify-between font-normal">
@@ -562,7 +576,7 @@ export function Sessions() {
             {/* Date + Time */}
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
-                <Label>التاريخ *</Label>
+                <Label>التاريخ</Label>
                 <Input
                   type="date"
                   value={formData.date || ''}

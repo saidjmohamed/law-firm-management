@@ -33,3 +33,26 @@ Stage Summary:
 - Professional teal/emerald color theme (not blue/indigo)
 - Dark mode support via next-themes
 - Responsive design with mobile drawer sidebar
+
+---
+Task ID: 2
+Agent: Main Agent
+Task: بناء مكونات التطبيق الناقصة + تعديلات الحقول + الادخال التراكمي
+
+Work Log:
+- جعل جميع حقول النماذج اختيارية في: clients.tsx, cases.tsx, sessions.tsx, payments.tsx
+- إزالة التحقق الإجباري (required validation) من جميع المكونات
+- إضافة خاصية الادخال التراكمي في: cases.tsx, sessions.tsx, payments.tsx
+- الادخال التراكمي يتيح إضافة عدة سجلات متتالية دون إغلاق النافذة
+- بناء مكون التأجيلات (delays.tsx) كامل مع CRUD + بحث + فلترة
+- بناء مكون النسخ الاحتياطي (backup.tsx) بدون تشفير
+- بناء مكون الأرشيف (archives.tsx) مع عرض/استعادة/حذف
+- بناء مكون الإعدادات (settings.tsx) مع معلومات المحامي + إحصائيات قاعدة البيانات + منطقة الخطر
+- تحديث manifest.json باسم التطبيق الصحيح
+- Lint يمر بنجاح، التطبيق يعمل
+
+Stage Summary:
+- جميع المكونات الناقصة تم بناؤها بالكامل
+- الادخال التراكمي يعمل عبر زر Switch في نماذج الإضافة
+- جميع الحقول اختيارية بدون تحقق إجباري
+- العملة: دينار جزائري (د.ج) بأرقام لاتينية
