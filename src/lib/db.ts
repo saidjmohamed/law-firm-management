@@ -1,157 +1,115 @@
 import Dexie, { type Table } from 'dexie';
 
 // ============================================================================
-// نوع الموكل
+// أنواع البيانات
 // ============================================================================
+
 export interface Client {
   id?: number;
-  name: string;              // الاسم واللقب
-  phone: string;             // الهاتف
-  phone2?: string;           // هاتف ثاني
-  email?: string;
-  address?: string;          // العنوان
-  wilaya?: number;           // الولاية (1-58)
-  nationalId?: string;       // رقم الهوية
-  type: 'individual' | 'company';
+  name?: string;
+  phone?: string;
+  phone2?: string;
+  address?: string;
+  wilaya?: number;
+  nationalId?: string;
   notes?: string;
   createdAt: Date;
   updatedAt: Date;
 }
 
-// ============================================================================
-// نوع القضية
-// ============================================================================
 export interface Case {
   id?: number;
-  caseNumber: string;        // رقم القضية
-  subject: string;           // الموضوع
-  clientId?: number;         // ربط بالموكل
-  clientName?: string;
+  caseNumber?: string;
+  subject?: string;
+  caseNature?: string;
+  litigationStage?: string;
+  origCaseNumber?: string;
+  customStage?: string;
+  status?: string;
 
-  // التسلسل القضائي
-  courtType: 'ordinary' | 'administrative' | 'supreme';  // نوع القضاء
-  councilName?: string;      // المجلس القضائي
-  courtName?: string;        // المحكمة
-  sectionName?: string;      // القسم/الغرفة
-  sectionNumber?: string;    // رقم القسم/الغرفة
+  councilName?: string;
+  courtName?: string;
+  chamber?: string;
 
-  // تفاصيل القضية
-  caseNature: string;        // طبيعة القضية (جنحة, مدني, عقاري, etc.)
-  stage: string;             // مرحلة التقاضي (ابتدائي, استئنافية, معارضة, etc.)
-  origCaseNumber?: string;   // رقم القضية الأصلية (للاستئناف/المعارضة)
-  customStage?: string;      // مرحلة مخصصة
-  status: 'active' | 'scheduling' | 'decided' | 'archived';  // جارية, للجدولة, مفصول فيها, مؤرشفة
+  totalFees?: number;
+  paidAmount?: number;
 
-  // المالية
-  fees?: number;             // الأتعاب
-  paid?: number;             // المدفوع
+  registrationDate?: string;
+  firstSessionDate?: string;
+  delibDate?: string;
 
-  // الخصم
-  opposingParty?: string;    // الخصم
-  opposingLawyer?: string;   // محامي الخصم
-
-  // التواريخ
-  registrationDate?: string; // تاريخ التسجيل
-  firstSessionDate?: string; // أول جلسة
-  delibDate?: string;        // تاريخ المداولة
-
-  // معلومات إضافية
-  barPhone?: string;         // هاتف قاعة المحامين
+  barPhone?: string;
+  lawyer?: string;
   notes?: string;
-  judgment?: string;         // منطوق الحكم
+  judgment?: string;
 
   createdAt: Date;
   updatedAt: Date;
 }
 
-// ============================================================================
-// نوع الجلسة
-// ============================================================================
-export interface Session {
+export interface Party {
   id?: number;
   caseId: number;
-  caseNumber: string;
-  caseSubject?: string;
-  date: string;              // تاريخ الجلسة
-  time?: string;             // الوقت
-  court?: string;            // المحكمة
-  hall?: string;             // القاعة
-  judgeName?: string;        // اسم القاضي
+  role?: string;
+  name?: string;
+  phone?: string;
+  lawyerName?: string;
+  lawyerPhone?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface Delay {
+  id?: number;
+  caseId: number;
+  delayDate?: string;
+  reason?: string;
   notes?: string;
-  status: 'scheduled' | 'completed' | 'postponed' | 'cancelled';
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface Session {
+  id?: number;
+  caseId?: number;
+  caseNumber?: string;
+  date?: string;
+  time?: string;
+  court?: string;
+  chamber?: string;
+  roomNumber?: string;
+  notes?: string;
+  status?: string;
   result?: string;
   createdAt: Date;
   updatedAt: Date;
 }
 
-// ============================================================================
-// نوع الدفع
-// ============================================================================
 export interface Payment {
   id?: number;
   caseId?: number;
   caseNumber?: string;
-  caseSubject?: string;
-  clientId?: number;
-  clientName?: string;
-  type: 'income' | 'expense';
-  category: string;          // أتعاب, استشارات, مصاريف قضية, etc.
-  amount: number;
-  description?: string;
-  date: string;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-// ============================================================================
-// نوع التأجيل
-// ============================================================================
-export interface Delay {
-  id?: number;
-  caseId: number;
-  caseNumber: string;
-  caseSubject?: string;
-  delayDate: string;         // تاريخ التأجيل
-  reason: string;            // سبب التأجيل
-  newDate?: string;          // التاريخ الجديد
+  amount?: number;
+  type?: string;
+  category?: string;
+  date?: string;
   notes?: string;
   createdAt: Date;
   updatedAt: Date;
 }
 
-// ============================================================================
-// نوع أطراف النزاع
-// ============================================================================
-export interface Party {
-  id?: number;
-  caseId: number;
-  role: string;              // المركز القانوني (مدعي, مدعى عليه, etc.)
-  name: string;              // الاسم واللقب
-  phone?: string;
-  lawyerName?: string;       // اسم محاميه
-  lawyerPhone?: string;      // هاتف المحامي
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-// ============================================================================
-// نوع الأرشيف
-// ============================================================================
 export interface Archive {
   id?: number;
   caseId: number;
-  caseData: string;          // JSON snapshot of the case + related data
+  caseData: string;
   archiveDate: string;
   reason?: string;
   createdAt: Date;
 }
 
-// ============================================================================
-// نوع الإعدادات
-// ============================================================================
 export interface Setting {
-  key: string;               // المفتاح الأساسي
-  value: string;             // JSON string
+  key: string;
+  value: string;
 }
 
 // ============================================================================
@@ -170,11 +128,11 @@ class LawFirmDB extends Dexie {
   constructor() {
     super('LawFirmDB');
 
-    this.version(2).stores({
-      clients: '++id, name, phone, nationalId, type, wilaya, createdAt',
-      cases: '++id, caseNumber, subject, clientId, courtType, courtName, caseNature, stage, status, registrationDate, firstSessionDate, createdAt',
+    this.version(4).stores({
+      clients: '++id, name, phone, nationalId, wilaya, createdAt',
+      cases: '++id, caseNumber, subject, caseNature, litigationStage, status, courtName, councilName, registrationDate, firstSessionDate, createdAt',
       sessions: '++id, caseId, date, status, court, createdAt',
-      payments: '++id, caseId, clientId, type, category, date, createdAt',
+      payments: '++id, caseId, type, category, date, createdAt',
       delays: '++id, caseId, delayDate, createdAt',
       parties: '++id, caseId, role, name, createdAt',
       archives: '++id, caseId, archiveDate, createdAt',
@@ -183,393 +141,497 @@ class LawFirmDB extends Dexie {
   }
 }
 
-/** نسخة واحدة من قاعدة البيانات للاستعمال في كل التطبيق */
 export const db = new LawFirmDB();
 
 // ============================================================================
-// بذرة البيانات التجريبية - جزائرية
+// بذرة البيانات - 19 قضية حقيقية
 // ============================================================================
 
-/** الإعدادات الافتراضية */
 const DEFAULT_SETTINGS: Setting[] = [
-  { key: 'lawyerName', value: JSON.stringify('الاستاذ سايج محمد محمد') },
+  { key: 'lawyerName', value: JSON.stringify('سايج محمد') },
   { key: 'lawyerTitle', value: JSON.stringify('محام لدى المجلس') },
   { key: 'lawyerAddress', value: JSON.stringify('الجزائر العاصمة') },
-  { key: 'lawyerPhone', value: JSON.stringify('0550123456') },
-  { key: 'encryptionEnabled', value: JSON.stringify(false) },
-  { key: 'encryptionPassword', value: JSON.stringify('') },
+  { key: 'lawyerPhone', value: JSON.stringify('') },
 ];
 
-/** بذرة قاعدة البيانات ببيانات جزائرية تجريبية */
+interface SeedCase {
+  caseNumber: string;
+  subject: string;
+  caseNature: string;
+  litigationStage: string;
+  origCaseNumber?: string;
+  status: string;
+  councilName?: string;
+  courtName?: string;
+  chamber?: string;
+  totalFees?: number;
+  paidAmount?: number;
+  registrationDate?: string;
+  firstSessionDate?: string;
+  delibDate?: string;
+  barPhone?: string;
+  judgment?: string;
+  delays?: { delayDate: string; reason: string }[];
+  parties?: { role: string; name: string; phone?: string; lawyerName?: string; lawyerPhone?: string }[];
+}
+
+const REAL_CASES: SeedCase[] = [
+  {
+    caseNumber: 'طعن رقم 2018912',
+    subject: 'النصب الموجه للجمهور     النصب الثلاثي',
+    caseNature: 'جنحة',
+    litigationStage: 'افتتاحية (ابتدائي)',
+    status: 'جارية',
+    councilName: 'المحكمة العليا',
+    courtName: 'المحكمة العليا',
+    chamber: 'الغرفة الجزائية',
+    totalFees: 150000,
+    paidAmount: 100000,
+    delays: [
+      { delayDate: '2026-03-16', reason: 'تاريخ التصريح بالطعن' },
+      { delayDate: '2026-04-28', reason: 'تسجيل مذكرة الطعن النقض' },
+    ],
+    parties: [
+      { role: 'مستأنف', name: 'مدور كريمو', phone: '00213555390201', lawyerName: 'سايج محمد' },
+      { role: 'طرف مدني', name: 'مسعودي ابراهيم', phone: 'رقم الهاتف' },
+      { role: 'متهم', name: 'شمام احمد', phone: '00213541956393' },
+    ],
+  },
+  {
+    caseNumber: '26/00239',
+    subject: 'تعويض عن الضرر من قضية نصب ثلاثي',
+    caseNature: 'مدني',
+    litigationStage: 'افتتاحية (ابتدائي)',
+    status: 'جارية',
+    councilName: 'مجلس قضاء تيزي وزو',
+    courtName: 'محكمة الاربعاء ناث ايراثن',
+    chamber: 'المدني',
+    totalFees: 700000,
+    paidAmount: 300000,
+    registrationDate: '2026-04-08',
+    firstSessionDate: '2026-04-22',
+    delays: [
+      { delayDate: '2026-05-20', reason: 'لجواب المدعى عليه' },
+    ],
+    parties: [
+      { role: 'مدعي', name: 'السي ناصر عبد النور', lawyerName: 'زورداني محمد', lawyerPhone: '00213552764665' },
+      { role: 'مدعى عليه', name: 'بلخوجة محمد ياسر', phone: '00213542819233', lawyerName: 'سايج محمد' },
+    ],
+  },
+  {
+    caseNumber: '26/01002',
+    subject: 'دعوى ضمان الاستحقاق و رد الثمن و تعويض عن الضرر',
+    caseNature: 'مدني',
+    litigationStage: 'افتتاحية (ابتدائي)',
+    status: 'جارية',
+    councilName: 'مجلس قضاء الجزائر',
+    courtName: 'محكمة بئرمرادراريس',
+    chamber: 'مدني',
+    totalFees: 60000,
+    paidAmount: 60000,
+    registrationDate: '2026-02-08',
+    firstSessionDate: '2026-03-02',
+    delibDate: '2026-05-27',
+    parties: [
+      { role: 'مدعي', name: 'كبور صالح', phone: '00213551050488', lawyerName: 'سايج محمد' },
+      { role: 'مدعى عليه', name: 'ناصري جمال' },
+    ],
+  },
+  {
+    caseNumber: '25/18381',
+    subject: 'إصدار شيك بدون رصيد',
+    caseNature: 'جنحة',
+    litigationStage: 'استئنافية',
+    origCaseNumber: '25/03842',
+    status: 'مؤرشفة',
+    councilName: 'مجلس قضاء الجزائر',
+    courtName: 'مجلس قضاء الجزائر',
+    chamber: 'الغرفة الجزائية الخامسة',
+    totalFees: 100000,
+    paidAmount: 100000,
+    barPhone: '023716257',
+    registrationDate: '2025-12-02',
+    firstSessionDate: '2025-12-02',
+    judgment: 'عام حبس نافذ للمتهم\nتعويض قيمة الشيك 340 مليون للطرف المدني',
+    parties: [
+      { role: 'ضحية', name: 'بدر الدين عبد الرحيم', phone: '00213551525881', lawyerName: 'سايج محمد' },
+      { role: 'متهم', name: 'مدني محمد أمين', phone: 'رقم الهاتف' },
+    ],
+  },
+  {
+    caseNumber: '26/00901',
+    subject: 'إلغاء قرار إداري صادر عن وزارة الدفاع',
+    caseNature: 'اداري استئنافي',
+    litigationStage: 'افتتاحية (ابتدائي)',
+    status: 'جارية',
+    councilName: 'مجلس قضاء الجزائر',
+    courtName: 'المحكمة الادارية الاستئنافية بالجزائر',
+    chamber: 'الإداري العادي',
+    totalFees: 80000,
+    paidAmount: 60000,
+    registrationDate: '2026-03-02',
+    parties: [
+      { role: 'مدعي', name: 'عماري سي احمد', phone: '00213698084523', lawyerName: 'سايج محمد' },
+      { role: 'مدعى عليه', name: 'وزارة الدفاع الوطني' },
+    ],
+  },
+  {
+    caseNumber: '26/00153',
+    subject: 'النصب الموجه للجمهور ( النصب الثلاثي)',
+    caseNature: 'جنحة',
+    litigationStage: 'استئنافية',
+    origCaseNumber: '25/07238',
+    status: 'جارية',
+    councilName: 'مجلس قضاء الجزائر',
+    courtName: 'الغرفة الجزائية السادسة',
+    chamber: 'جنح',
+    barPhone: '023716257',
+    registrationDate: '2026-03-15',
+    firstSessionDate: '2026-05-10',
+    delays: [
+      { delayDate: '2026-05-31', reason: 'مؤجلة' },
+    ],
+    parties: [
+      { role: 'متهم', name: 'بودبة منير', phone: '00213791449280', lawyerName: 'سايج محمد' },
+      { role: 'متهم', name: 'بن يمنية نصرالدين', phone: '00213774968339', lawyerName: 'سايج' },
+      { role: 'طرف مدني', name: 'بحري الصادق', phone: '00213794019201', lawyerName: 'زنبوط', lawyerPhone: '00213658885214' },
+    ],
+  },
+  {
+    caseNumber: '25/03255',
+    subject: 'النصب الموجه للجمهور   نصب ثلاثي',
+    caseNature: 'جنحة',
+    litigationStage: 'افتتاحية (ابتدائي)',
+    status: 'مؤرشفة',
+    councilName: 'مجلس قضاء تيبازة',
+    courtName: 'تيبازة',
+    chamber: 'القسم الجزائي',
+    barPhone: '0562724340',
+    registrationDate: '2025-02-03',
+    firstSessionDate: '2026-03-10',
+    delibDate: '2026-04-07',
+    judgment: 'عام حبس نافذ لبوجادي محمد زكرياء\nو براءة للضحية',
+    parties: [
+      { role: 'متهم', name: 'بوجادي محمد زكرياء', phone: '00213676169592', lawyerName: 'سايج محمد' },
+      { role: 'طرف مدني', name: 'لمختار يمينة', phone: '00213784939372' },
+      { role: 'طرف مدني', name: 'بريد الجزائر', phone: 'رقم الهاتف' },
+    ],
+  },
+  {
+    caseNumber: '25/00952',
+    subject: 'الضرب و الجرح العمدي',
+    caseNature: 'مخالفة',
+    litigationStage: 'افتتاحية (ابتدائي)',
+    status: 'مؤرشفة',
+    councilName: 'مجلس قضاء الجزائر',
+    courtName: 'محكمة الشراقة',
+    chamber: 'جزائي',
+    totalFees: 40000,
+    paidAmount: 40000,
+    barPhone: '0549111248',
+    delibDate: '2024-10-16',
+    judgment: 'غيايا للمتهمة و حضوريا للضحية\nفي الدعوى العمومية سته عشر الفا غرامة مالية\nفي الدعوى المدنية خمس ملايين تعويض لكلا الضحيتين',
+    parties: [
+      { role: 'متهم', name: 'عباسي رتيبة', phone: 'رقم الهاتف', lawyerName: 'سايج محمد', lawyerPhone: '0558367689' },
+      { role: 'طرف مدني', name: 'بوقريوة عائشة', phone: 'نسرين حسان', lawyerName: 'حسان نسرين', lawyerPhone: '0549351590' },
+    ],
+  },
+  {
+    caseNumber: '25/07881',
+    subject: 'النصب الموجه للجمهور ( نص ثلاثي )',
+    caseNature: 'جنحة',
+    litigationStage: 'استئنافية',
+    status: 'مؤرشفة',
+    councilName: 'مجلس قضاء المدية',
+    courtName: 'غرفة جزائية',
+    chamber: 'الجزائية',
+    totalFees: 80000,
+    paidAmount: 80000,
+    registrationDate: '2026-01-01',
+    firstSessionDate: '2026-04-30',
+    delibDate: '2026-04-30',
+    judgment: 'البراءة في حق المتهم',
+    parties: [
+      { role: 'متهم', name: 'بلقاسم بوزيدة اسامة', phone: '00213777250603', lawyerName: 'سايج محمد' },
+      { role: 'طرف مدني', name: 'دحماني رانية' },
+    ],
+  },
+  {
+    caseNumber: '25/08100',
+    subject: 'نزاع حول محل تجاري',
+    caseNature: 'مدني',
+    litigationStage: 'استئنافية',
+    status: 'جارية',
+    councilName: 'مجلس قضاء الجزائر',
+    courtName: 'الغرفة المدنية',
+    chamber: 'عقاري 02',
+    totalFees: 100000,
+    paidAmount: 90000,
+    registrationDate: '2025-10-16',
+    delibDate: '2026-01-08',
+    judgment: 'تأيد الحكم',
+    parties: [
+      { role: 'مستأنف', name: 'خلالفة عزالدين', phone: '00213783257551', lawyerName: 'سايج محمد' },
+      { role: 'مستأنف عليه', name: 'فراح رتيبة', lawyerName: 'بلعابد عزيز', lawyerPhone: '00213771242236' },
+    ],
+  },
+  {
+    caseNumber: '25/07238',
+    subject: 'النصب الموجه للجمهور ( النصب الثلاثي)',
+    caseNature: 'جنحة',
+    litigationStage: 'افتتاحية (ابتدائي)',
+    status: 'مؤرشفة',
+    councilName: 'مجلس قضاء الجزائر',
+    courtName: 'محكمة بئرمرادراريس',
+    chamber: 'جنح',
+    registrationDate: '2026-05-01',
+    judgment: 'الحكم ببراءة كل من بودبة منير\nبن يمينة نصر الدين\nو الادانة لكل من\nحمزة ميباركي\nخطاطبة محمد الامين ب عامين حبس نافذ و 400 الف دينار تعويض',
+    parties: [
+      { role: 'متهم', name: 'بودبة منير', phone: 'رقم الهاتف', lawyerName: 'سايج محمد' },
+      { role: 'متهم', name: 'بن يمنية نصرالدين', phone: 'رقم الهاتف', lawyerName: 'سايج' },
+      { role: 'طرف مدني', name: 'بحري الصادق' },
+    ],
+  },
+  {
+    caseNumber: '25/01724',
+    subject: 'الضرب و الجرح العمدي علي قاصر اقل من 16 سنة',
+    caseNature: 'مخالفة',
+    litigationStage: 'افتتاحية (ابتدائي)',
+    status: 'مؤرشفة',
+    councilName: 'مجلس قضاء الجزائر',
+    courtName: 'محكمة الشراقة',
+    chamber: 'جزائي',
+    totalFees: 40000,
+    paidAmount: 40000,
+    registrationDate: '2024-12-18',
+    firstSessionDate: '2025-12-18',
+    delibDate: '2026-01-08',
+    judgment: 'البراءة في حق المتهمين\nالحكم كان غيابي في حق متهمين و حضوري في حق الضحايا',
+    parties: [
+      { role: 'متهم', name: 'عباسي رتيبة و فوغالي اميمة و فوغالي ياسر', phone: 'رقم الهاتف', lawyerName: 'سايج محمد', lawyerPhone: '0558367689' },
+      { role: 'طرف مدني', name: 'بوشيرب امال و بوشيرب امينة و بوقرية عائشة', phone: 'نسرين حسان', lawyerName: 'حسان نسرين', lawyerPhone: '0549351590' },
+    ],
+  },
+  {
+    caseNumber: '26/00618',
+    subject: 'النصب الموجه للجمهور ( نص ثلاثي)',
+    caseNature: 'جنحة',
+    litigationStage: 'معارضة',
+    origCaseNumber: '25/07238',
+    status: 'مؤرشفة',
+    councilName: 'مجلس قضاء الجزائر',
+    courtName: 'بئرمرادراريس',
+    registrationDate: '2026-02-11',
+    delibDate: '2026-02-25',
+    judgment: 'البراءة للمتهمين',
+    parties: [
+      { role: 'متهم', name: 'حمزة ميباركي', lawyerName: 'سايج محمد' },
+      { role: 'متهم', name: 'خطاطبة محمد الامين', phone: 'ر' },
+      { role: 'طرف مدني', name: 'صادق بحري' },
+    ],
+  },
+  {
+    caseNumber: '26/01939',
+    subject: 'النصب الموجه للجمهور   نصب ثلالثي',
+    caseNature: 'جنحة',
+    litigationStage: 'استئنافية',
+    origCaseNumber: '26/00002',
+    status: 'جارية',
+    councilName: 'مجلس قضاء البويرة',
+    courtName: 'مجلس قضاء البويرة',
+    chamber: 'الغرفة الجزائية رقم 3',
+    totalFees: 100000,
+    paidAmount: 15000,
+    barPhone: '0655572657',
+    registrationDate: '2026-04-13',
+    delays: [
+      { delayDate: '2026-05-13', reason: 'لحضور الاطراف' },
+    ],
+    parties: [
+      { role: 'متهم', name: 'بودبة منير', phone: '00213791449280', lawyerName: 'سايج محمد' },
+      { role: 'طرف مدني', name: 'سحنون ليلى', phone: 'رقم الهاتف' },
+    ],
+  },
+  {
+    caseNumber: '25/01989',
+    subject: 'الضرب و الجرح العمدي على قاصر أقل من 16 سنة',
+    caseNature: 'جنحة',
+    litigationStage: 'افتتاحية (ابتدائي)',
+    status: 'مؤرشفة',
+    councilName: 'مجلس قضاء الجزائر',
+    courtName: 'شراقة',
+    chamber: 'قسم الجنح',
+    totalFees: 40000,
+    paidAmount: 40000,
+    barPhone: '0549111248',
+    registrationDate: '2024-02-18',
+    firstSessionDate: '2025-02-24',
+    delibDate: '2025-06-02',
+    judgment: 'في الدعوى المدنية تعويض مئة الف دينار عن الضرر\nفي الدعوى العمومية عام حبس نافذ لكل منهما و خمسون الف دينار جزائري تعويض',
+    parties: [
+      { role: 'ضحية', name: 'عباسي رتيبة', phone: 'رقم الهاتف', lawyerName: 'سايج محمد' },
+      { role: 'ضحية', name: 'فوغالي أميمة', phone: 'قاصرة', lawyerName: 'سايج محمد' },
+      { role: 'ضحية', name: 'فوغالي سيرين', phone: 'قاصر', lawyerName: 'سايج محمد' },
+      { role: 'معارض ضده', name: 'بوشيرب امال حديجة', phone: 'رقم الهاتف', lawyerName: 'حسان نسرين', lawyerPhone: '0549351590' },
+      { role: 'متهم', name: 'بوقريوة عائشة', phone: 'رقم الهاتف', lawyerName: 'حسان نسرين' },
+    ],
+  },
+  {
+    caseNumber: '25/02438',
+    subject: 'الضرب و الجرح العمدي على قاصر أقل من 16 سنة',
+    caseNature: 'مخالفة',
+    litigationStage: 'افتتاحية (ابتدائي)',
+    status: 'مؤرشفة',
+    councilName: 'مجلس قضاء الجزائر',
+    courtName: 'شراقة',
+    chamber: 'قسم الجنح',
+    barPhone: '0549111248',
+    registrationDate: '2024-03-07',
+    firstSessionDate: '2025-03-03',
+    delibDate: '2025-05-05',
+    judgment: 'إدانة المتهمين بعام حكم نافذ\nو غرامة مالية نافذة لكل واحدة منهن في الدعوى المدنية\n80000 دج للضرر عن كل واحدة\nحكم غيابي للمتهمين',
+    parties: [
+      { role: 'ضحية', name: 'عباسي رتيبة', phone: 'رقم الهاتف', lawyerName: 'سايج محمد' },
+      { role: 'ضحية', name: 'فوغالي أميمة', phone: 'قاصرة', lawyerName: 'سايج محمد' },
+      { role: 'ضحية', name: 'فوغالي ياسر', phone: 'قاصر', lawyerName: 'سايج محمد' },
+      { role: 'معارض ضده', name: 'بوشيرب امال خديجة/ بوشيرب امينة', phone: 'رقم الهاتف', lawyerName: 'حسان نسرين', lawyerPhone: '0549351590' },
+      { role: 'متهم', name: 'بوقريوة عائشة', phone: 'رقم الهاتف', lawyerName: 'حسان نسرين' },
+    ],
+  },
+  {
+    caseNumber: '26/04216',
+    subject: 'الضرب و الجرح العمدي على قاصر أقل من 16 سنة',
+    caseNature: 'جنحة',
+    litigationStage: 'معارضة',
+    origCaseNumber: '25/02438',
+    status: 'جارية',
+    councilName: 'مجلس قضاء الجزائر',
+    courtName: 'شراقة',
+    chamber: 'قسم الجنح',
+    totalFees: 40000,
+    paidAmount: 0,
+    barPhone: '0549111248',
+    registrationDate: '2026-04-08',
+    firstSessionDate: '2026-05-04',
+    delays: [
+      { delayDate: '2026-06-01', reason: 'لحضور الاطراف' },
+    ],
+    parties: [
+      { role: 'ضحية', name: 'عباسي رتيبة', phone: 'رقم الهاتف', lawyerName: 'سايج محمد' },
+      { role: 'ضحية', name: 'فوغالي أميمة', phone: 'قاصرة', lawyerName: 'سايج محمد' },
+      { role: 'ضحية', name: 'فوغالي ياسر', phone: 'قاصر', lawyerName: 'سايج محمد' },
+      { role: 'معارض ضده', name: 'بوشيرب امال خديجة/ بوشيرب امينة', phone: 'رقم الهاتف', lawyerName: 'حسان نسرين', lawyerPhone: '0549351590' },
+      { role: 'متهم', name: 'بوقريوة عائشة', phone: 'رقم الهاتف', lawyerName: 'حسان نسرين' },
+    ],
+  },
+  {
+    caseNumber: '26/04221',
+    subject: 'الضرب و الجرح العمدي على قاصر أقل من 16 سنة',
+    caseNature: 'جنحة',
+    litigationStage: 'معارضة',
+    origCaseNumber: '25/01989',
+    status: 'جارية',
+    councilName: 'مجلس قضاء الجزائر',
+    courtName: 'شراقة',
+    chamber: 'قسم الجنح',
+    totalFees: 40000,
+    paidAmount: 0,
+    barPhone: '0549111248',
+    registrationDate: '2026-04-08',
+    firstSessionDate: '2026-05-04',
+    delays: [
+      { delayDate: '2026-06-01', reason: 'لحضور الاطراف' },
+    ],
+    parties: [
+      { role: 'ضحية', name: 'عباسي رتيبة', phone: 'رقم الهاتف', lawyerName: 'سايج محمد' },
+      { role: 'ضحية', name: 'فوغالي أميمة', phone: 'قاصرة', lawyerName: 'سايج محمد' },
+      { role: 'ضحية', name: 'فوغالي سيرين', phone: 'قاصر', lawyerName: 'سايج محمد' },
+      { role: 'معارض ضده', name: 'بوشيرب امال خديجة', phone: 'رقم الهاتف', lawyerName: 'حسان نسرين', lawyerPhone: '0549351590' },
+      { role: 'متهم', name: 'بوقريوة عائشة', phone: 'رقم الهاتف', lawyerName: 'حسان نسرين' },
+    ],
+  },
+  {
+    caseNumber: '26/002',
+    subject: 'النصب الموجه للجمهور ( النصب الثلاثي)',
+    caseNature: 'جنحة',
+    litigationStage: 'معارضة',
+    status: 'مؤرشفة',
+    councilName: 'مجلس قضاء البويرة',
+    courtName: 'محكمة امشدالة',
+    chamber: 'جنح',
+    barPhone: '0655572567',
+    registrationDate: '2026-04-30',
+    firstSessionDate: '2026-04-30',
+    delibDate: '2026-04-30',
+    judgment: 'البراء للمتهم\nفي حق بودبة منير',
+    parties: [
+      { role: 'متهم', name: 'بودبة منير', phone: '00213791449280', lawyerName: 'سايج محمد' },
+      { role: 'طرف مدني', name: 'سحنون ليلى' },
+    ],
+  },
+];
+
 export async function seedDatabase() {
-  const clientCount = await db.clients.count();
-  if (clientCount > 0) return;
+  const caseCount = await db.cases.count();
+  if (caseCount > 0) return;
 
   const now = new Date();
 
-  // ---- الموكلون ----
-  const clientId1 = await db.clients.add({
-    name: 'كريم بوزيد',
-    phone: '0551234567',
-    phone2: '0770123456',
-    email: 'karim.bouzid@email.com',
-    address: 'شارع ديدوش مراد، الجزائر العاصمة',
-    wilaya: 16,
-    nationalId: '1602991234567',
-    type: 'individual',
-    notes: 'موكل قديم - قضايا عقارية وتجارية',
-    createdAt: now,
-    updatedAt: now,
-  });
+  // إدراج القضايا الحقيقية
+  for (const seedCase of REAL_CASES) {
+    const caseId = await db.cases.add({
+      caseNumber: seedCase.caseNumber,
+      subject: seedCase.subject,
+      caseNature: seedCase.caseNature,
+      litigationStage: seedCase.litigationStage,
+      origCaseNumber: seedCase.origCaseNumber,
+      status: seedCase.status,
+      councilName: seedCase.councilName,
+      courtName: seedCase.courtName,
+      chamber: seedCase.chamber,
+      totalFees: seedCase.totalFees,
+      paidAmount: seedCase.paidAmount,
+      registrationDate: seedCase.registrationDate,
+      firstSessionDate: seedCase.firstSessionDate,
+      delibDate: seedCase.delibDate,
+      barPhone: seedCase.barPhone,
+      lawyer: 'سايج محمد',
+      judgment: seedCase.judgment,
+      createdAt: now,
+      updatedAt: now,
+    });
 
-  const clientId2 = await db.clients.add({
-    name: 'مؤسسة الإعمار للأشغال',
-    phone: '021234567',
-    phone2: '0552987654',
-    email: 'contact@el-emaar.dz',
-    address: 'حي 500 مسكن، البليدة',
-    wilaya: 9,
-    nationalId: '09B1234567',
-    type: 'company',
-    notes: 'شركة أشغال عمومية - قضايا عمالية وتجارية',
-    createdAt: now,
-    updatedAt: now,
-  });
+    // إدراج الأطراف
+    if (seedCase.parties) {
+      for (const party of seedCase.parties) {
+        await db.parties.add({
+          caseId: caseId as number,
+          role: party.role,
+          name: party.name,
+          phone: party.phone,
+          lawyerName: party.lawyerName,
+          lawyerPhone: party.lawyerPhone,
+          createdAt: now,
+          updatedAt: now,
+        });
+      }
+    }
 
-  const clientId3 = await db.clients.add({
-    name: 'نادية بلقاسم',
-    phone: '0661234567',
-    email: 'nadia.belkacem@email.com',
-    address: 'شارع الاستقلال، وهران',
-    wilaya: 31,
-    nationalId: '3112851234567',
-    type: 'individual',
-    notes: 'قضايا أحوال شخصية',
-    createdAt: now,
-    updatedAt: now,
-  });
+    // إدراج التأجيلات
+    if (seedCase.delays) {
+      for (const delay of seedCase.delays) {
+        await db.delays.add({
+          caseId: caseId as number,
+          delayDate: delay.delayDate,
+          reason: delay.reason,
+          createdAt: now,
+          updatedAt: now,
+        });
+      }
+    }
+  }
 
-  const clientId4 = await db.clients.add({
-    name: 'يوسف مراد',
-    phone: '0770234567',
-    address: 'حي بن عمر، قسنطينة',
-    wilaya: 25,
-    nationalId: '2505901234567',
-    type: 'individual',
-    notes: 'قضايا جنحة وجناية',
-    createdAt: now,
-    updatedAt: now,
-  });
-
-  // ---- القضايا ----
-  const caseId1 = await db.cases.add({
-    caseNumber: '2024/م/001',
-    subject: 'نزاع عقاري حول قطعة أرض',
-    clientId: clientId1 as number,
-    clientName: 'كريم بوزيد',
-    courtType: 'ordinary',
-    councilName: 'مجلس قضاء الجزائر',
-    courtName: 'محكمة الجزائر العاصمة',
-    sectionName: 'الغرفة المدنية',
-    sectionNumber: '03',
-    caseNature: 'عقاري',
-    stage: 'ابتدائي',
-    status: 'active',
-    fees: 80000,
-    paid: 30000,
-    opposingParty: 'محمد بن علي',
-    opposingLawyer: 'الأستاذ رابح خلفي',
-    registrationDate: '2024-01-15',
-    firstSessionDate: '2024-03-10',
-    barPhone: '0550987654',
-    notes: 'نزاع حول ملكية قطعة أرض مساحتها 500 متر مربع',
-    createdAt: now,
-    updatedAt: now,
-  });
-
-  const caseId2 = await db.cases.add({
-    caseNumber: '2024/م/002',
-    subject: 'دعوى طلاق ونفقة',
-    clientId: clientId3 as number,
-    clientName: 'نادية بلقاسم',
-    courtType: 'ordinary',
-    councilName: 'مجلس قضاء وهران',
-    courtName: 'محكمة وهران',
-    sectionName: 'قسم الأحوال الشخصية',
-    sectionNumber: '01',
-    caseNature: 'أحوال شخصية',
-    stage: 'ابتدائي',
-    status: 'scheduling',
-    fees: 50000,
-    paid: 25000,
-    opposingParty: 'عبد الرحمن بلقاسم',
-    opposingLawyer: 'الأستاذ عمر بن حبيب',
-    registrationDate: '2024-03-20',
-    firstSessionDate: '2024-05-08',
-    notes: 'دعوى طلاق مع نفقة أولاد وحضانة',
-    createdAt: now,
-    updatedAt: now,
-  });
-
-  const caseId3 = await db.cases.add({
-    caseNumber: '2024/إ/001',
-    subject: 'مطالبة بأتعاب أشغال',
-    clientId: clientId2 as number,
-    clientName: 'مؤسسة الإعمار للأشغال',
-    courtType: 'administrative',
-    councilName: 'مجلس قضاء البليدة',
-    courtName: 'المحكمة الإدارية بالبليدة',
-    sectionName: 'الغرفة الإدارية',
-    sectionNumber: '01',
-    caseNature: 'إداري',
-    stage: 'استئنافية',
-    origCaseNumber: '2023/إ/015',
-    status: 'active',
-    fees: 150000,
-    paid: 60000,
-    opposingParty: 'بلدية البليدة',
-    registrationDate: '2024-02-10',
-    firstSessionDate: '2024-04-15',
-    notes: 'مطالبة بأتعاب أشغال عمومية - مرحلة استئنافية',
-    createdAt: now,
-    updatedAt: now,
-  });
-
-  const caseId4 = await db.cases.add({
-    caseNumber: '2024/ج/001',
-    subject: 'قضية سرقة مع سطو',
-    clientId: clientId4 as number,
-    clientName: 'يوسف مراد',
-    courtType: 'ordinary',
-    councilName: 'مجلس قضاء قسنطينة',
-    courtName: 'محكمة قسنطينة',
-    sectionName: 'الغرفة الجزائية',
-    sectionNumber: '02',
-    caseNature: 'جنحة',
-    stage: 'ابتدائي',
-    status: 'decided',
-    fees: 40000,
-    paid: 40000,
-    opposingParty: 'الدولة الجزائرية',
-    registrationDate: '2024-04-05',
-    firstSessionDate: '2024-06-12',
-    delibDate: '2024-09-20',
-    judgment: 'براءة المتهم لانعدام الأدلة',
-    notes: 'تم الفصل - براءة',
-    createdAt: now,
-    updatedAt: now,
-  });
-
-  // ---- الجلسات ----
-  await db.sessions.bulkAdd([
-    {
-      caseId: caseId1 as number,
-      caseNumber: '2024/م/001',
-      caseSubject: 'نزاع عقاري حول قطعة أرض',
-      date: '2025-06-15',
-      time: '09:30',
-      court: 'محكمة الجزائر العاصمة',
-      hall: 'القاعة 3',
-      judgeName: 'القاضي بلقاسم جلول',
-      notes: 'جلسة استماع شهود',
-      status: 'scheduled',
-      createdAt: now,
-      updatedAt: now,
-    },
-    {
-      caseId: caseId1 as number,
-      caseNumber: '2024/م/001',
-      caseSubject: 'نزاع عقاري حول قطعة أرض',
-      date: '2025-05-20',
-      time: '10:00',
-      court: 'محكمة الجزائر العاصمة',
-      hall: 'القاعة 5',
-      judgeName: 'القاضي بلقاسم جلول',
-      notes: 'تم تأجيل الجلسة لاستكمال المستندات',
-      status: 'postponed',
-      result: 'تأجيل لاستكمال المستندات',
-      createdAt: now,
-      updatedAt: now,
-    },
-    {
-      caseId: caseId2 as number,
-      caseNumber: '2024/م/002',
-      caseSubject: 'دعوى طلاق ونفقة',
-      date: '2025-06-10',
-      time: '11:00',
-      court: 'محكمة وهران',
-      hall: 'القاعة 2',
-      judgeName: 'القاضية هدى بن عمر',
-      notes: 'جلسة صلح',
-      status: 'scheduled',
-      createdAt: now,
-      updatedAt: now,
-    },
-    {
-      caseId: caseId3 as number,
-      caseNumber: '2024/إ/001',
-      caseSubject: 'مطالبة بأتعاب أشغال',
-      date: '2025-06-22',
-      time: '08:30',
-      court: 'المحكمة الإدارية بالبليدة',
-      hall: 'القاعة 1',
-      judgeName: 'القاضي عبد الله مراد',
-      notes: 'جلسة مرافعة',
-      status: 'scheduled',
-      createdAt: now,
-      updatedAt: now,
-    },
-  ]);
-
-  // ---- المدفوعات ----
-  await db.payments.bulkAdd([
-    {
-      caseId: caseId1 as number,
-      caseNumber: '2024/م/001',
-      caseSubject: 'نزاع عقاري حول قطعة أرض',
-      clientId: clientId1 as number,
-      clientName: 'كريم بوزيد',
-      type: 'income',
-      category: 'أتعاب',
-      amount: 30000,
-      description: 'دفعة أولى من الأتعاب - 30,000 د.ج',
-      date: '2024-01-20',
-      createdAt: now,
-      updatedAt: now,
-    },
-    {
-      caseId: caseId2 as number,
-      caseNumber: '2024/م/002',
-      caseSubject: 'دعوى طلاق ونفقة',
-      clientId: clientId3 as number,
-      clientName: 'نادية بلقاسم',
-      type: 'income',
-      category: 'أتعاب',
-      amount: 25000,
-      description: 'دفعة أولى من الأتعاب - 25,000 د.ج',
-      date: '2024-04-01',
-      createdAt: now,
-      updatedAt: now,
-    },
-    {
-      caseId: caseId3 as number,
-      caseNumber: '2024/إ/001',
-      caseSubject: 'مطالبة بأتعاب أشغال',
-      clientId: clientId2 as number,
-      clientName: 'مؤسسة الإعمار للأشغال',
-      type: 'income',
-      category: 'أتعاب',
-      amount: 60000,
-      description: 'دفعة أولى من الأتعاب - 60,000 د.ج',
-      date: '2024-02-15',
-      createdAt: now,
-      updatedAt: now,
-    },
-    {
-      type: 'expense',
-      category: 'إيجار',
-      amount: 40000,
-      description: 'إيجار المكتب - شهر مارس 2024',
-      date: '2024-03-01',
-      createdAt: now,
-      updatedAt: now,
-    },
-    {
-      caseId: caseId1 as number,
-      caseNumber: '2024/م/001',
-      caseSubject: 'نزاع عقاري حول قطعة أرض',
-      type: 'expense',
-      category: 'مصاريف قضية',
-      amount: 5000,
-      description: 'رسوم المحكمة ووثائق - 5,000 د.ج',
-      date: '2024-01-18',
-      createdAt: now,
-      updatedAt: now,
-    },
-    {
-      clientId: clientId2 as number,
-      clientName: 'مؤسسة الإعمار للأشغال',
-      type: 'income',
-      category: 'استشارات',
-      amount: 15000,
-      description: 'استشارة قانونية - مؤسسة الإعمار - 15,000 د.ج',
-      date: '2024-03-15',
-      createdAt: now,
-      updatedAt: now,
-    },
-  ]);
-
-  // ---- التأجيلات ----
-  await db.delays.bulkAdd([
-    {
-      caseId: caseId1 as number,
-      caseNumber: '2024/م/001',
-      caseSubject: 'نزاع عقاري حول قطعة أرض',
-      delayDate: '2025-05-20',
-      reason: 'استكمال المستندات',
-      newDate: '2025-06-15',
-      notes: 'الخصم لم يحضر وطلب تأجيل',
-      createdAt: now,
-      updatedAt: now,
-    },
-    {
-      caseId: caseId2 as number,
-      caseNumber: '2024/م/002',
-      caseSubject: 'دعوى طلاق ونفقة',
-      delayDate: '2025-04-12',
-      reason: 'غياب الخصم',
-      newDate: '2025-06-10',
-      notes: 'تم التأجيل لغياب المدعى عليه',
-      createdAt: now,
-      updatedAt: now,
-    },
-  ]);
-
-  // ---- أطراف النزاع ----
-  await db.parties.bulkAdd([
-    {
-      caseId: caseId1 as number,
-      role: 'مدعي',
-      name: 'كريم بوزيد',
-      phone: '0551234567',
-      lawyerName: 'الاستاذ سايج محمد محمد',
-      lawyerPhone: '0550123456',
-      createdAt: now,
-      updatedAt: now,
-    },
-    {
-      caseId: caseId1 as number,
-      role: 'مدعى عليه',
-      name: 'محمد بن علي',
-      phone: '0660987654',
-      lawyerName: 'الأستاذ رابح خلفي',
-      lawyerPhone: '0550876543',
-      createdAt: now,
-      updatedAt: now,
-    },
-    {
-      caseId: caseId2 as number,
-      role: 'مدعية',
-      name: 'نادية بلقاسم',
-      phone: '0661234567',
-      lawyerName: 'الاستاذ سايج محمد محمد',
-      lawyerPhone: '0550123456',
-      createdAt: now,
-      updatedAt: now,
-    },
-    {
-      caseId: caseId2 as number,
-      role: 'مدعى عليه',
-      name: 'عبد الرحمن بلقاسم',
-      phone: '0770345678',
-      lawyerName: 'الأستاذ عمر بن حبيب',
-      lawyerPhone: '0550654321',
-      createdAt: now,
-      updatedAt: now,
-    },
-  ]);
-
-  // ---- الإعدادات ----
+  // إدراج الإعدادات
   await db.settings.bulkAdd(DEFAULT_SETTINGS);
 }
 
@@ -594,6 +656,7 @@ export async function setSetting(key: string, value: unknown): Promise<void> {
 }
 
 /** تنسيق المبلغ بالدينار الجزائري */
-export function formatCurrency(amount: number): string {
+export function formatCurrency(amount: number | undefined | null): string {
+  if (amount == null) return '0 د.ج';
   return `${amount.toLocaleString('en-US')} د.ج`;
 }

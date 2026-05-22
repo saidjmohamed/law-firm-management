@@ -25,6 +25,8 @@ import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
+const APP_NAME = 'مكتب الاستاذ سايج محمد محام لدى المجلس';
+
 const navItems: { id: Section; label: string; icon: React.ElementType }[] = [
   { id: 'dashboard', label: 'لوحة التحكم', icon: LayoutDashboard },
   { id: 'clients', label: 'الموكلون', icon: Users },
@@ -45,7 +47,7 @@ function SidebarContent({ activeSection, onNavigate }: { activeSection: Section;
           <Scale className="w-5 h-5 text-white" />
         </div>
         <div className="min-w-0">
-          <h2 className="font-bold text-sidebar-foreground text-sm leading-tight truncate">مكتب الاستاذ سايج محمد محمد محام لدى المجلس</h2>
+          <h2 className="font-bold text-sidebar-foreground text-sm leading-tight truncate">{APP_NAME}</h2>
           <p className="text-xs text-sidebar-foreground/60 mt-0.5">إدارة مكتب المحاماة</p>
         </div>
       </div>
@@ -118,7 +120,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <div className="w-8 h-8 rounded-lg bg-teal-700 flex items-center justify-center">
                 <Scale className="w-4 h-4 text-white" />
               </div>
-              <span className="font-bold text-sm">مكتب الاستاذ سايج محمد محمد</span>
+              <span className="font-bold text-sm">{APP_NAME}</span>
             </div>
           </div>
           <div className="flex items-center gap-1">
@@ -143,7 +145,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <div className="w-8 h-8 rounded-lg bg-teal-600 flex items-center justify-center shrink-0">
                 <Scale className="w-4 h-4 text-white" />
               </div>
-              <span className="font-bold text-sm text-sidebar-foreground truncate">مكتب الاستاذ سايج محمد محمد</span>
+              <span className="font-bold text-sm text-sidebar-foreground truncate">{APP_NAME}</span>
             </div>
             {mounted && (
               <Button
@@ -157,35 +159,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             )}
           </div>
           <Separator className="bg-sidebar-border" />
-          <ScrollArea className="flex-1 px-3 py-4">
-            <nav className="space-y-1">
-              {navItems.map((item) => {
-                const Icon = item.icon;
-                const isActive = activeSection === item.id;
-                return (
-                  <button
-                    key={item.id}
-                    onClick={() => setActiveSection(item.id)}
-                    className={cn(
-                      'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200',
-                      isActive
-                        ? 'bg-sidebar-accent text-sidebar-accent-foreground shadow-sm'
-                        : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground'
-                    )}
-                  >
-                    <Icon className="w-5 h-5 shrink-0" />
-                    <span>{item.label}</span>
-                  </button>
-                );
-              })}
-            </nav>
-          </ScrollArea>
-          <Separator className="bg-sidebar-border" />
-          <div className="p-4">
-            <Badge variant="outline" className="text-xs border-sidebar-border text-sidebar-foreground/50">
-              الإصدار 2.0
-            </Badge>
-          </div>
+          <SidebarContent activeSection={activeSection} onNavigate={setActiveSection} />
         </aside>
 
         {/* Main content */}

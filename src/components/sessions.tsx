@@ -3,32 +3,21 @@
 import React, { useState, useMemo } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, type Session } from '@/lib/db';
+import { SESSION_STATUSES, formatDate } from '@/lib/constants';
+import { useAppStore } from '@/lib/store';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
-import { Separator } from '@/components/ui/separator';
-import { Switch } from '@/components/ui/switch';
+import { Badge } from '@/components/ui/badge';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogFooter,
-  DialogDescription,
 } from '@/components/ui/dialog';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
 import {
   Select,
   SelectContent,
@@ -36,664 +25,324 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { toast } from 'sonner';
 import {
   Plus,
-  Search,
-  Pencil,
-  Trash2,
-  Eye,
-  CalendarDays,
+  Calendar,
   Clock,
   MapPin,
-  ChevronDown,
-  Check,
-  Gavel,
-  FileText,
+  Pencil,
+  Trash2,
+  ChevronLeft,
 } from 'lucide-react';
-import { toast } from 'sonner';
-import { cn } from '@/lib/utils';
 
-// ============================================================================
-// ثوابت
-// ============================================================================
-const statusLabels: Record<string, string> = {
+const STATUS_LABELS: Record<string, string> = {
   scheduled: 'مجدولة',
-  completed: 'منجزة',
+  completed: 'مكتملة',
   postponed: 'مؤجلة',
   cancelled: 'ملغاة',
 };
 
-const statusColors: Record<string, string> = {
-  scheduled: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
-  completed: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
-  postponed: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
-  cancelled: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+const STATUS_BADGE_CLASSES: Record<string, string> = {
+  scheduled: 'bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-400',
+  completed: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400',
+  postponed: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400',
+  cancelled: 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400',
 };
 
-const formatDate = (date: string) => {
-  if (!date) return '—';
-  try {
-    return new Date(date).toLocaleDateString('ar-DZ', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    });
-  } catch {
-    return '—';
-  }
-};
-
-const formatDay = (date: string) => {
-  if (!date) return '';
-  try {
-    return new Date(date).toLocaleDateString('ar-DZ', { weekday: 'long' });
-  } catch {
-    return '';
-  }
-};
-
-const emptyFormData = (): Partial<Session> => ({
-  caseId: 0,
-  caseNumber: '',
-  caseSubject: '',
-  date: new Date().toISOString().split('T')[0],
-  time: '09:00',
-  court: '',
-  hall: '',
-  judgeName: '',
-  notes: '',
-  status: 'scheduled',
-  result: '',
-});
-
-// ============================================================================
-// مكون الجلسات
-// ============================================================================
 export function Sessions() {
-  const sessions = useLiveQuery(() => db.sessions.orderBy('date').reverse().toArray());
+  const { setSelectedCaseId, setActiveSection } = useAppStore();
+  const [showForm, setShowForm] = useState(false);
+  const [editingSession, setEditingSession] = useState<Session | null>(null);
+  const [formData, setFormData] = useState<Partial<Session>>({});
+  const [filterDate, setFilterDate] = useState('');
+
+  const sessions = useLiveQuery(() => db.sessions.toArray());
   const cases = useLiveQuery(() => db.cases.toArray());
 
-  const [search, setSearch] = useState('');
-  const [filterStatus, setFilterStatus] = useState<string>('all');
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [cumulativeMode, setCumulativeMode] = useState(false);
-  const [cumulativeCount, setCumulativeCount] = useState(0);
-  const [deleteOpen, setDeleteOpen] = useState(false);
-  const [viewOpen, setViewOpen] = useState(false);
-  const [selectedSession, setSelectedSession] = useState<Session | null>(null);
-  const [casePickerOpen, setCasePickerOpen] = useState(false);
-  const [formData, setFormData] = useState<Partial<Session>>(emptyFormData());
-
-  // Filter sessions
   const filteredSessions = useMemo(() => {
     if (!sessions) return [];
-    return sessions.filter((s) => {
-      const q = search.trim().toLowerCase();
-      const matchSearch =
-        !q ||
-        (s.caseNumber && s.caseNumber.toLowerCase().includes(q)) ||
-        (s.caseSubject && s.caseSubject.toLowerCase().includes(q)) ||
-        (s.court && s.court.toLowerCase().includes(q)) ||
-        (s.hall && s.hall.toLowerCase().includes(q)) ||
-        (s.judgeName && s.judgeName.toLowerCase().includes(q)) ||
-        (s.notes && s.notes.toLowerCase().includes(q)) ||
-        (s.result && s.result.toLowerCase().includes(q));
-      const matchStatus = filterStatus === 'all' || s.status === filterStatus;
-      return matchSearch && matchStatus;
-    });
-  }, [sessions, search, filterStatus]);
+    let filtered = [...sessions];
+    if (filterDate) {
+      filtered = filtered.filter((s) => s.date === filterDate);
+    }
+    return filtered.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+  }, [sessions, filterDate]);
 
-  // Group sessions by date
+  // تجميع حسب التاريخ
   const groupedSessions = useMemo(() => {
-    if (!filteredSessions) return {};
-    const groups: Record<string, Session[]> = {};
-    filteredSessions.forEach((s) => {
-      const key = s.date || 'غير محدد';
+    const groups: Record<string, typeof filteredSessions> = {};
+    for (const session of filteredSessions) {
+      const key = session.date || 'بدون تاريخ';
       if (!groups[key]) groups[key] = [];
-      groups[key].push(s);
-    });
-    // Sort groups by date desc
-    const sorted = Object.entries(groups).sort(([a], [b]) => b.localeCompare(a));
-    return Object.fromEntries(sorted);
+      groups[key].push(session);
+    }
+    return groups;
   }, [filteredSessions]);
 
-  const isUpcoming = (date: string) => {
-    if (!date) return false;
-    return new Date(date) >= new Date(new Date().toDateString());
-  };
+  function resetForm() {
+    setFormData({});
+    setEditingSession(null);
+  }
 
-  // Get case info for view dialog
-  const viewCaseInfo = useMemo(() => {
-    if (!selectedSession) return null;
-    return cases?.find((c) => c.id === selectedSession.caseId) ?? null;
-  }, [selectedSession, cases]);
+  function openAddForm() {
+    resetForm();
+    setShowForm(true);
+  }
 
-  // Handlers
-  const openAdd = () => {
-    setFormData(emptyFormData());
-    setSelectedSession(null);
-    setCumulativeMode(false);
-    setCumulativeCount(0);
-    setDialogOpen(true);
-  };
+  function openEditForm(session: Session) {
+    setEditingSession(session);
+    setFormData({ ...session });
+    setShowForm(true);
+  }
 
-  const openEdit = (s: Session) => {
-    setFormData({ ...s });
-    setSelectedSession(s);
-    setDialogOpen(true);
-  };
+  async function saveSession() {
+    const now = new Date();
 
-  const openView = (s: Session) => {
-    setSelectedSession(s);
-    setViewOpen(true);
-  };
-
-  const openDelete = (s: Session) => {
-    setSelectedSession(s);
-    setDeleteOpen(true);
-  };
-
-  const handleSave = async () => {
-    try {
-      const now = new Date();
-      if (selectedSession?.id) {
-        await db.sessions.update(selectedSession.id, {
-          caseId: formData.caseId || 0,
-          caseNumber: formData.caseNumber || '',
-          caseSubject: formData.caseSubject || '',
-          date: formData.date || new Date().toISOString().split('T')[0],
-          time: formData.time || undefined,
-          court: formData.court || undefined,
-          hall: formData.hall || undefined,
-          judgeName: formData.judgeName || undefined,
-          notes: formData.notes || undefined,
-          status: (formData.status as Session['status']) || 'scheduled',
-          result: formData.status === 'completed' ? formData.result || undefined : undefined,
-          updatedAt: now,
-        } as Session);
-        toast.success('تم تحديث الجلسة بنجاح');
-        setDialogOpen(false);
-      } else {
-        await db.sessions.add({
-          caseId: formData.caseId || 0,
-          caseNumber: formData.caseNumber || '',
-          caseSubject: formData.caseSubject || '',
-          date: formData.date || new Date().toISOString().split('T')[0],
-          time: formData.time || undefined,
-          court: formData.court || undefined,
-          hall: formData.hall || undefined,
-          judgeName: formData.judgeName || undefined,
-          notes: formData.notes || undefined,
-          status: (formData.status as Session['status']) || 'scheduled',
-          result: formData.status === 'completed' ? formData.result || undefined : undefined,
-          createdAt: now,
-          updatedAt: now,
-        });
-        if (cumulativeMode) {
-          setCumulativeCount((c) => c + 1);
-          setFormData(emptyFormData());
-          toast.success(`تم إضافة الجلسة بنجاح (${cumulativeCount + 1} جلسات في هذه الجلسة)`);
-        } else {
-          toast.success('تم إضافة الجلسة بنجاح');
-          setDialogOpen(false);
-        }
-      }
-    } catch {
-      toast.error('حدث خطأ أثناء الحفظ');
+    if (editingSession?.id) {
+      await db.sessions.update(editingSession.id, {
+        ...formData,
+        updatedAt: now,
+      });
+      toast.success('تم تحديث الجلسة بنجاح');
+    } else {
+      await db.sessions.add({
+        ...formData,
+        createdAt: now,
+        updatedAt: now,
+      });
+      toast.success('تم إضافة الجلسة بنجاح');
     }
-  };
 
-  const handleDelete = async () => {
-    if (selectedSession?.id) {
-      try {
-        await db.sessions.delete(selectedSession.id);
-        toast.success('تم حذف الجلسة بنجاح');
-      } catch {
-        toast.error('حدث خطأ أثناء الحذف');
-      }
-      setDeleteOpen(false);
-    }
-  };
+    setShowForm(false);
+    resetForm();
+  }
+
+  async function deleteSession(id: number) {
+    await db.sessions.delete(id);
+    toast.success('تم حذف الجلسة');
+  }
+
+  // الجلسات القادمة
+  const now = new Date();
+  const upcomingSessions = filteredSessions.filter(
+    (s) => s.date && new Date(s.date) >= now && s.status !== 'completed' && s.status !== 'cancelled'
+  );
 
   return (
     <div className="space-y-4">
-      {/* Toolbar */}
+      {/* شريط الأدوات */}
       <div className="flex flex-col sm:flex-row gap-3">
-        <div className="relative flex-1">
-          <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            placeholder="بحث بالقضية، المحكمة، القاضي..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pr-9"
-          />
-        </div>
-        <Select value={filterStatus} onValueChange={setFilterStatus}>
-          <SelectTrigger className="w-full sm:w-40">
-            <SelectValue placeholder="الحالة" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">كل الحالات</SelectItem>
-            <SelectItem value="scheduled">مجدولة</SelectItem>
-            <SelectItem value="completed">منجزة</SelectItem>
-            <SelectItem value="postponed">مؤجلة</SelectItem>
-            <SelectItem value="cancelled">ملغاة</SelectItem>
-          </SelectContent>
-        </Select>
-        <Button onClick={openAdd} className="bg-teal-700 hover:bg-teal-800 shrink-0">
-          <Plus className="w-4 h-4 ml-2" />
+        <Input
+          type="date"
+          value={filterDate}
+          onChange={(e) => setFilterDate(e.target.value)}
+          className="w-full sm:w-48"
+        />
+        {filterDate && (
+          <Button variant="ghost" size="sm" onClick={() => setFilterDate('')}>
+            مسح الفلتر
+          </Button>
+        )}
+        <div className="flex-1" />
+        <Button onClick={openAddForm} className="bg-teal-600 hover:bg-teal-700 shrink-0">
+          <Plus className="w-4 h-4 ml-1" />
           إضافة جلسة
         </Button>
       </div>
 
-      {/* Count */}
-      <div className="flex items-center gap-2">
-        <Badge variant="outline" className="text-sm">
-          <CalendarDays className="w-3.5 h-3.5 ml-1" />
-          {filteredSessions.length} جلسة
-        </Badge>
-      </div>
+      {/* الجلسات القادمة */}
+      {upcomingSessions.length > 0 && !filterDate && (
+        <div>
+          <h3 className="text-sm font-semibold mb-2 text-teal-700 dark:text-teal-400">الجلسات القادمة</h3>
+          <div className="grid gap-2">
+            {upcomingSessions.slice(0, 5).map((session) => (
+              <Card
+                key={session.id}
+                className="cursor-pointer hover:shadow-md transition-shadow"
+                onClick={() => {
+                  if (session.caseId) {
+                    setSelectedCaseId(session.caseId);
+                    setActiveSection('cases');
+                  }
+                }}
+              >
+                <CardContent className="p-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium">{session.caseNumber || '—'}</span>
+                        <Badge className={`${STATUS_BADGE_CLASSES[session.status || 'scheduled'] || ''} text-xs`}>
+                          {STATUS_LABELS[session.status || 'scheduled']}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                        {session.court && <span>{session.court}</span>}
+                        {session.chamber && <span>• {session.chamber}</span>}
+                        {session.time && <span>• {session.time}</span>}
+                      </div>
+                    </div>
+                    <div className="text-left">
+                      <Badge variant="outline" className="text-xs">{formatDate(session.date)}</Badge>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      )}
 
-      {/* Sessions grouped by date */}
-      <div className="space-y-4 max-h-[calc(100vh-320px)] overflow-y-auto">
-        {Object.keys(groupedSessions).length > 0 ? (
-          Object.entries(groupedSessions).map(([dateKey, dateSessions]) => {
-            const upcoming = isUpcoming(dateKey);
-            return (
-              <div key={dateKey}>
-                <div className="flex items-center gap-2 mb-3 sticky top-0 bg-background/95 backdrop-blur-sm py-1 z-10">
-                  <CalendarDays className={`w-4 h-4 ${upcoming ? 'text-amber-500' : 'text-muted-foreground'}`} />
-                  <span className={`font-semibold text-sm ${upcoming ? 'text-amber-600 dark:text-amber-400' : ''}`}>
-                    {formatDate(dateKey)}
-                  </span>
-                  <span className="text-sm text-muted-foreground">({formatDay(dateKey)})</span>
-                  {upcoming && (
-                    <Badge className="text-xs bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">قادمة</Badge>
-                  )}
-                  <Badge variant="outline" className="text-xs">{dateSessions.length}</Badge>
-                </div>
-                <div className="grid gap-3">
-                  {dateSessions.map((session) => (
-                    <Card key={session.id} className="border-0 shadow-sm">
-                      <CardContent className="p-4">
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-2">
-                              <Badge variant="secondary" className={`text-xs ${statusColors[session.status]}`}>
-                                {statusLabels[session.status]}
-                              </Badge>
-                              <span className="font-mono text-xs text-muted-foreground">{session.caseNumber}</span>
-                            </div>
-                            <p className="font-medium text-sm mb-1">{session.caseSubject || '—'}</p>
-                            <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                              {session.time && (
-                                <span className="flex items-center gap-1">
-                                  <Clock className="w-3 h-3" />
-                                  {session.time}
-                                </span>
-                              )}
-                              {session.court && (
-                                <span className="flex items-center gap-1">
-                                  <MapPin className="w-3 h-3" />
-                                  {session.court}{session.hall ? ` - ${session.hall}` : ''}
-                                </span>
-                              )}
-                              {session.judgeName && (
-                                <span className="flex items-center gap-1">
-                                  <Gavel className="w-3 h-3" />
-                                  {session.judgeName}
-                                </span>
-                              )}
-                            </div>
-                            {session.notes && (
-                              <p className="text-xs text-muted-foreground mt-2">{session.notes}</p>
-                            )}
-                            {session.result && (
-                              <p className="text-xs mt-2 p-2 rounded bg-muted/50">
-                                <span className="text-muted-foreground">النتيجة: </span>{session.result}
-                              </p>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-1 mr-2 shrink-0">
-                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openView(session)} title="عرض">
-                              <Eye className="w-4 h-4" />
-                            </Button>
-                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(session)} title="تعديل">
-                              <Pencil className="w-4 h-4" />
-                            </Button>
-                            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => openDelete(session)} title="حذف">
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </div>
+      {/* كل الجلسات مج.grouped */}
+      <div className="space-y-4">
+        {Object.entries(groupedSessions).map(([date, dateSessions]) => (
+          <div key={date}>
+            <h3 className="text-sm font-semibold mb-2 text-muted-foreground">{date}</h3>
+            <div className="space-y-2">
+              {dateSessions.map((session) => (
+                <Card key={session.id} className="hover:shadow-sm transition-shadow">
+                  <CardContent className="p-3">
+                    <div className="flex items-center justify-between">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-sm font-medium">{session.caseNumber || '—'}</span>
+                          <Badge className={`${STATUS_BADGE_CLASSES[session.status || 'scheduled'] || ''} text-xs`}>
+                            {STATUS_LABELS[session.status || 'scheduled']}
+                          </Badge>
                         </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              </div>
-            );
-          })
-        ) : (
-          <Card className="border-0 shadow-sm">
-            <CardContent className="py-12 text-center text-muted-foreground">
-              {search || filterStatus !== 'all' ? 'لا توجد نتائج للبحث' : 'لا توجد جلسات بعد'}
+                        <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground flex-wrap">
+                          {session.court && <span>{session.court}</span>}
+                          {session.chamber && <span>• {session.chamber}</span>}
+                          {session.time && <span>• {session.time}</span>}
+                          {session.roomNumber && <span>• قاعة {(session.roomNumber).toLocaleString('en-US')}</span>}
+                        </div>
+                        {session.result && (
+                          <p className="text-xs mt-1 text-muted-foreground">النتيجة: {session.result}</p>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-1 mr-2">
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEditForm(session)}>
+                          <Pencil className="w-3 h-3" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => session.id && deleteSession(session.id)}>
+                          <Trash2 className="w-3 h-3" />
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        ))}
+
+        {filteredSessions.length === 0 && (
+          <Card>
+            <CardContent className="p-8 text-center">
+              <Calendar className="w-12 h-12 mx-auto text-muted-foreground/30 mb-3" />
+              <p className="text-muted-foreground">لا توجد جلسات مسجلة</p>
             </CardContent>
           </Card>
         )}
       </div>
 
-      {/* View Session Dialog */}
-      <Dialog open={viewOpen} onOpenChange={setViewOpen}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto" dir="rtl">
+      {/* نافذة إضافة/تعديل */}
+      <Dialog open={showForm} onOpenChange={(open) => { setShowForm(open); if (!open) resetForm(); }}>
+        <DialogContent className="max-w-lg" dir="rtl">
           <DialogHeader>
-            <DialogTitle>تفاصيل الجلسة</DialogTitle>
-            <DialogDescription>معلومات الجلسة والقضية المرتبطة</DialogDescription>
+            <DialogTitle>{editingSession ? 'تعديل الجلسة' : 'إضافة جلسة جديدة'}</DialogTitle>
           </DialogHeader>
-          {selectedSession && (
-            <div className="space-y-4">
-              {/* Session Header */}
-              <div className="flex items-center gap-3 p-4 rounded-lg bg-muted/50">
-                <div className="w-12 h-12 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center shrink-0">
-                  <CalendarDays className="w-6 h-6 text-amber-700 dark:text-amber-400" />
-                </div>
-                <div className="min-w-0">
-                  <p className="font-bold">{selectedSession.caseSubject || '—'}</p>
-                  <p className="text-sm text-muted-foreground font-mono">{selectedSession.caseNumber}</p>
-                </div>
-                <Badge variant="secondary" className={`text-xs shrink-0 mr-auto ${statusColors[selectedSession.status]}`}>
-                  {statusLabels[selectedSession.status]}
-                </Badge>
-              </div>
 
-              {/* Session Details */}
-              <div className="grid gap-3">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="text-sm">
-                    <span className="text-muted-foreground">التاريخ: </span>
-                    <span className="font-medium">{formatDate(selectedSession.date)}</span>
-                  </div>
-                  {selectedSession.time && (
-                    <div className="text-sm">
-                      <span className="text-muted-foreground">الوقت: </span>
-                      <span className="font-medium" dir="ltr">{selectedSession.time}</span>
-                    </div>
-                  )}
-                </div>
-                {selectedSession.court && (
-                  <div className="text-sm">
-                    <span className="text-muted-foreground">المحكمة: </span>
-                    <span className="font-medium">{selectedSession.court}</span>
-                  </div>
-                )}
-                {selectedSession.hall && (
-                  <div className="text-sm">
-                    <span className="text-muted-foreground">القاعة: </span>
-                    <span className="font-medium">{selectedSession.hall}</span>
-                  </div>
-                )}
-                {selectedSession.judgeName && (
-                  <div className="text-sm">
-                    <span className="text-muted-foreground">القاضي: </span>
-                    <span className="font-medium">{selectedSession.judgeName}</span>
-                  </div>
-                )}
-                {selectedSession.notes && (
-                  <div className="text-sm p-3 rounded-lg bg-muted/50">
-                    <span className="text-muted-foreground">ملاحظات: </span>
-                    {selectedSession.notes}
-                  </div>
-                )}
-                {selectedSession.result && (
-                  <div className="text-sm p-3 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800">
-                    <span className="text-emerald-700 dark:text-emerald-400 font-medium">النتيجة: </span>
-                    {selectedSession.result}
-                  </div>
-                )}
-              </div>
-
-              {/* Case Info */}
-              {viewCaseInfo && (
-                <>
-                  <Separator />
-                  <div>
-                    <h4 className="font-semibold text-sm mb-2 flex items-center gap-2">
-                      <FileText className="w-4 h-4 text-teal-600" />
-                      معلومات القضية
-                    </h4>
-                    <div className="p-3 rounded-lg bg-teal-50 dark:bg-teal-900/10 space-y-1 text-sm">
-                      <div><span className="text-muted-foreground">الموضوع: </span>{viewCaseInfo.subject}</div>
-                      <div><span className="text-muted-foreground">الموكل: </span>{viewCaseInfo.clientName || '—'}</div>
-                      <div><span className="text-muted-foreground">المحكمة: </span>{viewCaseInfo.courtName || '—'}</div>
-                      <div><span className="text-muted-foreground">الطبيعة: </span>{viewCaseInfo.caseNature}</div>
-                    </div>
-                  </div>
-                </>
-              )}
-
-              {/* Actions */}
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  className="flex-1"
-                  onClick={() => {
-                    setViewOpen(false);
-                    setTimeout(() => openEdit(selectedSession), 200);
-                  }}
-                >
-                  <Pencil className="w-4 h-4 ml-2" />
-                  تعديل
-                </Button>
-                <Button
-                  variant="outline"
-                  className="flex-1 text-destructive hover:text-destructive"
-                  onClick={() => {
-                    setViewOpen(false);
-                    setTimeout(() => openDelete(selectedSession), 200);
-                  }}
-                >
-                  <Trash2 className="w-4 h-4 ml-2" />
-                  حذف
-                </Button>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Add/Edit Dialog */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto" dir="rtl">
-          <DialogHeader>
-            <DialogTitle>{selectedSession ? 'تعديل الجلسة' : 'إضافة جلسة جديدة'} {cumulativeMode && cumulativeCount > 0 && <Badge className="mr-2 bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">{cumulativeCount} تمت إضافتها</Badge>}</DialogTitle>
-            <DialogDescription>
-              {selectedSession ? 'قم بتعديل بيانات الجلسة' : cumulativeMode ? 'الادخال التراكمي: أضف جلسات متعددة دون إغلاق النافذة' : 'أدخل بيانات الجلسة الجديدة'}
-            </DialogDescription>
-            {!selectedSession && (
-              <div className="flex items-center gap-2 mt-2">
-                <Switch
-                  id="cumulative-mode"
-                  checked={cumulativeMode}
-                  onCheckedChange={setCumulativeMode}
-                />
-                <Label htmlFor="cumulative-mode" className="text-sm cursor-pointer">الادخال التراكمي</Label>
-              </div>
-            )}
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            {/* Case Picker */}
-            <div className="grid gap-2">
-              <Label>القضية</Label>
-              <Popover open={casePickerOpen} onOpenChange={setCasePickerOpen}>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" className="justify-between font-normal">
-                    {formData.caseSubject || 'اختر القضية'}
-                    <ChevronDown className="w-4 h-4 mr-2 opacity-50" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="p-0" align="start">
-                  <Command>
-                    <CommandInput placeholder="بحث عن قضية..." />
-                    <CommandList>
-                      <CommandEmpty>لا توجد قضايا</CommandEmpty>
-                      <CommandGroup>
-                        {cases?.map((c) => (
-                          <CommandItem
-                            key={c.id}
-                            onSelect={() => {
-                              setFormData({
-                                ...formData,
-                                caseId: c.id!,
-                                caseNumber: c.caseNumber,
-                                caseSubject: c.subject,
-                                court: c.courtName || formData.court,
-                              });
-                              setCasePickerOpen(false);
-                            }}
-                          >
-                            <Check
-                              className={cn(
-                                'w-4 h-4 ml-2',
-                                formData.caseId === c.id ? 'opacity-100' : 'opacity-0'
-                              )}
-                            />
-                            <span>{c.subject}</span>
-                            <span className="text-xs text-muted-foreground mr-2">({c.caseNumber})</span>
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
-                    </CommandList>
-                  </Command>
-                </PopoverContent>
-              </Popover>
-            </div>
-
-            {/* Date + Time */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="grid gap-2">
-                <Label>التاريخ</Label>
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className="text-xs">تاريخ الجلسة</Label>
                 <Input
                   type="date"
                   value={formData.date || ''}
                   onChange={(e) => setFormData({ ...formData, date: e.target.value })}
                 />
               </div>
-              <div className="grid gap-2">
-                <Label>الوقت</Label>
+              <div>
+                <Label className="text-xs">الوقت</Label>
                 <Input
                   type="time"
-                  value={formData.time || '09:00'}
+                  value={formData.time || ''}
                   onChange={(e) => setFormData({ ...formData, time: e.target.value })}
                 />
               </div>
             </div>
-
-            {/* Court + Hall */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="grid gap-2">
-                <Label>المحكمة</Label>
+            <div>
+              <Label className="text-xs">رقم القضية</Label>
+              <Input
+                value={formData.caseNumber || ''}
+                onChange={(e) => setFormData({ ...formData, caseNumber: e.target.value })}
+                placeholder="رقم القضية"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className="text-xs">المحكمة</Label>
                 <Input
                   value={formData.court || ''}
                   onChange={(e) => setFormData({ ...formData, court: e.target.value })}
                   placeholder="اسم المحكمة"
                 />
               </div>
-              <div className="grid gap-2">
-                <Label>القاعة</Label>
+              <div>
+                <Label className="text-xs">الغرفة</Label>
                 <Input
-                  value={formData.hall || ''}
-                  onChange={(e) => setFormData({ ...formData, hall: e.target.value })}
-                  placeholder="رقم القاعة"
+                  value={formData.chamber || ''}
+                  onChange={(e) => setFormData({ ...formData, chamber: e.target.value })}
+                  placeholder="الغرفة/القسم"
                 />
               </div>
             </div>
-
-            {/* Judge Name */}
-            <div className="grid gap-2">
-              <Label>اسم القاضي</Label>
+            <div>
+              <Label className="text-xs">رقم القاعة</Label>
               <Input
-                value={formData.judgeName || ''}
-                onChange={(e) => setFormData({ ...formData, judgeName: e.target.value })}
-                placeholder="اسم القاضي"
+                value={formData.roomNumber || ''}
+                onChange={(e) => setFormData({ ...formData, roomNumber: e.target.value })}
+                placeholder="رقم القاعة"
               />
             </div>
-
-            {/* Status */}
-            <div className="grid gap-2">
-              <Label>الحالة</Label>
-              <Select
-                value={formData.status || 'scheduled'}
-                onValueChange={(v) => setFormData({ ...formData, status: v as Session['status'] })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
+            <div>
+              <Label className="text-xs">الحالة</Label>
+              <Select value={formData.status || ''} onValueChange={(v) => setFormData({ ...formData, status: v === '_empty' ? '' : v })}>
+                <SelectTrigger><SelectValue placeholder="اختر الحالة" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="scheduled">مجدولة</SelectItem>
-                  <SelectItem value="completed">منجزة</SelectItem>
-                  <SelectItem value="postponed">مؤجلة</SelectItem>
-                  <SelectItem value="cancelled">ملغاة</SelectItem>
+                  <SelectItem value="_empty">—</SelectItem>
+                  {SESSION_STATUSES.map((s) => (
+                    <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
-
-            {/* Result (shown when completed) */}
-            {formData.status === 'completed' && (
-              <div className="grid gap-2">
-                <Label>النتيجة</Label>
-                <Textarea
-                  value={formData.result || ''}
-                  onChange={(e) => setFormData({ ...formData, result: e.target.value })}
-                  placeholder="نتيجة الجلسة"
-                  rows={2}
-                />
-              </div>
-            )}
-
-            {/* Notes */}
-            <div className="grid gap-2">
-              <Label>ملاحظات</Label>
+            <div>
+              <Label className="text-xs">النتيجة</Label>
+              <Input
+                value={formData.result || ''}
+                onChange={(e) => setFormData({ ...formData, result: e.target.value })}
+                placeholder="نتيجة الجلسة"
+              />
+            </div>
+            <div>
+              <Label className="text-xs">ملاحظات</Label>
               <Textarea
                 value={formData.notes || ''}
                 onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                placeholder="ملاحظات إضافية"
+                placeholder="ملاحظات"
                 rows={2}
               />
             </div>
           </div>
-          <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>
-              إلغاء
-            </Button>
-            <Button onClick={handleSave} className="bg-teal-700 hover:bg-teal-800">
-              {selectedSession ? 'تحديث' : 'إضافة'}
-            </Button>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setShowForm(false); resetForm(); }}>إلغاء</Button>
+            <Button onClick={saveSession} className="bg-teal-600 hover:bg-teal-700">حفظ</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      {/* Delete Confirmation */}
-      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
-        <AlertDialogContent dir="rtl">
-          <AlertDialogHeader>
-            <AlertDialogTitle>تأكيد الحذف</AlertDialogTitle>
-            <AlertDialogDescription>
-              هل أنت متأكد من حذف هذه الجلسة؟ لا يمكن التراجع عن هذا الإجراء.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>إلغاء</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90">
-              حذف
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }

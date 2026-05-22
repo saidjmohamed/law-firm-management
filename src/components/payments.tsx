@@ -2,32 +2,21 @@
 
 import React, { useState, useMemo } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { db, type Payment } from '@/lib/db';
+import { db, formatCurrency, type Payment } from '@/lib/db';
+import { PAYMENT_CATEGORIES, formatDate } from '@/lib/constants';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
-import { Switch } from '@/components/ui/switch';
+import { Badge } from '@/components/ui/badge';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogFooter,
-  DialogDescription,
 } from '@/components/ui/dialog';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
 import {
   Select,
   SelectContent,
@@ -35,671 +24,284 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { Separator } from '@/components/ui/separator';
+import { toast } from 'sonner';
 import {
   Plus,
-  Search,
-  Pencil,
-  Trash2,
   TrendingUp,
   TrendingDown,
-  Wallet,
-  ChevronDown,
-  Check,
-  Banknote,
+  DollarSign,
+  Pencil,
+  Trash2,
 } from 'lucide-react';
-import { toast } from 'sonner';
-import { cn } from '@/lib/utils';
-import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-} from 'recharts';
 
-// ============================================================================
-// ثوابت
-// ============================================================================
-const fmtCurrency = (amount: number) => `${amount.toLocaleString('en-US')} د.ج`;
-
-const typeLabels: Record<string, string> = {
-  income: 'دخل',
-  expense: 'مصروف',
-};
-
-const categories = ['أتعاب', 'استشارات', 'مصاريف قضية', 'رواتب', 'إيجار', 'أخرى'];
-
-const formatDate = (date: string) => {
-  if (!date) return '—';
-  try {
-    return new Date(date).toLocaleDateString('ar-DZ', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    });
-  } catch {
-    return '—';
-  }
-};
-
-const emptyFormData = (): Partial<Payment> => ({
-  type: 'income',
-  category: 'أتعاب',
-  amount: 0,
-  description: '',
-  date: new Date().toISOString().split('T')[0],
-  caseId: undefined,
-  caseNumber: '',
-  caseSubject: '',
-  clientId: undefined,
-  clientName: '',
-});
-
-// ============================================================================
-// مكون المدفوعات
-// ============================================================================
 export function PaymentsManager() {
-  const payments = useLiveQuery(() => db.payments.orderBy('date').reverse().toArray());
-  const cases = useLiveQuery(() => db.cases.toArray());
-  const clients = useLiveQuery(() => db.clients.toArray());
-
-  const [search, setSearch] = useState('');
+  const [showForm, setShowForm] = useState(false);
+  const [editingPayment, setEditingPayment] = useState<Payment | null>(null);
+  const [formData, setFormData] = useState<Partial<Payment>>({});
   const [filterType, setFilterType] = useState<string>('all');
-  const [filterCategory, setFilterCategory] = useState<string>('all');
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [cumulativeMode, setCumulativeMode] = useState(false);
-  const [cumulativeCount, setCumulativeCount] = useState(0);
-  const [deleteOpen, setDeleteOpen] = useState(false);
-  const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
-  const [casePickerOpen, setCasePickerOpen] = useState(false);
-  const [clientPickerOpen, setClientPickerOpen] = useState(false);
-  const [formData, setFormData] = useState<Partial<Payment>>(emptyFormData());
-  const [page, setPage] = useState(1);
-  const PAGE_SIZE = 20;
+  const [filterDateFrom, setFilterDateFrom] = useState('');
+  const [filterDateTo, setFilterDateTo] = useState('');
 
-  // Summary calculations
-  const totalIncome = useMemo(
-    () => payments?.filter((p) => p.type === 'income').reduce((sum, p) => sum + p.amount, 0) ?? 0,
-    [payments]
-  );
-  const totalExpenses = useMemo(
-    () => payments?.filter((p) => p.type === 'expense').reduce((sum, p) => sum + p.amount, 0) ?? 0,
-    [payments]
-  );
-  const netBalance = totalIncome - totalExpenses;
+  const payments = useLiveQuery(() => db.payments.toArray());
+  const cases = useLiveQuery(() => db.cases.toArray());
 
-  // Filter payments
   const filteredPayments = useMemo(() => {
     if (!payments) return [];
-    return payments.filter((p) => {
-      const q = search.trim().toLowerCase();
-      const matchSearch =
-        !q ||
-        (p.description && p.description.toLowerCase().includes(q)) ||
-        (p.caseNumber && p.caseNumber.toLowerCase().includes(q)) ||
-        (p.caseSubject && p.caseSubject.toLowerCase().includes(q)) ||
-        (p.clientName && p.clientName.toLowerCase().includes(q)) ||
-        (p.category && p.category.toLowerCase().includes(q));
-      const matchType = filterType === 'all' || p.type === filterType;
-      const matchCategory = filterCategory === 'all' || p.category === filterCategory;
-      return matchSearch && matchType && matchCategory;
-    });
-  }, [payments, search, filterType, filterCategory]);
-
-  const totalPages = Math.max(1, Math.ceil(filteredPayments.length / PAGE_SIZE));
-  const paginatedPayments = filteredPayments.slice(0, page * PAGE_SIZE);
-  const hasMore = page * PAGE_SIZE < filteredPayments.length;
-
-  // Monthly chart data
-  const monthlyData = useMemo(() => {
-    const months = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
-    const data: { month: string; income: number; expenses: number }[] = [];
-    for (let i = 0; i < 6; i++) {
-      const d = new Date();
-      d.setMonth(d.getMonth() - 5 + i);
-      const m = d.getMonth();
-      const y = d.getFullYear();
-      const income = payments?.filter((p) => {
-        const td = new Date(p.date);
-        return p.type === 'income' && td.getMonth() === m && td.getFullYear() === y;
-      }).reduce((s, p) => s + p.amount, 0) ?? 0;
-      const expenses = payments?.filter((p) => {
-        const td = new Date(p.date);
-        return p.type === 'expense' && td.getMonth() === m && td.getFullYear() === y;
-      }).reduce((s, p) => s + p.amount, 0) ?? 0;
-      data.push({ month: months[m], income, expenses });
+    let filtered = [...payments];
+    if (filterType !== 'all') {
+      filtered = filtered.filter((p) => p.type === filterType);
     }
-    return data;
-  }, [payments]);
-
-  // Handlers
-  const openAdd = () => {
-    setFormData(emptyFormData());
-    setSelectedPayment(null);
-    setCumulativeMode(false);
-    setCumulativeCount(0);
-    setDialogOpen(true);
-  };
-
-  const openEdit = (p: Payment) => {
-    setFormData({ ...p });
-    setSelectedPayment(p);
-    setDialogOpen(true);
-  };
-
-  const openDelete = (p: Payment) => {
-    setSelectedPayment(p);
-    setDeleteOpen(true);
-  };
-
-  const handleSave = async () => {
-    try {
-      const now = new Date();
-      if (selectedPayment?.id) {
-        await db.payments.update(selectedPayment.id, {
-          type: (formData.type as 'income' | 'expense') || 'income',
-          category: formData.category || 'أخرى',
-          amount: formData.amount || 0,
-          description: formData.description?.trim() || undefined,
-          date: formData.date || new Date().toISOString().split('T')[0],
-          caseId: formData.caseId || undefined,
-          caseNumber: formData.caseNumber || undefined,
-          caseSubject: formData.caseSubject || undefined,
-          clientId: formData.clientId || undefined,
-          clientName: formData.clientName || undefined,
-          updatedAt: now,
-        } as Payment);
-        toast.success('تم تحديث المعاملة بنجاح');
-        setDialogOpen(false);
-      } else {
-        await db.payments.add({
-          type: (formData.type as 'income' | 'expense') || 'income',
-          category: formData.category || 'أخرى',
-          amount: formData.amount || 0,
-          description: formData.description?.trim() || undefined,
-          date: formData.date || new Date().toISOString().split('T')[0],
-          caseId: formData.caseId || undefined,
-          caseNumber: formData.caseNumber || undefined,
-          caseSubject: formData.caseSubject || undefined,
-          clientId: formData.clientId || undefined,
-          clientName: formData.clientName || undefined,
-          createdAt: now,
-          updatedAt: now,
-        });
-        if (cumulativeMode) {
-          setCumulativeCount((c) => c + 1);
-          setFormData(emptyFormData());
-          toast.success(`تم إضافة المعاملة بنجاح (${cumulativeCount + 1} معاملات في هذه الجلسة)`);
-        } else {
-          toast.success('تم إضافة المعاملة بنجاح');
-          setDialogOpen(false);
-        }
-      }
-    } catch {
-      toast.error('حدث خطأ أثناء الحفظ');
+    if (filterDateFrom) {
+      filtered = filtered.filter((p) => p.date && p.date >= filterDateFrom);
     }
-  };
-
-  const handleDelete = async () => {
-    if (selectedPayment?.id) {
-      try {
-        await db.payments.delete(selectedPayment.id);
-        toast.success('تم حذف المعاملة بنجاح');
-      } catch {
-        toast.error('حدث خطأ أثناء الحذف');
-      }
-      setDeleteOpen(false);
+    if (filterDateTo) {
+      filtered = filtered.filter((p) => p.date && p.date <= filterDateTo);
     }
-  };
+    return filtered.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+  }, [payments, filterType, filterDateFrom, filterDateTo]);
+
+  const totalIncome = filteredPayments
+    .filter((p) => p.type === 'income')
+    .reduce((sum, p) => sum + (p.amount || 0), 0);
+
+  const totalExpense = filteredPayments
+    .filter((p) => p.type === 'expense')
+    .reduce((sum, p) => sum + (p.amount || 0), 0);
+
+  const netAmount = totalIncome - totalExpense;
+
+  function resetForm() {
+    setFormData({});
+    setEditingPayment(null);
+  }
+
+  function openAddForm(type?: string) {
+    resetForm();
+    if (type) setFormData({ type });
+    setShowForm(true);
+  }
+
+  function openEditForm(payment: Payment) {
+    setEditingPayment(payment);
+    setFormData({ ...payment });
+    setShowForm(true);
+  }
+
+  async function savePayment() {
+    const now = new Date();
+
+    if (editingPayment?.id) {
+      await db.payments.update(editingPayment.id, {
+        ...formData,
+        updatedAt: now,
+      });
+      toast.success('تم تحديث الدفعة بنجاح');
+    } else {
+      await db.payments.add({
+        ...formData,
+        createdAt: now,
+        updatedAt: now,
+      });
+      toast.success('تم إضافة الدفعة بنجاح');
+    }
+
+    setShowForm(false);
+    resetForm();
+  }
+
+  async function deletePayment(id: number) {
+    await db.payments.delete(id);
+    toast.success('تم حذف الدفعة');
+  }
 
   return (
     <div className="space-y-4">
-      {/* Summary cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <Card className="border-0 shadow-sm">
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="w-12 h-12 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center shrink-0">
-              <TrendingUp className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-xs text-muted-foreground">إجمالي الدخل</p>
-              <p className="text-lg font-bold text-emerald-600 dark:text-emerald-400 truncate">{fmtCurrency(totalIncome)}</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="border-0 shadow-sm">
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="w-12 h-12 rounded-lg bg-red-50 dark:bg-red-900/20 flex items-center justify-center shrink-0">
-              <TrendingDown className="w-6 h-6 text-red-600 dark:text-red-400" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-xs text-muted-foreground">إجمالي المصاريف</p>
-              <p className="text-lg font-bold text-red-600 dark:text-red-400 truncate">{fmtCurrency(totalExpenses)}</p>
+      {/* بطاقات الملخص */}
+      <div className="grid grid-cols-3 gap-3">
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
+                <TrendingUp className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">الإيرادات</p>
+                <p className="text-sm font-bold text-emerald-700 dark:text-emerald-400">{formatCurrency(totalIncome)}</p>
+              </div>
             </div>
           </CardContent>
         </Card>
-        <Card className="border-0 shadow-sm">
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className={`w-12 h-12 rounded-lg flex items-center justify-center shrink-0 ${netBalance >= 0 ? 'bg-teal-50 dark:bg-teal-900/20' : 'bg-red-50 dark:bg-red-900/20'}`}>
-              <Wallet className={`w-6 h-6 ${netBalance >= 0 ? 'text-teal-600 dark:text-teal-400' : 'text-red-600 dark:text-red-400'}`} />
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-lg bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+                <TrendingDown className="w-4 h-4 text-red-600 dark:text-red-400" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">المصروفات</p>
+                <p className="text-sm font-bold text-red-700 dark:text-red-400">{formatCurrency(totalExpense)}</p>
+              </div>
             </div>
-            <div className="min-w-0">
-              <p className="text-xs text-muted-foreground">الرصيد الصافي</p>
-              <p className={`text-lg font-bold truncate ${netBalance >= 0 ? 'text-teal-600 dark:text-teal-400' : 'text-red-600 dark:text-red-400'}`}>
-                {fmtCurrency(netBalance)}
-              </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-lg bg-teal-100 dark:bg-teal-900/30 flex items-center justify-center">
+                <DollarSign className="w-4 h-4 text-teal-600 dark:text-teal-400" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">الصافي</p>
+                <p className={`text-sm font-bold ${netAmount >= 0 ? 'text-teal-700 dark:text-teal-400' : 'text-red-700 dark:text-red-400'}`}>{formatCurrency(netAmount)}</p>
+              </div>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Chart */}
-      <Card className="border-0 shadow-sm">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base font-semibold">الدخل مقابل المصاريف (آخر 6 أشهر)</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ResponsiveContainer width="100%" height={220}>
-            <BarChart data={monthlyData}>
-              <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-              <XAxis dataKey="month" tick={{ fontSize: 11 }} />
-              <YAxis tick={{ fontSize: 11 }} />
-              <Tooltip
-                formatter={(value: number) => `${value.toLocaleString('en-US')} د.ج`}
-                contentStyle={{ direction: 'rtl', textAlign: 'right' }}
-              />
-              <Bar dataKey="income" name="الدخل" fill="#059669" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="expenses" name="المصاريف" fill="#dc2626" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </CardContent>
-      </Card>
-
-      {/* Toolbar */}
+      {/* أزرار وفلاتر */}
       <div className="flex flex-col sm:flex-row gap-3">
-        <div className="relative flex-1">
-          <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            placeholder="بحث بالوصف، القضية، الموكل..."
-            value={search}
-            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-            className="pr-9"
-          />
-        </div>
-        <Select value={filterType} onValueChange={(v) => { setFilterType(v); setPage(1); }}>
-          <SelectTrigger className="w-full sm:w-36">
+        <Button onClick={() => openAddForm('income')} className="bg-emerald-600 hover:bg-emerald-700 shrink-0">
+          <Plus className="w-4 h-4 ml-1" />
+          إيراد
+        </Button>
+        <Button variant="outline" onClick={() => openAddForm('expense')} className="shrink-0 border-red-300 text-red-700 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-900/20">
+          <Plus className="w-4 h-4 ml-1" />
+          مصروف
+        </Button>
+        <div className="flex-1" />
+        <Select value={filterType} onValueChange={setFilterType}>
+          <SelectTrigger className="w-32">
             <SelectValue placeholder="النوع" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">الكل</SelectItem>
-            <SelectItem value="income">دخل</SelectItem>
-            <SelectItem value="expense">مصروف</SelectItem>
+            <SelectItem value="income">إيرادات</SelectItem>
+            <SelectItem value="expense">مصروفات</SelectItem>
           </SelectContent>
         </Select>
-        <Select value={filterCategory} onValueChange={(v) => { setFilterCategory(v); setPage(1); }}>
-          <SelectTrigger className="w-full sm:w-36">
-            <SelectValue placeholder="الفئة" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">كل الفئات</SelectItem>
-            {categories.map((c) => (
-              <SelectItem key={c} value={c}>{c}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Button onClick={openAdd} className="bg-teal-700 hover:bg-teal-800 shrink-0">
-          <Plus className="w-4 h-4 ml-2" />
-          إضافة معاملة
-        </Button>
+        <Input type="date" value={filterDateFrom} onChange={(e) => setFilterDateFrom(e.target.value)} className="w-40" />
+        <Input type="date" value={filterDateTo} onChange={(e) => setFilterDateTo(e.target.value)} className="w-40" />
       </div>
 
-      {/* Count */}
-      <div className="flex items-center gap-2">
-        <Badge variant="outline" className="text-sm">
-          <Banknote className="w-3.5 h-3.5 ml-1" />
-          {filteredPayments.length} معاملة
-        </Badge>
-      </div>
-
-      {/* Desktop Table */}
-      <Card className="border-0 shadow-sm overflow-hidden hidden md:block">
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="text-right">التاريخ</TableHead>
-                <TableHead className="text-right">النوع</TableHead>
-                <TableHead className="text-right">الفئة</TableHead>
-                <TableHead className="text-right">الوصف</TableHead>
-                <TableHead className="text-right hidden lg:table-cell">القضية</TableHead>
-                <TableHead className="text-right hidden xl:table-cell">الموكل</TableHead>
-                <TableHead className="text-right">المبلغ</TableHead>
-                <TableHead className="text-right">الإجراءات</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {paginatedPayments.length > 0 ? (
-                paginatedPayments.map((p) => (
-                  <TableRow key={p.id} className="hover:bg-muted/50">
-                    <TableCell className="text-sm">{formatDate(p.date)}</TableCell>
-                    <TableCell>
-                      <Badge
-                        variant="secondary"
-                        className={`text-xs ${p.type === 'income'
-                          ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
-                          : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-                        }`}
-                      >
-                        {p.type === 'income' ? <TrendingUp className="w-3 h-3 ml-1" /> : <TrendingDown className="w-3 h-3 ml-1" />}
-                        {typeLabels[p.type]}
+      {/* قائمة المدفوعات */}
+      <div className="space-y-2">
+        {filteredPayments.length > 0 ? (
+          filteredPayments.map((payment) => (
+            <Card key={payment.id} className="hover:shadow-sm transition-shadow">
+              <CardContent className="p-3">
+                <div className="flex items-center justify-between">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Badge className={payment.type === 'income' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'}>
+                        {payment.type === 'income' ? 'إيراد' : 'مصروف'}
                       </Badge>
-                    </TableCell>
-                    <TableCell className="text-sm">{p.category}</TableCell>
-                    <TableCell className="text-sm max-w-[200px] truncate">{p.description || '—'}</TableCell>
-                    <TableCell className="text-sm hidden lg:table-cell max-w-[150px] truncate">
-                      {p.caseNumber || '—'}
-                    </TableCell>
-                    <TableCell className="text-sm hidden xl:table-cell max-w-[120px] truncate">
-                      {p.clientName || '—'}
-                    </TableCell>
-                    <TableCell className={`font-bold text-sm ${p.type === 'income' ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
-                      {p.type === 'income' ? '+' : '-'}{fmtCurrency(p.amount)}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1">
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(p)} title="تعديل">
-                          <Pencil className="w-4 h-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => openDelete(p)} title="حذف">
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                    {search || filterType !== 'all' ? 'لا توجد نتائج للبحث' : 'لا توجد معاملات بعد'}
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
-      </Card>
-
-      {/* Mobile Cards */}
-      <div className="space-y-3 md:hidden">
-        {paginatedPayments.length > 0 ? (
-          paginatedPayments.map((p) => (
-            <Card key={p.id} className="p-4 shadow-sm">
-              <div className="flex items-start justify-between mb-2">
-                <div className="min-w-0">
-                  <p className="font-medium text-sm truncate">{p.description || p.category}</p>
-                  <p className="text-xs text-muted-foreground">{formatDate(p.date)}</p>
+                      <Badge variant="outline" className="text-xs">{payment.category || '—'}</Badge>
+                      {payment.caseNumber && <span className="text-xs text-muted-foreground">قضية: {payment.caseNumber}</span>}
+                    </div>
+                    {payment.notes && <p className="text-xs text-muted-foreground mt-1">{payment.notes}</p>}
+                  </div>
+                  <div className="flex items-center gap-2 mr-2">
+                    <span className={`text-sm font-bold ${payment.type === 'income' ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-700 dark:text-red-400'}`}>
+                      {payment.type === 'income' ? '+' : '-'}{formatCurrency(payment.amount)}
+                    </span>
+                    <Badge variant="outline" className="text-xs">{formatDate(payment.date)}</Badge>
+                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEditForm(payment)}>
+                      <Pencil className="w-3 h-3" />
+                    </Button>
+                    <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => payment.id && deletePayment(payment.id)}>
+                      <Trash2 className="w-3 h-3" />
+                    </Button>
+                  </div>
                 </div>
-                <Badge
-                  variant="secondary"
-                  className={`text-xs shrink-0 ${p.type === 'income'
-                    ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
-                    : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-                  }`}
-                >
-                  {typeLabels[p.type]}
-                </Badge>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="text-xs text-muted-foreground space-x-3 space-x-reverse">
-                  <span>{p.category}</span>
-                  {p.caseNumber && <span>{p.caseNumber}</span>}
-                </div>
-                <span className={`font-bold ${p.type === 'income' ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
-                  {p.type === 'income' ? '+' : '-'}{fmtCurrency(p.amount)}
-                </span>
-              </div>
-              <div className="flex items-center gap-2 mt-3 pt-3 border-t">
-                <Button variant="ghost" size="sm" className="h-8 px-2" onClick={() => openEdit(p)}>
-                  <Pencil className="w-4 h-4 ml-1" /> تعديل
-                </Button>
-                <Button variant="ghost" size="sm" className="h-8 px-2 text-destructive" onClick={() => openDelete(p)}>
-                  <Trash2 className="w-4 h-4 ml-1" /> حذف
-                </Button>
-              </div>
+              </CardContent>
             </Card>
           ))
         ) : (
-          <div className="text-center py-8 text-muted-foreground">
-            {search || filterType !== 'all' ? 'لا توجد نتائج للبحث' : 'لا توجد معاملات بعد'}
-          </div>
+          <Card>
+            <CardContent className="p-8 text-center">
+              <DollarSign className="w-12 h-12 mx-auto text-muted-foreground/30 mb-3" />
+              <p className="text-muted-foreground">لا توجد مدفوعات مسجلة</p>
+            </CardContent>
+          </Card>
         )}
       </div>
 
-      {/* Load More */}
-      {hasMore && (
-        <div className="flex justify-center">
-          <Button variant="outline" onClick={() => setPage((p) => p + 1)}>
-            عرض المزيد
-          </Button>
-        </div>
-      )}
-
-      {/* Add/Edit Dialog */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto" dir="rtl">
+      {/* نافذة إضافة/تعديل */}
+      <Dialog open={showForm} onOpenChange={(open) => { setShowForm(open); if (!open) resetForm(); }}>
+        <DialogContent className="max-w-lg" dir="rtl">
           <DialogHeader>
-            <DialogTitle>{selectedPayment ? 'تعديل المعاملة' : 'إضافة معاملة جديدة'} {cumulativeMode && cumulativeCount > 0 && <Badge className="mr-2 bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">{cumulativeCount} تمت إضافتها</Badge>}</DialogTitle>
-            <DialogDescription>
-              {selectedPayment ? 'قم بتعديل بيانات المعاملة' : cumulativeMode ? 'الادخال التراكمي: أضف معاملات متعددة دون إغلاق النافذة' : 'أدخل بيانات المعاملة الجديدة'}
-            </DialogDescription>
-            {!selectedPayment && (
-              <div className="flex items-center gap-2 mt-2">
-                <Switch
-                  id="cumulative-mode"
-                  checked={cumulativeMode}
-                  onCheckedChange={setCumulativeMode}
-                />
-                <Label htmlFor="cumulative-mode" className="text-sm cursor-pointer">الادخال التراكمي</Label>
-              </div>
-            )}
+            <DialogTitle>{editingPayment ? 'تعديل الدفعة' : 'إضافة دفعة جديدة'}</DialogTitle>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
-            {/* Type Toggle */}
-            <div className="grid gap-2">
-              <Label>النوع</Label>
-              <div className="flex gap-2">
-                <Button
-                  type="button"
-                  variant={formData.type === 'income' ? 'default' : 'outline'}
-                  className={formData.type === 'income' ? 'bg-emerald-600 hover:bg-emerald-700 flex-1' : 'flex-1'}
-                  onClick={() => setFormData({ ...formData, type: 'income' })}
-                >
-                  <TrendingUp className="w-4 h-4 ml-2" />
-                  دخل
-                </Button>
-                <Button
-                  type="button"
-                  variant={formData.type === 'expense' ? 'default' : 'outline'}
-                  className={formData.type === 'expense' ? 'bg-red-600 hover:bg-red-700 flex-1' : 'flex-1'}
-                  onClick={() => setFormData({ ...formData, type: 'expense' })}
-                >
-                  <TrendingDown className="w-4 h-4 ml-2" />
-                  مصروف
-                </Button>
-              </div>
-            </div>
 
-            {/* Category + Amount */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="grid gap-2">
-                <Label>الفئة</Label>
-                <Select
-                  value={formData.category || 'أتعاب'}
-                  onValueChange={(v) => setFormData({ ...formData, category: v })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className="text-xs">النوع</Label>
+                <Select value={formData.type || ''} onValueChange={(v) => setFormData({ ...formData, type: v })}>
+                  <SelectTrigger><SelectValue placeholder="اختر النوع" /></SelectTrigger>
                   <SelectContent>
-                    {categories.map((c) => (
+                    <SelectItem value="income">إيراد</SelectItem>
+                    <SelectItem value="expense">مصروف</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="text-xs">الفئة</Label>
+                <Select value={formData.category || ''} onValueChange={(v) => setFormData({ ...formData, category: v === '_empty' ? '' : v })}>
+                  <SelectTrigger><SelectValue placeholder="اختر الفئة" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="_empty">—</SelectItem>
+                    {PAYMENT_CATEGORIES.map((c) => (
                       <SelectItem key={c} value={c}>{c}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
-              <div className="grid gap-2">
-                <Label>المبلغ (د.ج)</Label>
-                <Input
-                  type="number"
-                  min="0"
-                  value={formData.amount || ''}
-                  onChange={(e) => setFormData({ ...formData, amount: parseFloat(e.target.value) || 0 })}
-                  placeholder="0"
-                  dir="ltr"
-                  className="text-right"
-                />
-              </div>
             </div>
-
-            {/* Description */}
-            <div className="grid gap-2">
-              <Label>الوصف</Label>
-              <Textarea
-                value={formData.description || ''}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                placeholder="وصف المعاملة"
-                rows={2}
+            <div>
+              <Label className="text-xs">المبلغ (د.ج)</Label>
+              <Input
+                type="number"
+                value={formData.amount ?? ''}
+                onChange={(e) => setFormData({ ...formData, amount: e.target.value ? Number(e.target.value) : undefined })}
+                placeholder="0"
               />
             </div>
-
-            {/* Date */}
-            <div className="grid gap-2">
-              <Label>التاريخ</Label>
+            <div>
+              <Label className="text-xs">رقم القضية</Label>
+              <Input
+                value={formData.caseNumber || ''}
+                onChange={(e) => setFormData({ ...formData, caseNumber: e.target.value })}
+                placeholder="رقم القضية (اختياري)"
+              />
+            </div>
+            <div>
+              <Label className="text-xs">التاريخ</Label>
               <Input
                 type="date"
                 value={formData.date || ''}
                 onChange={(e) => setFormData({ ...formData, date: e.target.value })}
               />
             </div>
-
-            {/* Case Picker */}
-            <div className="grid gap-2">
-              <Label>القضية</Label>
-              <Popover open={casePickerOpen} onOpenChange={setCasePickerOpen}>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" className="justify-between font-normal">
-                    {formData.caseNumber ? `${formData.caseNumber} - ${formData.caseSubject || ''}` : 'اختر القضية'}
-                    <ChevronDown className="w-4 h-4 mr-2 opacity-50" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="p-0" align="start">
-                  <Command>
-                    <CommandInput placeholder="بحث عن قضية..." />
-                    <CommandList>
-                      <CommandEmpty>لا توجد قضايا</CommandEmpty>
-                      <CommandGroup>
-                        {cases?.map((c) => (
-                          <CommandItem
-                            key={c.id}
-                            onSelect={() => {
-                              setFormData({
-                                ...formData,
-                                caseId: c.id!,
-                                caseNumber: c.caseNumber,
-                                caseSubject: c.subject,
-                              });
-                              setCasePickerOpen(false);
-                            }}
-                          >
-                            <Check className={cn('w-4 h-4 ml-2', formData.caseId === c.id ? 'opacity-100' : 'opacity-0')} />
-                            <span>{c.subject}</span>
-                            <span className="text-xs text-muted-foreground mr-2">({c.caseNumber})</span>
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
-                    </CommandList>
-                  </Command>
-                </PopoverContent>
-              </Popover>
-            </div>
-
-            {/* Client Picker */}
-            <div className="grid gap-2">
-              <Label>الموكل</Label>
-              <Popover open={clientPickerOpen} onOpenChange={setClientPickerOpen}>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" className="justify-between font-normal">
-                    {formData.clientName || 'اختر الموكل'}
-                    <ChevronDown className="w-4 h-4 mr-2 opacity-50" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="p-0" align="start">
-                  <Command>
-                    <CommandInput placeholder="بحث عن موكل..." />
-                    <CommandList>
-                      <CommandEmpty>لا يوجد موكلون</CommandEmpty>
-                      <CommandGroup>
-                        {clients?.map((cl) => (
-                          <CommandItem
-                            key={cl.id}
-                            onSelect={() => {
-                              setFormData({
-                                ...formData,
-                                clientId: cl.id!,
-                                clientName: cl.name,
-                              });
-                              setClientPickerOpen(false);
-                            }}
-                          >
-                            <Check className={cn('w-4 h-4 ml-2', formData.clientId === cl.id ? 'opacity-100' : 'opacity-0')} />
-                            {cl.name}
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
-                    </CommandList>
-                  </Command>
-                </PopoverContent>
-              </Popover>
+            <div>
+              <Label className="text-xs">ملاحظات</Label>
+              <Textarea
+                value={formData.notes || ''}
+                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                placeholder="ملاحظات"
+                rows={2}
+              />
             </div>
           </div>
-          <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>
-              إلغاء
-            </Button>
-            <Button onClick={handleSave} className="bg-teal-700 hover:bg-teal-800">
-              {selectedPayment ? 'تحديث' : 'إضافة'}
-            </Button>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setShowForm(false); resetForm(); }}>إلغاء</Button>
+            <Button onClick={savePayment} className="bg-teal-600 hover:bg-teal-700">حفظ</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      {/* Delete Confirmation */}
-      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
-        <AlertDialogContent dir="rtl">
-          <AlertDialogHeader>
-            <AlertDialogTitle>تأكيد الحذف</AlertDialogTitle>
-            <AlertDialogDescription>
-              هل أنت متأكد من حذف هذه المعاملة؟ لا يمكن التراجع عن هذا الإجراء.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>إلغاء</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90">
-              حذف
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }

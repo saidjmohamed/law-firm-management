@@ -1,4 +1,4 @@
-const CACHE_NAME = 'law-firm-v1';
+const CACHE_NAME = 'law-firm-v2';
 const urlsToCache = ['/'];
 
 self.addEventListener('install', (event) => {
@@ -22,9 +22,16 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
+  // Skip non-GET requests
+  if (event.request.method !== 'GET') return;
+
+  // Skip chrome-extension and other non-http requests
+  if (!event.request.url.startsWith('http')) return;
+
   event.respondWith(
     caches.match(event.request).then((response) => {
       if (response) return response;
+
       return fetch(event.request).then((fetchResponse) => {
         if (
           !fetchResponse ||
@@ -33,13 +40,19 @@ self.addEventListener('fetch', (event) => {
         ) {
           return fetchResponse;
         }
+
         const responseToCache = fetchResponse.clone();
         caches.open(CACHE_NAME).then((cache) => {
           cache.put(event.request, responseToCache);
         });
+
         return fetchResponse;
       }).catch(() => {
-        return caches.match('/');
+        // Return offline page for navigation requests
+        if (event.request.mode === 'navigate') {
+          return caches.match('/');
+        }
+        return new Response('Offline', { status: 503 });
       });
     })
   );

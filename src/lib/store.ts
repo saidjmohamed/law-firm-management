@@ -16,6 +16,8 @@ interface AppState {
   setActiveSection: (section: Section) => void;
   sidebarOpen: boolean;
   setSidebarOpen: (open: boolean) => void;
+  selectedCaseId: number | null;
+  setSelectedCaseId: (id: number | null) => void;
 }
 
 export const useAppStore = create<AppState>((set) => ({
@@ -23,6 +25,8 @@ export const useAppStore = create<AppState>((set) => ({
   setActiveSection: (section) => set({ activeSection: section, sidebarOpen: false }),
   sidebarOpen: false,
   setSidebarOpen: (open) => set({ sidebarOpen: open }),
+  selectedCaseId: null,
+  setSelectedCaseId: (id) => set({ selectedCaseId: id }),
 }));
 
 export type { Section };
