@@ -159,6 +159,27 @@
   text-align: right;
 }
 
+/* Arabic typography improvements */
+body {
+  line-height: 1.7;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  line-height: 1.4;
+  font-weight: 700;
+}
+
+h1 {
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+p, span, div {
+  line-height: 1.6;
+}
+
 /* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
@@ -197,4 +218,109 @@ input[type="date"],
 input[type="time"] {
   direction: ltr;
   text-align: right;
+}
+
+/* Sidebar gradient */
+.sidebar-gradient {
+  background: linear-gradient(180deg, oklch(0.25 0.06 170) 0%, oklch(0.18 0.05 170) 100%);
+}
+
+.dark .sidebar-gradient {
+  background: linear-gradient(180deg, oklch(0.16 0.03 170) 0%, oklch(0.10 0.02 170) 100%);
+}
+
+/* Active nav indicator - colored bar on right side for RTL */
+.nav-active-bar {
+  position: relative;
+}
+
+.nav-active-bar::before {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 25%;
+  height: 50%;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: oklch(0.55 0.15 170);
+}
+
+/* Stat card hover effect */
+.stat-card-hover {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.stat-card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px oklch(0.45 0.12 170 / 0.15);
+}
+
+.dark .stat-card-hover:hover {
+  box-shadow: 0 4px 12px oklch(0.55 0.15 170 / 0.2);
+}
+
+/* Mobile sheet smooth animation */
+@keyframes sheet-slide-in {
+  from {
+    transform: translateX(100%);
+    opacity: 0.5;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes sheet-slide-out {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(100%);
+    opacity: 0.5;
+  }
+}
+
+/* Case status border indicators */
+.case-border-active {
+  border-right: 3px solid oklch(0.55 0.15 160);
+}
+
+.case-border-archived {
+  border-right: 3px solid oklch(0.55 0.01 155);
+}
+
+.case-border-scheduled {
+  border-right: 3px solid oklch(0.65 0.15 85);
+}
+
+.case-border-decided {
+  border-right: 3px solid oklch(0.55 0.12 250);
+}
+
+/* Offline indicator pulse */
+@keyframes offline-pulse {
+  0%, 100% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.offline-pulse {
+  animation: offline-pulse 3s ease-in-out infinite;
+}
+
+/* Touch target minimum size */
+.touch-target {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* Smooth scrolling for list areas */
+.smooth-scroll {
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
 }

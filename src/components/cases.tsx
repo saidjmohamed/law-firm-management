@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   Dialog,
   DialogContent,
@@ -48,7 +49,16 @@ import {
   X,
   UserPlus,
   Clock,
+  Wallet,
 } from 'lucide-react';
+
+// Status border colors for case cards
+const STATUS_BORDER_COLORS: Record<string, string> = {
+  'جارية': 'border-r-emerald-500',
+  'مؤرشفة': 'border-r-gray-400',
+  'للجدولة': 'border-r-amber-500',
+  'مفصول فيها': 'border-r-sky-500',
+};
 
 interface PartyRow {
   id: string;
@@ -73,6 +83,44 @@ const emptyParty = (): PartyRow => ({
 const emptyDelay = (): DelayRow => ({
   id: crypto.randomUUID(),
 });
+
+function CasesSkeleton() {
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-col sm:flex-row gap-3">
+        <Skeleton className="h-10 flex-1 rounded-lg" />
+        <Skeleton className="h-10 w-full sm:w-40 rounded-lg" />
+        <Skeleton className="h-10 w-full sm:w-40 rounded-lg" />
+      </div>
+      <div className="space-y-2">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <Card key={i} className="overflow-hidden">
+            <CardContent className="p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 flex-1 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Skeleton className="h-4 w-32" />
+                    <Skeleton className="h-5 w-16 rounded-full" />
+                    <Skeleton className="h-5 w-14 rounded-full" />
+                  </div>
+                  <Skeleton className="h-3 w-3/4" />
+                  <div className="flex gap-3">
+                    <Skeleton className="h-3 w-20" />
+                    <Skeleton className="h-3 w-24" />
+                  </div>
+                </div>
+                <div className="space-y-2 shrink-0">
+                  <Skeleton className="h-3 w-12" />
+                  <Skeleton className="h-4 w-24" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export function Cases() {
   const { selectedCaseId, setSelectedCaseId } = useAppStore();
@@ -127,7 +175,18 @@ export function Cases() {
       const matchNature = filterNature === 'all' || c.caseNature === filterNature;
       return matchSearch && matchStatus && matchNature;
     });
-  }, [cases, clients, searchTerm, filterStatus, filterNature]);
+  }, [cases, clientMap, searchTerm, filterStatus, filterNature]);
+
+  // عدد القضايا لكل حالة (للفلاتر)
+  const statusCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    cases?.forEach((c) => {
+      if (c.status) {
+        counts[c.status] = (counts[c.status] || 0) + 1;
+      }
+    });
+    return counts;
+  }, [cases]);
 
   const selectedCase = cases?.find((c) => c.id === selectedCaseId);
   const caseParties = allParties?.filter((p) => p.caseId === selectedCaseId);
@@ -307,6 +366,11 @@ export function Cases() {
     toast.success('تم أرشفة القضية');
   }
 
+  // Loading state
+  if (!cases || !clients) {
+    return <CasesSkeleton />;
+  }
+
   // ========================================================================
   // عرض التفاصيل
   // ========================================================================
@@ -316,7 +380,7 @@ export function Cases() {
     return (
       <div className="space-y-4">
         <div className="flex items-center gap-2 mb-4">
-          <Button variant="ghost" size="sm" onClick={() => { setView('list'); setSelectedCaseId(null); }}>
+          <Button variant="ghost" size="sm" onClick={() => { setView('list'); setSelectedCaseId(null); }} className="touch-target">
             <ChevronRight className="w-4 h-4 ml-1" />
             العودة للقائمة
           </Button>
@@ -325,13 +389,13 @@ export function Cases() {
         {/* المعلومات الأساسية */}
         <Card>
           <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-lg">{selectedCase.caseNumber || '—'}</CardTitle>
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <CardTitle className="text-lg font-extrabold">{selectedCase.caseNumber || '—'}</CardTitle>
               <div className="flex items-center gap-2">
                 <Badge className={`${STATUS_COLORS[selectedCase.status || ''] || ''}`}>
                   {selectedCase.status}
                 </Badge>
-                <Button variant="outline" size="sm" onClick={() => openEditForm(selectedCase)}>
+                <Button variant="outline" size="sm" onClick={() => openEditForm(selectedCase)} className="touch-target">
                   <Pencil className="w-3 h-3 ml-1" />
                   تعديل
                 </Button>
@@ -339,7 +403,7 @@ export function Cases() {
             </div>
           </CardHeader>
           <CardContent className="space-y-3">
-            <p className="text-sm font-medium">{selectedCase.subject || '—'}</p>
+            <p className="text-sm font-semibold">{selectedCase.subject || '—'}</p>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
               {selectedCase.clientId && clientMap[selectedCase.clientId] && (
                 <DetailField label="الموكل" value={clientMap[selectedCase.clientId].name} />
@@ -361,15 +425,15 @@ export function Cases() {
             <div className="grid grid-cols-3 gap-3">
               <div className="text-center p-3 bg-teal-50 dark:bg-teal-900/20 rounded-lg">
                 <p className="text-xs text-muted-foreground">الأتعاب</p>
-                <p className="text-sm font-bold text-teal-700 dark:text-teal-400">{formatCurrency(selectedCase.totalFees)}</p>
+                <p className="text-sm font-extrabold text-teal-700 dark:text-teal-400 tabular-nums">{formatCurrency(selectedCase.totalFees)}</p>
               </div>
               <div className="text-center p-3 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg">
                 <p className="text-xs text-muted-foreground">المدفوع</p>
-                <p className="text-sm font-bold text-emerald-700 dark:text-emerald-400">{formatCurrency(selectedCase.paidAmount)}</p>
+                <p className="text-sm font-extrabold text-emerald-700 dark:text-emerald-400 tabular-nums">{formatCurrency(selectedCase.paidAmount)}</p>
               </div>
               <div className={`text-center p-3 rounded-lg ${remaining > 0 ? 'bg-amber-50 dark:bg-amber-900/20' : 'bg-emerald-50 dark:bg-emerald-900/20'}`}>
                 <p className="text-xs text-muted-foreground">المتبقي</p>
-                <p className={`text-sm font-bold ${remaining > 0 ? 'text-amber-700 dark:text-amber-400' : 'text-emerald-700 dark:text-emerald-400'}`}>{formatCurrency(remaining)}</p>
+                <p className={`text-sm font-extrabold tabular-nums ${remaining > 0 ? 'text-amber-700 dark:text-amber-400' : 'text-emerald-700 dark:text-emerald-400'}`}>{formatCurrency(remaining)}</p>
               </div>
             </div>
 
@@ -379,7 +443,7 @@ export function Cases() {
                 <Separator />
                 <div>
                   <Label className="text-xs text-muted-foreground">منطوق الحكم</Label>
-                  <p className="text-sm mt-1 p-3 bg-muted/50 rounded-lg whitespace-pre-wrap">{selectedCase.judgment}</p>
+                  <p className="text-sm mt-1 p-3 bg-muted/50 rounded-lg whitespace-pre-wrap leading-relaxed">{selectedCase.judgment}</p>
                 </div>
               </>
             )}
@@ -388,7 +452,7 @@ export function Cases() {
             {selectedCase.notes && (
               <div>
                 <Label className="text-xs text-muted-foreground">ملاحظات</Label>
-                <p className="text-sm mt-1 p-3 bg-muted/50 rounded-lg whitespace-pre-wrap">{selectedCase.notes}</p>
+                <p className="text-sm mt-1 p-3 bg-muted/50 rounded-lg whitespace-pre-wrap leading-relaxed">{selectedCase.notes}</p>
               </div>
             )}
           </CardContent>
@@ -397,7 +461,7 @@ export function Cases() {
         {/* أطراف النزاع */}
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2">
+            <CardTitle className="text-base font-bold flex items-center gap-2">
               <UserPlus className="w-4 h-4" />
               أطراف النزاع
             </CardTitle>
@@ -430,7 +494,7 @@ export function Cases() {
         {/* التأجيلات */}
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2">
+            <CardTitle className="text-base font-bold flex items-center gap-2">
               <Clock className="w-4 h-4" />
               التأجيلات
             </CardTitle>
@@ -441,7 +505,7 @@ export function Cases() {
                 {caseDelays.map((d) => (
                   <div key={d.id} className="flex items-center justify-between p-2.5 rounded-lg border">
                     <div>
-                      <p className="text-sm">{d.reason || '—'}</p>
+                      <p className="text-sm font-medium">{d.reason || '—'}</p>
                       {d.notes && <p className="text-xs text-muted-foreground">{d.notes}</p>}
                     </div>
                     <Badge variant="outline" className="text-xs">{formatDate(d.delayDate)}</Badge>
@@ -460,6 +524,7 @@ export function Cases() {
             variant="destructive"
             size="sm"
             onClick={() => selectedCase.id && setDeleteConfirm(selectedCase.id)}
+            className="touch-target"
           >
             <Trash2 className="w-3 h-3 ml-1" />
             حذف
@@ -469,6 +534,7 @@ export function Cases() {
               variant="outline"
               size="sm"
               onClick={() => setArchiveConfirm(selectedCase.id!)}
+              className="touch-target"
             >
               <Archive className="w-3 h-3 ml-1" />
               أرشفة
@@ -528,22 +594,31 @@ export function Cases() {
             placeholder="بحث برقم القضية، الموضوع، المحكمة..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pr-9"
+            className="pr-9 h-11"
           />
         </div>
         <Select value={filterStatus} onValueChange={setFilterStatus}>
-          <SelectTrigger className="w-full sm:w-40">
+          <SelectTrigger className="w-full sm:w-auto h-11 min-w-[140px]">
             <SelectValue placeholder="الحالة" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">كل الحالات</SelectItem>
+            <SelectItem value="all">
+              كل الحالات ({(cases?.length ?? 0).toLocaleString('en-US')})
+            </SelectItem>
             {CASE_STATUSES.map((s) => (
-              <SelectItem key={s} value={s}>{s}</SelectItem>
+              <SelectItem key={s} value={s}>
+                <div className="flex items-center gap-2">
+                  <span>{s}</span>
+                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 tabular-nums">
+                    {(statusCounts[s] || 0).toLocaleString('en-US')}
+                  </Badge>
+                </div>
+              </SelectItem>
             ))}
           </SelectContent>
         </Select>
         <Select value={filterNature} onValueChange={setFilterNature}>
-          <SelectTrigger className="w-full sm:w-40">
+          <SelectTrigger className="w-full sm:w-auto h-11 min-w-[140px]">
             <SelectValue placeholder="الطبيعة" />
           </SelectTrigger>
           <SelectContent>
@@ -553,7 +628,7 @@ export function Cases() {
             ))}
           </SelectContent>
         </Select>
-        <Button onClick={openAddForm} className="bg-teal-600 hover:bg-teal-700 shrink-0">
+        <Button onClick={openAddForm} className="bg-teal-600 hover:bg-teal-700 shrink-0 h-11 touch-target">
           <Plus className="w-4 h-4 ml-1" />
           إضافة قضية
         </Button>
@@ -566,10 +641,11 @@ export function Cases() {
             .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
             .map((c) => {
               const remaining = (c.totalFees || 0) - (c.paidAmount || 0);
+              const borderColor = STATUS_BORDER_COLORS[c.status || ''] || 'border-r-gray-300';
               return (
                 <Card
                   key={c.id}
-                  className="cursor-pointer hover:shadow-md transition-shadow"
+                  className={`cursor-pointer hover:shadow-md transition-all duration-200 border-r-4 ${borderColor}`}
                   onClick={() => {
                     setSelectedCaseId(c.id ?? null);
                     setView('detail');
@@ -579,7 +655,7 @@ export function Cases() {
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-sm font-bold">{c.caseNumber || '—'}</span>
+                          <span className="text-sm font-extrabold">{c.caseNumber || '—'}</span>
                           <Badge className={`${STATUS_COLORS[c.status || ''] || ''} text-xs`}>
                             {c.status}
                           </Badge>
@@ -589,7 +665,7 @@ export function Cases() {
                         </div>
                         <p className="text-sm text-muted-foreground mt-1 truncate">{c.subject || '—'}</p>
                         <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground flex-wrap">
-                          {c.clientId && clientMap[c.clientId] && <span className="text-teal-600 dark:text-teal-400 font-medium">{clientMap[c.clientId].name}</span>}
+                          {c.clientId && clientMap[c.clientId] && <span className="text-teal-600 dark:text-teal-400 font-semibold">{clientMap[c.clientId].name}</span>}
                           {c.courtName && <span>{c.courtName}</span>}
                           {c.chamber && <span>• {c.chamber}</span>}
                           {c.registrationDate && <span>• {formatDate(c.registrationDate)}</span>}
@@ -599,9 +675,12 @@ export function Cases() {
                         {c.totalFees ? (
                           <>
                             <p className="text-xs text-muted-foreground">الأتعاب</p>
-                            <p className="text-sm font-bold">{formatCurrency(c.totalFees)}</p>
+                            <p className="text-sm font-extrabold tabular-nums">{formatCurrency(c.totalFees)}</p>
                             {remaining > 0 && (
-                              <p className="text-xs text-amber-600 dark:text-amber-400">متبقي: {formatCurrency(remaining)}</p>
+                              <div className="flex items-center gap-1 bg-amber-50 dark:bg-amber-900/20 px-2 py-1 rounded-md">
+                                <Wallet className="w-3 h-3 text-amber-600 dark:text-amber-400" />
+                                <p className="text-xs font-bold text-amber-700 dark:text-amber-400 tabular-nums">{formatCurrency(remaining)}</p>
+                              </div>
                             )}
                           </>
                         ) : null}
@@ -622,15 +701,15 @@ export function Cases() {
 
       {/* نافذة إضافة/تعديل القضية */}
       <Dialog open={showForm} onOpenChange={(open) => { setShowForm(open); if (!open) resetForm(); }}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto" dir="rtl">
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto smooth-scroll" dir="rtl">
           <DialogHeader>
-            <DialogTitle>{editingCase ? 'تعديل القضية' : 'إضافة قضية جديدة'}</DialogTitle>
+            <DialogTitle className="text-lg font-extrabold">{editingCase ? 'تعديل القضية' : 'إضافة قضية جديدة'}</DialogTitle>
           </DialogHeader>
 
           <div className="space-y-6">
             {/* المعلومات الأساسية */}
             <div>
-              <h3 className="text-sm font-semibold mb-3 text-teal-700 dark:text-teal-400">المعلومات الأساسية</h3>
+              <h3 className="text-sm font-bold mb-3 text-teal-700 dark:text-teal-400">المعلومات الأساسية</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
                   <Label className="text-xs">رقم القضية</Label>
@@ -638,6 +717,7 @@ export function Cases() {
                     value={formData.caseNumber || ''}
                     onChange={(e) => setFormData({ ...formData, caseNumber: e.target.value })}
                     placeholder="رقم القضية"
+                    className="h-11"
                   />
                 </div>
                 <div>
@@ -646,12 +726,13 @@ export function Cases() {
                     value={formData.subject || ''}
                     onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
                     placeholder="موضوع القضية"
+                    className="h-11"
                   />
                 </div>
                 <div>
                   <Label className="text-xs">طبيعة القضية</Label>
                   <Select value={formData.caseNature || ''} onValueChange={(v) => setFormData({ ...formData, caseNature: v === '_empty' ? '' : v })}>
-                    <SelectTrigger><SelectValue placeholder="اختر الطبيعة" /></SelectTrigger>
+                    <SelectTrigger className="h-11"><SelectValue placeholder="اختر الطبيعة" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="_empty">—</SelectItem>
                       {CASE_NATURES.map((n) => (
@@ -663,7 +744,7 @@ export function Cases() {
                 <div>
                   <Label className="text-xs">حالة القضية</Label>
                   <Select value={formData.status || ''} onValueChange={(v) => setFormData({ ...formData, status: v === '_empty' ? '' : v })}>
-                    <SelectTrigger><SelectValue placeholder="اختر الحالة" /></SelectTrigger>
+                    <SelectTrigger className="h-11"><SelectValue placeholder="اختر الحالة" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="_empty">—</SelectItem>
                       {CASE_STATUSES.map((s) => (
@@ -675,7 +756,7 @@ export function Cases() {
                 <div>
                   <Label className="text-xs">مرحلة التقاضي</Label>
                   <Select value={formData.litigationStage || ''} onValueChange={(v) => setFormData({ ...formData, litigationStage: v === '_empty' ? '' : v })}>
-                    <SelectTrigger><SelectValue placeholder="اختر المرحلة" /></SelectTrigger>
+                    <SelectTrigger className="h-11"><SelectValue placeholder="اختر المرحلة" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="_empty">—</SelectItem>
                       {LITIGATION_STAGES.map((s) => (
@@ -690,12 +771,13 @@ export function Cases() {
                     value={formData.origCaseNumber || ''}
                     onChange={(e) => setFormData({ ...formData, origCaseNumber: e.target.value })}
                     placeholder="للاستئناف/المعارضة"
+                    className="h-11"
                   />
                 </div>
                 <div>
                   <Label className="text-xs">الموكل</Label>
                   <Select value={formData.clientId?.toString() || '_empty'} onValueChange={(v) => setFormData({ ...formData, clientId: v === '_empty' ? undefined : Number(v) })}>
-                    <SelectTrigger><SelectValue placeholder="اختر الموكل" /></SelectTrigger>
+                    <SelectTrigger className="h-11"><SelectValue placeholder="اختر الموكل" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="_empty">— بدون موكل —</SelectItem>
                       {clients?.sort((a, b) => (a.name || '').localeCompare(b.name || '')).map((cl) => (
@@ -709,7 +791,7 @@ export function Cases() {
 
             {/* التسلسل القضائي */}
             <div>
-              <h3 className="text-sm font-semibold mb-3 text-teal-700 dark:text-teal-400">التسلسل القضائي</h3>
+              <h3 className="text-sm font-bold mb-3 text-teal-700 dark:text-teal-400">التسلسل القضائي</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
                   <Label className="text-xs">المجلس</Label>
@@ -717,6 +799,7 @@ export function Cases() {
                     value={formData.councilName || ''}
                     onChange={(e) => setFormData({ ...formData, councilName: e.target.value })}
                     placeholder="اسم المجلس"
+                    className="h-11"
                   />
                 </div>
                 <div>
@@ -725,12 +808,13 @@ export function Cases() {
                     value={formData.courtName || ''}
                     onChange={(e) => setFormData({ ...formData, courtName: e.target.value })}
                     placeholder="اسم المحكمة"
+                    className="h-11"
                   />
                 </div>
                 <div>
                   <Label className="text-xs">الغرفة/القسم</Label>
                   <Select value={formData.chamber || ''} onValueChange={(v) => setFormData({ ...formData, chamber: v === '_empty' ? '' : v })}>
-                    <SelectTrigger><SelectValue placeholder="اختر الغرفة" /></SelectTrigger>
+                    <SelectTrigger className="h-11"><SelectValue placeholder="اختر الغرفة" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="_empty">—</SelectItem>
                       {JUDICIAL_CHAMBERS.map((c) => (
@@ -745,6 +829,7 @@ export function Cases() {
                     value={formData.barPhone || ''}
                     onChange={(e) => setFormData({ ...formData, barPhone: e.target.value })}
                     placeholder="رقم الهاتف"
+                    className="h-11"
                   />
                 </div>
               </div>
@@ -752,7 +837,7 @@ export function Cases() {
 
             {/* المالية */}
             <div>
-              <h3 className="text-sm font-semibold mb-3 text-teal-700 dark:text-teal-400">المالية</h3>
+              <h3 className="text-sm font-bold mb-3 text-teal-700 dark:text-teal-400">المالية</h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 <div>
                   <Label className="text-xs">الأتعاب (د.ج)</Label>
@@ -761,6 +846,7 @@ export function Cases() {
                     value={formData.totalFees ?? ''}
                     onChange={(e) => setFormData({ ...formData, totalFees: e.target.value ? Number(e.target.value) : undefined })}
                     placeholder="0"
+                    className="h-11"
                   />
                 </div>
                 <div>
@@ -770,6 +856,7 @@ export function Cases() {
                     value={formData.paidAmount ?? ''}
                     onChange={(e) => setFormData({ ...formData, paidAmount: e.target.value ? Number(e.target.value) : undefined })}
                     placeholder="0"
+                    className="h-11"
                   />
                 </div>
                 <div>
@@ -778,7 +865,7 @@ export function Cases() {
                     type="number"
                     value={((formData.totalFees || 0) - (formData.paidAmount || 0)).toLocaleString('en-US')}
                     disabled
-                    className="bg-muted"
+                    className="bg-muted h-11"
                   />
                 </div>
               </div>
@@ -786,7 +873,7 @@ export function Cases() {
 
             {/* التواريخ */}
             <div>
-              <h3 className="text-sm font-semibold mb-3 text-teal-700 dark:text-teal-400">التواريخ</h3>
+              <h3 className="text-sm font-bold mb-3 text-teal-700 dark:text-teal-400">التواريخ</h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 <div>
                   <Label className="text-xs">تاريخ التسجيل</Label>
@@ -794,6 +881,7 @@ export function Cases() {
                     type="date"
                     value={formData.registrationDate || ''}
                     onChange={(e) => setFormData({ ...formData, registrationDate: e.target.value })}
+                    className="h-11"
                   />
                 </div>
                 <div>
@@ -802,6 +890,7 @@ export function Cases() {
                     type="date"
                     value={formData.firstSessionDate || ''}
                     onChange={(e) => setFormData({ ...formData, firstSessionDate: e.target.value })}
+                    className="h-11"
                   />
                 </div>
                 <div>
@@ -810,6 +899,7 @@ export function Cases() {
                     type="date"
                     value={formData.delibDate || ''}
                     onChange={(e) => setFormData({ ...formData, delibDate: e.target.value })}
+                    className="h-11"
                   />
                 </div>
               </div>
@@ -818,8 +908,8 @@ export function Cases() {
             {/* أطراف النزاع */}
             <div>
               <div className="flex items-center justify-between mb-3">
-                <h3 className="text-sm font-semibold text-teal-700 dark:text-teal-400">أطراف النزاع</h3>
-                <Button variant="outline" size="sm" onClick={() => setParties([...parties, emptyParty()])}>
+                <h3 className="text-sm font-bold text-teal-700 dark:text-teal-400">أطراف النزاع</h3>
+                <Button variant="outline" size="sm" onClick={() => setParties([...parties, emptyParty()])} className="touch-target">
                   <Plus className="w-3 h-3 ml-1" />
                   إضافة طرف
                 </Button>
@@ -828,9 +918,9 @@ export function Cases() {
                 {parties.map((party, idx) => (
                   <div key={party.id} className="p-3 border rounded-lg space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-medium text-muted-foreground">الطرف {(idx + 1).toLocaleString('en-US')}</span>
+                      <span className="text-xs font-bold text-muted-foreground">الطرف {(idx + 1).toLocaleString('en-US')}</span>
                       {parties.length > 1 && (
-                        <Button variant="ghost" size="sm" onClick={() => setParties(parties.filter((p) => p.id !== party.id))}>
+                        <Button variant="ghost" size="sm" onClick={() => setParties(parties.filter((p) => p.id !== party.id))} className="touch-target">
                           <X className="w-3 h-3" />
                         </Button>
                       )}
@@ -843,7 +933,7 @@ export function Cases() {
                           updated[idx] = { ...updated[idx], role: v === '_empty' ? '' : v };
                           setParties(updated);
                         }}>
-                          <SelectTrigger className="h-9"><SelectValue placeholder="الدور" /></SelectTrigger>
+                          <SelectTrigger className="h-10"><SelectValue placeholder="الدور" /></SelectTrigger>
                           <SelectContent>
                             <SelectItem value="_empty">—</SelectItem>
                             {PARTY_ROLES.map((r) => (
@@ -862,7 +952,7 @@ export function Cases() {
                             setParties(updated);
                           }}
                           placeholder="الاسم واللقب"
-                          className="h-9"
+                          className="h-10"
                         />
                       </div>
                       <div>
@@ -875,7 +965,7 @@ export function Cases() {
                             setParties(updated);
                           }}
                           placeholder="رقم الهاتف"
-                          className="h-9"
+                          className="h-10"
                         />
                       </div>
                       <div>
@@ -888,7 +978,7 @@ export function Cases() {
                             setParties(updated);
                           }}
                           placeholder="اسم المحامي"
-                          className="h-9"
+                          className="h-10"
                         />
                       </div>
                       <div>
@@ -901,7 +991,7 @@ export function Cases() {
                             setParties(updated);
                           }}
                           placeholder="هاتف المحامي"
-                          className="h-9"
+                          className="h-10"
                         />
                       </div>
                     </div>
@@ -913,8 +1003,8 @@ export function Cases() {
             {/* التأجيلات */}
             <div>
               <div className="flex items-center justify-between mb-3">
-                <h3 className="text-sm font-semibold text-teal-700 dark:text-teal-400">التأجيلات</h3>
-                <Button variant="outline" size="sm" onClick={() => setDelays([...delays, emptyDelay()])}>
+                <h3 className="text-sm font-bold text-teal-700 dark:text-teal-400">التأجيلات</h3>
+                <Button variant="outline" size="sm" onClick={() => setDelays([...delays, emptyDelay()])} className="touch-target">
                   <Plus className="w-3 h-3 ml-1" />
                   إضافة تأجيل
                 </Button>
@@ -934,7 +1024,7 @@ export function Cases() {
                               updated[idx] = { ...updated[idx], delayDate: e.target.value };
                               setDelays(updated);
                             }}
-                            className="h-9"
+                            className="h-10"
                           />
                         </div>
                         <div>
@@ -947,11 +1037,11 @@ export function Cases() {
                               setDelays(updated);
                             }}
                             placeholder="سبب التأجيل"
-                            className="h-9"
+                            className="h-10"
                           />
                         </div>
                       </div>
-                      <Button variant="ghost" size="sm" onClick={() => setDelays(delays.filter((d) => d.id !== delay.id))} className="shrink-0">
+                      <Button variant="ghost" size="sm" onClick={() => setDelays(delays.filter((d) => d.id !== delay.id))} className="shrink-0 touch-target">
                         <X className="w-3 h-3" />
                       </Button>
                     </div>
@@ -962,7 +1052,7 @@ export function Cases() {
 
             {/* منطوق الحكم وملاحظات */}
             <div>
-              <h3 className="text-sm font-semibold mb-3 text-teal-700 dark:text-teal-400">معلومات إضافية</h3>
+              <h3 className="text-sm font-bold mb-3 text-teal-700 dark:text-teal-400">معلومات إضافية</h3>
               <div className="space-y-3">
                 <div>
                   <Label className="text-xs">منطوق الحكم</Label>
@@ -1014,7 +1104,7 @@ function DetailField({ label, value }: { label: string; value?: string | null })
   return (
     <div>
       <p className="text-xs text-muted-foreground">{label}</p>
-      <p className="text-sm font-medium">{value}</p>
+      <p className="text-sm font-semibold">{value}</p>
     </div>
   );
 }

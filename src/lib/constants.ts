@@ -172,12 +172,6 @@ export const STATUS_COLORS: Record<string, string> = {
   'مؤرشفة': 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400',
 };
 
-/** تنسيق المبلغ بالدينار الجزائري */
-export function formatCurrency(amount: number | undefined | null): string {
-  if (amount == null) return '0 د.ج';
-  return `${amount.toLocaleString('en-US')} د.ج`;
-}
-
 /** تنسيق التاريخ */
 export function formatDate(date: string | undefined | null): string {
   if (!date) return '—';

@@ -143,13 +143,37 @@ class LawFirmDB extends Dexie {
   }
 }
 
-export const db = new LawFirmDB();
+// Lazy initialization - only create DB on client side to avoid SSR issues
+let _db: LawFirmDB | null = null;
+
+function getDb(): LawFirmDB {
+  if (!_db) {
+    _db = new LawFirmDB();
+  }
+  return _db;
+}
+
+// Export a proxy that lazily initializes the database
+export const db = new Proxy({} as LawFirmDB, {
+  get(_target, prop: string | symbol) {
+    // During SSR, return a no-op for any property access
+    if (typeof window === 'undefined') {
+      return undefined;
+    }
+    const actualDb = getDb();
+    const value = Reflect.get(actualDb, prop, actualDb);
+    if (typeof value === 'function') {
+      return value.bind(actualDb);
+    }
+    return value;
+  },
+});
 
 // ============================================================================
 // بذرة البيانات - 19 قضية حقيقية + 16 موكل
 // ============================================================================
 
-const CURRENT_SEED_VERSION = 5;
+const CURRENT_SEED_VERSION = 6;
 
 const DEFAULT_SETTINGS: Setting[] = [
   { key: 'lawyerName', value: JSON.stringify('سايج محمد') },
@@ -616,12 +640,29 @@ const REAL_CASES: SeedCase[] = [
 ];
 
 export async function seedDatabase() {
+  // Guard: don't run during SSR
+  if (typeof window === 'undefined') {
+    console.log('[Seed] Skipping seed during SSR');
+    return;
+  }
+
   try {
     // تحقق من إصدار البذرة
     const seedVersionSetting = await db.settings.get('seedVersion');
     const currentVersion = seedVersionSetting ? JSON.parse(seedVersionSetting.value) : 0;
 
-    if (currentVersion >= CURRENT_SEED_VERSION) {
+    // Data existence check: even if seedVersion is current, re-seed if no data
+    let needsReseed = currentVersion < CURRENT_SEED_VERSION;
+    if (!needsReseed && currentVersion >= CURRENT_SEED_VERSION) {
+      const caseCount = await db.cases.count();
+      const clientCount = await db.clients.count();
+      if (caseCount === 0 && clientCount === 0) {
+        console.log('[Seed] Seed version is current but database is empty. Force re-seeding...');
+        needsReseed = true;
+      }
+    }
+
+    if (!needsReseed) {
       // البذرة محدثة، لا حاجة لإعادة البذرة
       return;
     }
@@ -629,8 +670,8 @@ export async function seedDatabase() {
     console.log('[Seed] Starting database seed, version:', currentVersion, '->', CURRENT_SEED_VERSION);
 
     // إذا كانت هناك بيانات قديمة و الإصدار أقل، نقوم بالمسح و إعادة البذرة
-    if (currentVersion > 0 && currentVersion < CURRENT_SEED_VERSION) {
-      console.log('[Seed] Upgrading seed, clearing old data...');
+    if (currentVersion > 0 || (await db.cases.count()) > 0 || (await db.clients.count()) > 0) {
+      console.log('[Seed] Clearing old data before re-seeding...');
       await db.transaction('rw', [db.clients, db.cases, db.sessions, db.payments, db.delays, db.parties, db.archives, db.settings], async () => {
         await db.clients.clear();
         await db.cases.clear();
@@ -754,7 +795,16 @@ export async function seedDatabase() {
     console.log('[Seed] Database seeded successfully');
   } catch (error) {
     console.error('[Seed] Error seeding database:', error);
-    // محاولة إعادة البذرة بإصدار جديد
+    // Try to recover: delete and recreate the database
+    try {
+      console.log('[Seed] Attempting recovery - deleting database...');
+      const actualDb = getDb();
+      await actualDb.delete();
+      await actualDb.open();
+      console.log('[Seed] Database recreated, will retry on next load');
+    } catch (recoveryError) {
+      console.error('[Seed] Recovery also failed:', recoveryError);
+    }
     throw error;
   }
 }
@@ -762,9 +812,10 @@ export async function seedDatabase() {
 /** إعادة تعيين قاعدة البيانات بالكامل */
 export async function resetDatabase() {
   console.log('[DB] Resetting database...');
-  await db.delete();
+  const actualDb = getDb();
+  await actualDb.delete();
   // إعادة فتح قاعدة البيانات
-  await db.open();
+  await actualDb.open();
   await seedDatabase();
   console.log('[DB] Database reset complete');
 }

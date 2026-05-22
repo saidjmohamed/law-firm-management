@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   Dialog,
   DialogContent,
@@ -43,9 +44,42 @@ import {
   MapPin,
   ChevronLeft,
   Briefcase,
+  User,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useAppStore } from '@/lib/store';
+
+function ClientsSkeleton() {
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-col sm:flex-row gap-3">
+        <Skeleton className="h-11 flex-1 rounded-lg" />
+        <Skeleton className="h-11 w-32 rounded-lg" />
+      </div>
+      <div className="space-y-2">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <Card key={i}>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-36" />
+                  <div className="flex gap-3">
+                    <Skeleton className="h-3 w-24" />
+                    <Skeleton className="h-3 w-16" />
+                  </div>
+                </div>
+                <div className="flex gap-1">
+                  <Skeleton className="h-8 w-8 rounded-md" />
+                  <Skeleton className="h-8 w-8 rounded-md" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export function Clients() {
   const [showForm, setShowForm] = useState(false);
@@ -69,6 +103,11 @@ export function Clients() {
       c.nationalId?.includes(searchTerm)
     );
   }, [clients, searchTerm]);
+
+  // Loading state
+  if (!clients || !cases) {
+    return <ClientsSkeleton />;
+  }
 
   function resetForm() {
     setFormData({});
@@ -124,7 +163,7 @@ export function Clients() {
     return (
       <div className="space-y-4">
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" onClick={() => setViewingClient(null)}>
+          <Button variant="ghost" size="sm" onClick={() => setViewingClient(null)} className="touch-target">
             <ChevronLeft className="w-4 h-4 ml-1" />
             العودة
           </Button>
@@ -132,9 +171,14 @@ export function Clients() {
 
         <Card>
           <CardContent className="p-6 space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-bold">{viewingClient.name || '—'}</h2>
-              <Button variant="outline" size="sm" onClick={() => openEditForm(viewingClient)}>
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-teal-100 dark:bg-teal-900/30 flex items-center justify-center shrink-0">
+                  <User className="w-5 h-5 text-teal-700 dark:text-teal-400" />
+                </div>
+                <h2 className="text-lg font-extrabold">{viewingClient.name || '—'}</h2>
+              </div>
+              <Button variant="outline" size="sm" onClick={() => openEditForm(viewingClient)} className="touch-target">
                 <Pencil className="w-3 h-3 ml-1" />
                 تعديل
               </Button>
@@ -143,19 +187,19 @@ export function Clients() {
             <div className="grid grid-cols-2 gap-3 text-sm">
               {viewingClient.phone && (
                 <div className="flex items-center gap-2">
-                  <Phone className="w-4 h-4 text-muted-foreground" />
-                  <span>{viewingClient.phone}</span>
+                  <Phone className="w-4 h-4 text-muted-foreground shrink-0" />
+                  <span className="tabular-nums">{viewingClient.phone}</span>
                 </div>
               )}
               {viewingClient.phone2 && (
                 <div className="flex items-center gap-2">
-                  <Phone className="w-4 h-4 text-muted-foreground" />
-                  <span>{viewingClient.phone2}</span>
+                  <Phone className="w-4 h-4 text-muted-foreground shrink-0" />
+                  <span className="tabular-nums">{viewingClient.phone2}</span>
                 </div>
               )}
               {wilayaName && (
                 <div className="flex items-center gap-2">
-                  <MapPin className="w-4 h-4 text-muted-foreground" />
+                  <MapPin className="w-4 h-4 text-muted-foreground shrink-0" />
                   <span>{wilayaName}</span>
                 </div>
               )}
@@ -165,7 +209,7 @@ export function Clients() {
               {viewingClient.nationalId && (
                 <div>
                   <span className="text-xs text-muted-foreground">رقم الهوية: </span>
-                  <span>{viewingClient.nationalId}</span>
+                  <span className="tabular-nums">{viewingClient.nationalId}</span>
                 </div>
               )}
             </div>
@@ -173,14 +217,14 @@ export function Clients() {
             {viewingClient.notes && (
               <div className="p-3 bg-muted/50 rounded-lg">
                 <p className="text-xs text-muted-foreground mb-1">ملاحظات</p>
-                <p className="text-sm">{viewingClient.notes}</p>
+                <p className="text-sm leading-relaxed">{viewingClient.notes}</p>
               </div>
             )}
 
             {/* قضايا الموكل */}
             {clientCases && clientCases.length > 0 && (
               <div className="space-y-2">
-                <p className="text-xs text-muted-foreground flex items-center gap-1">
+                <p className="text-xs text-muted-foreground flex items-center gap-1 font-semibold">
                   <Briefcase className="w-3 h-3" />
                   قضايا الموكل ({(clientCases.length).toLocaleString('en-US')})
                 </p>
@@ -197,7 +241,7 @@ export function Clients() {
                   >
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium truncate">{c.caseNumber || '—'}</span>
+                        <span className="text-sm font-semibold truncate">{c.caseNumber || '—'}</span>
                         <Badge variant="secondary" className={`${STATUS_COLORS[c.status || ''] || ''} text-xs`}>
                           {c.status}
                         </Badge>
@@ -216,6 +260,7 @@ export function Clients() {
               variant="destructive"
               size="sm"
               onClick={() => viewingClient.id && setDeleteConfirm(viewingClient.id)}
+              className="touch-target"
             >
               <Trash2 className="w-3 h-3 ml-1" />
               حذف
@@ -251,10 +296,10 @@ export function Clients() {
             placeholder="بحث بالاسم، الهاتف، رقم الهوية..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pr-9"
+            className="pr-9 h-11"
           />
         </div>
-        <Button onClick={openAddForm} className="bg-teal-600 hover:bg-teal-700 shrink-0">
+        <Button onClick={openAddForm} className="bg-teal-600 hover:bg-teal-700 shrink-0 h-11 touch-target">
           <Plus className="w-4 h-4 ml-1" />
           إضافة موكل
         </Button>
@@ -269,35 +314,42 @@ export function Clients() {
             return (
               <Card
                 key={client.id}
-                className="cursor-pointer hover:shadow-md transition-shadow"
+                className="cursor-pointer hover:shadow-md transition-all duration-200 border-r-4 border-r-teal-500"
                 onClick={() => setViewingClient(client)}
               >
                 <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium text-sm">{client.name || '—'}</p>
-                      <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
-                        {client.phone && <span>{client.phone}</span>}
-                        {wilayaName && <span>• {wilayaName}</span>}
-                        {clientCasesCount > 0 && <span>• {clientCasesCount.toLocaleString('en-US')} قضية</span>}
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-lg bg-teal-100 dark:bg-teal-900/30 flex items-center justify-center shrink-0">
+                          <User className="w-4 h-4 text-teal-700 dark:text-teal-400" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="font-bold text-sm truncate">{client.name || '—'}</p>
+                          <div className="flex items-center gap-3 mt-0.5 text-xs text-muted-foreground">
+                            {client.phone && <span className="tabular-nums">{client.phone}</span>}
+                            {wilayaName && <span>• {wilayaName}</span>}
+                            {clientCasesCount > 0 && <span className="text-teal-600 dark:text-teal-400 font-semibold">• {clientCasesCount.toLocaleString('en-US')} قضية</span>}
+                          </div>
+                        </div>
                       </div>
                     </div>
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-1 shrink-0">
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-8 w-8"
+                        className="h-9 w-9 touch-target"
                         onClick={(e) => { e.stopPropagation(); openEditForm(client); }}
                       >
-                        <Pencil className="w-3 h-3" />
+                        <Pencil className="w-3.5 h-3.5" />
                       </Button>
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-8 w-8 text-destructive"
+                        className="h-9 w-9 touch-target text-destructive hover:text-destructive"
                         onClick={(e) => { e.stopPropagation(); if (client.id) setDeleteConfirm(client.id); }}
                       >
-                        <Trash2 className="w-3 h-3" />
+                        <Trash2 className="w-3.5 h-3.5" />
                       </Button>
                     </div>
                   </div>
@@ -318,7 +370,7 @@ export function Clients() {
       <Dialog open={showForm} onOpenChange={(open) => { setShowForm(open); if (!open) resetForm(); }}>
         <DialogContent className="max-w-lg" dir="rtl">
           <DialogHeader>
-            <DialogTitle>{editingClient ? 'تعديل الموكل' : 'إضافة موكل جديد'}</DialogTitle>
+            <DialogTitle className="text-lg font-extrabold">{editingClient ? 'تعديل الموكل' : 'إضافة موكل جديد'}</DialogTitle>
           </DialogHeader>
 
           <div className="space-y-3">
@@ -328,6 +380,7 @@ export function Clients() {
                 value={formData.name || ''}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 placeholder="الاسم واللقب"
+                className="h-11"
               />
             </div>
             <div className="grid grid-cols-2 gap-3">
@@ -337,6 +390,7 @@ export function Clients() {
                   value={formData.phone || ''}
                   onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                   placeholder="رقم الهاتف"
+                  className="h-11"
                 />
               </div>
               <div>
@@ -345,13 +399,14 @@ export function Clients() {
                   value={formData.phone2 || ''}
                   onChange={(e) => setFormData({ ...formData, phone2: e.target.value })}
                   placeholder="رقم هاتف ثاني"
+                  className="h-11"
                 />
               </div>
             </div>
             <div>
               <Label className="text-xs">الولاية</Label>
               <Select value={formData.wilaya?.toString() || ''} onValueChange={(v) => setFormData({ ...formData, wilaya: v ? Number(v) : undefined })}>
-                <SelectTrigger><SelectValue placeholder="اختر الولاية" /></SelectTrigger>
+                <SelectTrigger className="h-11"><SelectValue placeholder="اختر الولاية" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="0">—</SelectItem>
                   {WILAYAS.map((w) => (
@@ -366,6 +421,7 @@ export function Clients() {
                 value={formData.address || ''}
                 onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                 placeholder="العنوان"
+                className="h-11"
               />
             </div>
             <div>
@@ -374,6 +430,7 @@ export function Clients() {
                 value={formData.nationalId || ''}
                 onChange={(e) => setFormData({ ...formData, nationalId: e.target.value })}
                 placeholder="رقم بطاقة الهوية"
+                className="h-11"
               />
             </div>
             <div>
