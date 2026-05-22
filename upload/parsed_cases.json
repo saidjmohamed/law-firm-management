@@ -1,0 +1,1103 @@
+{
+  "cases": [
+    {
+      "case_number": "طعن رقم 2018912",
+      "case_year": null,
+      "case_type": "جنحة",
+      "case_category": "",
+      "subject": "النصب الموجه للجمهور     النصب الثلاثي",
+      "litigation_stage": "افتتاحية (ابتدائي)",
+      "original_case_number": "",
+      "custom_stage": "",
+      "status": "جارية",
+      "council": "المحكمة العليا",
+      "court": "المحكمة العليا",
+      "chamber": "الغرفة الجزائية",
+      "bar_phone": "",
+      "lawyer": "الأستاذ سايج محمد",
+      "total_fees": 150000.0,
+      "paid_amount": 100000.0,
+      "remaining_amount": 50000.0,
+      "filing_date": "",
+      "first_session_date": "",
+      "delib_date": "",
+      "notes": "",
+      "verdict": "",
+      "delays": [
+        {
+          "date": "2026-03-16",
+          "reason": "تاريخ التصريح بالطعن"
+        },
+        {
+          "date": "2026-04-28",
+          "reason": "تسجيل مذكرة الطعن النقض"
+        }
+      ],
+      "parties": [
+        {
+          "role": "مستأنف",
+          "name": "مدور كريمو",
+          "phone": "00213555390201",
+          "lawyer_name": "سايج محمد",
+          "lawyer_phone": ""
+        },
+        {
+          "role": "طرف مدني",
+          "name": "مسعودي ابراهيم",
+          "phone": "رقم الهاتف",
+          "lawyer_name": "",
+          "lawyer_phone": ""
+        },
+        {
+          "role": "متهم",
+          "name": "شمام احمد",
+          "phone": "00213541956393",
+          "lawyer_name": "",
+          "lawyer_phone": ""
+        }
+      ],
+      "source_file": "&.txt"
+    },
+    {
+      "case_number": "26/00239",
+      "case_year": null,
+      "case_type": "مدني",
+      "case_category": "",
+      "subject": "تعويض عن الضرر من قضية نصب ثلاثي",
+      "litigation_stage": "افتتاحية (ابتدائي)",
+      "original_case_number": "",
+      "custom_stage": "",
+      "status": "جارية",
+      "council": "مجلس قضاء تيزي وزو",
+      "court": "محكمة الاربعاء ناث ايراثن",
+      "chamber": "المدني",
+      "bar_phone": "",
+      "lawyer": "الأستاذ سايج محمدالأستاذ سايج محمد",
+      "total_fees": 700000.0,
+      "paid_amount": 300000.0,
+      "remaining_amount": 400000.0,
+      "filing_date": "2026-4-08",
+      "first_session_date": "2026-04-22",
+      "delib_date": "",
+      "notes": "",
+      "verdict": "",
+      "delays": [
+        {
+          "date": "2026-05-20",
+          "reason": "لجواب المدعى عليه"
+        }
+      ],
+      "parties": [
+        {
+          "role": "مدعي",
+          "name": "السي ناصر عبد النور",
+          "phone": "",
+          "lawyer_name": "زورداني محمد",
+          "lawyer_phone": "00213552764665"
+        },
+        {
+          "role": "مدعى عليه",
+          "name": "بلخوجة محمد ياسر",
+          "phone": "00213542819233",
+          "lawyer_name": "سايج محمد",
+          "lawyer_phone": ""
+        }
+      ],
+      "source_file": "dqsdq.txt"
+    },
+    {
+      "case_number": "26/01002",
+      "case_year": null,
+      "case_type": "مدني",
+      "case_category": "",
+      "subject": "دعوى ضمان الاستحقاق و رد الثمن و تعويض عن الضرر",
+      "litigation_stage": "افتتاحية (ابتدائي)",
+      "original_case_number": "",
+      "custom_stage": "",
+      "status": "جارية",
+      "council": "مجلس قضاء الجزائر",
+      "court": "محكمة بئرمرادراريس",
+      "chamber": "مدني",
+      "bar_phone": "",
+      "lawyer": "الأستاذ سايج محمد",
+      "total_fees": 60000.0,
+      "paid_amount": 60000.0,
+      "remaining_amount": 0.0,
+      "filing_date": "2026-02-08",
+      "first_session_date": "2026-03-02",
+      "delib_date": "2026-05-27",
+      "notes": "",
+      "verdict": "",
+      "delays": [],
+      "parties": [
+        {
+          "role": "مدعي",
+          "name": "كبور صالح",
+          "phone": "00213551050488",
+          "lawyer_name": "سايج محمد",
+          "lawyer_phone": ""
+        },
+        {
+          "role": "مدعى عليه",
+          "name": "ناصري جمال",
+          "phone": "",
+          "lawyer_name": "",
+          "lawyer_phone": ""
+        }
+      ],
+      "source_file": "dsfsd.txt"
+    },
+    {
+      "case_number": "25/18381",
+      "case_year": null,
+      "case_type": "جنحة",
+      "case_category": "",
+      "subject": "إصدار شيك بدون رصيد",
+      "litigation_stage": "استئنافية",
+      "original_case_number": "25/03842",
+      "custom_stage": "",
+      "status": "مؤرشفة",
+      "council": "مجلس قضاء الجزائر",
+      "court": "مجلس قضاء الجزائر",
+      "chamber": "الغرفة الجزائية الخامسة",
+      "bar_phone": "023716257",
+      "lawyer": "الأستاذ سايج محمد",
+      "total_fees": 100000.0,
+      "paid_amount": 100000.0,
+      "remaining_amount": 0.0,
+      "filing_date": "2025-12-02",
+      "first_session_date": "2025-12-02",
+      "delib_date": "",
+      "notes": "",
+      "verdict": "عام حبس نافذ للمتهم \nتعويض قيمة الشيك 340 مليون للطرف المدني",
+      "delays": [],
+      "parties": [
+        {
+          "role": "ضحية",
+          "name": "بدر الدين عبد الرحيم",
+          "phone": "00213551525881",
+          "lawyer_name": "سايج محمد",
+          "lawyer_phone": ""
+        },
+        {
+          "role": "متهم",
+          "name": "مدني محمد أمين",
+          "phone": "رقم الهاتف",
+          "lawyer_name": "",
+          "lawyer_phone": ""
+        }
+      ],
+      "source_file": "e.txt"
+    },
+    {
+      "case_number": "26/00901",
+      "case_year": null,
+      "case_type": "اداري استئنافي",
+      "case_category": "",
+      "subject": "إلغاء قرار إداري صادر عن وزارة الدفاع",
+      "litigation_stage": "افتتاحية (ابتدائي)",
+      "original_case_number": "",
+      "custom_stage": "",
+      "status": "جارية",
+      "council": "مجلس قضاء الجزائر",
+      "court": "المحمة الادارية الاستئنافية بالجزائر",
+      "chamber": "الإداري العادي",
+      "bar_phone": "",
+      "lawyer": "الأستاذ سايج محمدالأستاذ سايج محمد",
+      "total_fees": 80000.0,
+      "paid_amount": 60000.0,
+      "remaining_amount": 20000.0,
+      "filing_date": "2026-03-02",
+      "first_session_date": "",
+      "delib_date": "",
+      "notes": "",
+      "verdict": "",
+      "delays": [],
+      "parties": [
+        {
+          "role": "مدعي",
+          "name": "عماري سي احمد",
+          "phone": "00213698084523",
+          "lawyer_name": "سايج محمد",
+          "lawyer_phone": ""
+        },
+        {
+          "role": "مدعى عليه",
+          "name": "وزارة الدفاع الوطني",
+          "phone": "",
+          "lawyer_name": "",
+          "lawyer_phone": ""
+        }
+      ],
+      "source_file": "ere.txt"
+    },
+    {
+      "case_number": "26/00153",
+      "case_year": null,
+      "case_type": "جنحة",
+      "case_category": "",
+      "subject": "النصب الموجه للجمهور ( النصب الثلاثي)",
+      "litigation_stage": "استئنافية",
+      "original_case_number": "25/07238",
+      "custom_stage": "",
+      "status": "جارية",
+      "council": "مجلس قضاء الجزائر",
+      "court": "الغرفة الجزائية السادسة",
+      "chamber": "جنح",
+      "bar_phone": "023716257",
+      "lawyer": "الأستاذ سايج محمد",
+      "total_fees": 0.0,
+      "paid_amount": 0.0,
+      "remaining_amount": 0.0,
+      "filing_date": "2026-03-15",
+      "first_session_date": "2026-05-10",
+      "delib_date": "",
+      "notes": "",
+      "verdict": "",
+      "delays": [
+        {
+          "date": "2026-05-31",
+          "reason": "مؤجلة"
+        }
+      ],
+      "parties": [
+        {
+          "role": "متهم",
+          "name": "بودبة منير",
+          "phone": "00213791449280",
+          "lawyer_name": "سايج محمد",
+          "lawyer_phone": ""
+        },
+        {
+          "role": "متهم",
+          "name": "بن يمنية نصرالدين",
+          "phone": "00213774968339",
+          "lawyer_name": "سايج",
+          "lawyer_phone": ""
+        },
+        {
+          "role": "طرف مدني",
+          "name": "بحري الصادق",
+          "phone": "00213794019201",
+          "lawyer_name": "زنبوط",
+          "lawyer_phone": "00213658885214"
+        }
+      ],
+      "source_file": "ez.txt"
+    },
+    {
+      "case_number": "25/03255",
+      "case_year": null,
+      "case_type": "جنحة",
+      "case_category": "",
+      "subject": "النصب الموجه للجمهور   نصب ثلاثي",
+      "litigation_stage": "افتتاحية (ابتدائي)",
+      "original_case_number": "",
+      "custom_stage": "",
+      "status": "مؤرشفة",
+      "council": "مجلس قضاء تيبازة",
+      "court": "تيبازة",
+      "chamber": "القسم الجزائي",
+      "bar_phone": "0562724340",
+      "lawyer": "الأستاذ سايج محمد",
+      "total_fees": 0.0,
+      "paid_amount": 0.0,
+      "remaining_amount": 0.0,
+      "filing_date": "2025-02-03",
+      "first_session_date": "2026-03-10",
+      "delib_date": "2026-04-07",
+      "notes": "",
+      "verdict": "عام حبس نافذ لبوجادي محمد زكرياء\nو براءة للضحية",
+      "delays": [],
+      "parties": [
+        {
+          "role": "متهم",
+          "name": "بوجادي محمد زكرياء",
+          "phone": "00213676169592",
+          "lawyer_name": "سايج محمد",
+          "lawyer_phone": ""
+        },
+        {
+          "role": "طرف مدني",
+          "name": "لمختار يمينة",
+          "phone": "00213784939372",
+          "lawyer_name": "",
+          "lawyer_phone": ""
+        },
+        {
+          "role": "طرف مدني",
+          "name": "بريد الجزائر",
+          "phone": "رقم الهاتف",
+          "lawyer_name": "",
+          "lawyer_phone": ""
+        }
+      ],
+      "source_file": "fezer.txt"
+    },
+    {
+      "case_number": "25/00952",
+      "case_year": null,
+      "case_type": "مخالفة",
+      "case_category": "",
+      "subject": "الضرب و الجرح العمدي",
+      "litigation_stage": "افتتاحية (ابتدائي)",
+      "original_case_number": "",
+      "custom_stage": "",
+      "status": "مؤرشفة",
+      "council": "مجلس قضاء الجزائر",
+      "court": "محكمة الشراقة",
+      "chamber": "جزائي",
+      "bar_phone": "0549111248",
+      "lawyer": "سايج محمدالأستاذ سايج محمد",
+      "total_fees": 40000.0,
+      "paid_amount": 40000.0,
+      "remaining_amount": 0.0,
+      "filing_date": "",
+      "first_session_date": "",
+      "delib_date": "2024-10-16",
+      "notes": "",
+      "verdict": "غيايا للمتهمة و حضوريا للضحية \nفي الدعوى العمومية سته عشر الفا غرامة مالية \nفي الدعوى المدنية خمس ملايين تعويضص لكلا الضحيتين",
+      "delays": [],
+      "parties": [
+        {
+          "role": "متهم",
+          "name": "عباسي رتيبة",
+          "phone": "رقم الهاتف",
+          "lawyer_name": "سايج محمد",
+          "lawyer_phone": "0558367689"
+        },
+        {
+          "role": "طرف مدني",
+          "name": "بوقريوة عائشة",
+          "phone": "نسرين حسان",
+          "lawyer_name": "حسان نسرين",
+          "lawyer_phone": "0549351590"
+        }
+      ],
+      "source_file": "gthryt.txt"
+    },
+    {
+      "case_number": "25/07881",
+      "case_year": null,
+      "case_type": "جنحة",
+      "case_category": "",
+      "subject": "النصب الموجه للجمهور ( نص ثلاثي )",
+      "litigation_stage": "استئنافية",
+      "original_case_number": "",
+      "custom_stage": "",
+      "status": "مؤرشفة",
+      "council": "مجلس قضاء المدية",
+      "court": "غرفة جزائية",
+      "chamber": "الجزائية",
+      "bar_phone": "",
+      "lawyer": "الأستاذ سايج محمدالأستاذ سايج محمدالأستاذ سايج محمد",
+      "total_fees": 80000.0,
+      "paid_amount": 80000.0,
+      "remaining_amount": 0.0,
+      "filing_date": "2026-01-01",
+      "first_session_date": "2026-04-30",
+      "delib_date": "2026-04-30",
+      "notes": "",
+      "verdict": "البراءة في حق المتهم",
+      "delays": [],
+      "parties": [
+        {
+          "role": "متهم",
+          "name": "بلقاسم بوزيدة اسامة",
+          "phone": "00213777250603",
+          "lawyer_name": "سايج محمد",
+          "lawyer_phone": ""
+        },
+        {
+          "role": "طرف مدني",
+          "name": "دحماني رانية",
+          "phone": "",
+          "lawyer_name": "",
+          "lawyer_phone": ""
+        }
+      ],
+      "source_file": "hrhytr.txt"
+    },
+    {
+      "case_number": "25/08100",
+      "case_year": null,
+      "case_type": "مدني",
+      "case_category": "",
+      "subject": "نزاع حول محل تجاري",
+      "litigation_stage": "استئنافية",
+      "original_case_number": "",
+      "custom_stage": "",
+      "status": "جارية",
+      "council": "مجلس قضاء الجزائر",
+      "court": "الغرفة المدنية",
+      "chamber": "عقاري 02",
+      "bar_phone": "",
+      "lawyer": "سايج محمد",
+      "total_fees": 100000.0,
+      "paid_amount": 90000.0,
+      "remaining_amount": 10000.0,
+      "filing_date": "2025-10-16",
+      "first_session_date": "",
+      "delib_date": "2026-01-08",
+      "notes": "",
+      "verdict": "تأيد الحكم",
+      "delays": [],
+      "parties": [
+        {
+          "role": "مستأنف",
+          "name": "خلالفة عزالدين",
+          "phone": "00213783257551",
+          "lawyer_name": "سايج محمد",
+          "lawyer_phone": ""
+        },
+        {
+          "role": "مستأنف عليه",
+          "name": "فراح رتيبة",
+          "phone": "",
+          "lawyer_name": "بلعابد عزيز",
+          "lawyer_phone": "00213771242236"
+        }
+      ],
+      "source_file": "ree.txt"
+    },
+    {
+      "case_number": "25/07238",
+      "case_year": null,
+      "case_type": "جنحة",
+      "case_category": "",
+      "subject": "النصب الموجه للجمهور ( النصب الثلاثي)",
+      "litigation_stage": "افتتاحية (ابتدائي)",
+      "original_case_number": "",
+      "custom_stage": "",
+      "status": "مؤرشفة",
+      "council": "مجلس قضاء الجزائر",
+      "court": "محكمة بئرمرادراريس",
+      "chamber": "جنح",
+      "bar_phone": "",
+      "lawyer": "الأستاذ سايج محمدالأستاذ سايج محمد",
+      "total_fees": 0.0,
+      "paid_amount": 0.0,
+      "remaining_amount": 0.0,
+      "filing_date": "2026-05-01",
+      "first_session_date": "",
+      "delib_date": "",
+      "notes": "",
+      "verdict": "الحكم ببراءة  كل من بودبة منير \nبن يمينة نصر الدين \nو الادانة لكل من \nحمزة ميباركي \nخطاطبة محمد الامين ب عامين حبس نافذ و 400 الف دينار  تعويض",
+      "delays": [],
+      "parties": [
+        {
+          "role": "متهم",
+          "name": "بودبة منير",
+          "phone": "رقم الهاتف",
+          "lawyer_name": "سايج محمد",
+          "lawyer_phone": ""
+        },
+        {
+          "role": "متهم",
+          "name": "بن يمنية نصرالدين",
+          "phone": "رقم الهاتف",
+          "lawyer_name": "سايج",
+          "lawyer_phone": ""
+        },
+        {
+          "role": "طرف مدني",
+          "name": "بحري الصادق",
+          "phone": "",
+          "lawyer_name": "",
+          "lawyer_phone": ""
+        }
+      ],
+      "source_file": "reterter.txt"
+    },
+    {
+      "case_number": "25/01724",
+      "case_year": null,
+      "case_type": "مخالفة",
+      "case_category": "",
+      "subject": "الضرب و الجرح العمدي علي قاصر اقل من 16 سنة",
+      "litigation_stage": "افتتاحية (ابتدائي)",
+      "original_case_number": "",
+      "custom_stage": "",
+      "status": "مؤرشفة",
+      "council": "مجلس قضاء الجزائر",
+      "court": "محكمة الشراقة",
+      "chamber": "جزائي",
+      "bar_phone": "",
+      "lawyer": "سايج محمد",
+      "total_fees": 40000.0,
+      "paid_amount": 40000.0,
+      "remaining_amount": 0.0,
+      "filing_date": "2024-12-18",
+      "first_session_date": "2025-12-18",
+      "delib_date": "2026-01-08",
+      "notes": "",
+      "verdict": "البراءة في حق  المتهمين  \nالحكم كان غيابي في حق متهمين و حضوري في حق الضحايا",
+      "delays": [],
+      "parties": [
+        {
+          "role": "متهم",
+          "name": "عباسي رتيبة و فوغالي اميمة و فوغالي ياسر",
+          "phone": "رقم الهاتف",
+          "lawyer_name": "سايج محمد",
+          "lawyer_phone": "0558367689"
+        },
+        {
+          "role": "طرف مدني",
+          "name": "بوشيرب امال و بوشيرب امينة و بوقرية  عائشة",
+          "phone": "نسرين حسان",
+          "lawyer_name": "حسان نسرين",
+          "lawyer_phone": "0549351590"
+        }
+      ],
+      "source_file": "rgdr.txt"
+    },
+    {
+      "case_number": "26/00618",
+      "case_year": null,
+      "case_type": "جنحة",
+      "case_category": "",
+      "subject": "النصب الموجه للجمهور ( نص ثلاثي)",
+      "litigation_stage": "معارضة",
+      "original_case_number": "25/07238",
+      "custom_stage": "",
+      "status": "مؤرشفة",
+      "council": "مجلس قضاء  الجزائر",
+      "court": "بئرمرادراريس",
+      "chamber": "",
+      "bar_phone": "",
+      "lawyer": "الأستاذ سايج محمدالأستاذ سايج محمد",
+      "total_fees": 0.0,
+      "paid_amount": 0.0,
+      "remaining_amount": 0.0,
+      "filing_date": "2026-02-11",
+      "first_session_date": "",
+      "delib_date": "2026-02-25",
+      "notes": "",
+      "verdict": "البراءة للمتهمين",
+      "delays": [],
+      "parties": [
+        {
+          "role": "متهم",
+          "name": "حمزة ميباركي",
+          "phone": "",
+          "lawyer_name": "سايج محمد",
+          "lawyer_phone": ""
+        },
+        {
+          "role": "متهم",
+          "name": "خطاطبة محمد الامين",
+          "phone": "ر",
+          "lawyer_name": "",
+          "lawyer_phone": ""
+        },
+        {
+          "role": "طرف مدني",
+          "name": "صادق بحري",
+          "phone": "",
+          "lawyer_name": "",
+          "lawyer_phone": ""
+        }
+      ],
+      "source_file": "terte.txt"
+    },
+    {
+      "case_number": "26/01939",
+      "case_year": null,
+      "case_type": "جنحة",
+      "case_category": "",
+      "subject": "النصب الموجه للجمهور   نصب ثلالثي",
+      "litigation_stage": "استئنافية",
+      "original_case_number": "26/00002",
+      "custom_stage": "",
+      "status": "جارية",
+      "council": "مجلس قضاء البويرة",
+      "court": "مجلس قضاء البويرة",
+      "chamber": "الغرفة الجزائية رقم 3",
+      "bar_phone": "0655572657",
+      "lawyer": "الأستاذ سايج محمد",
+      "total_fees": 100000.0,
+      "paid_amount": 15000.0,
+      "remaining_amount": 85000.0,
+      "filing_date": "2026-04-13",
+      "first_session_date": "",
+      "delib_date": "",
+      "notes": "",
+      "verdict": "",
+      "delays": [
+        {
+          "date": "2026-05-13",
+          "reason": "لحضور الاطراف"
+        }
+      ],
+      "parties": [
+        {
+          "role": "متهم",
+          "name": "بودبة منير",
+          "phone": "00213791449280",
+          "lawyer_name": "سايج محمد",
+          "lawyer_phone": ""
+        },
+        {
+          "role": "طرف مدني",
+          "name": "سحنون ليلى",
+          "phone": "رقم الهاتف",
+          "lawyer_name": "",
+          "lawyer_phone": ""
+        }
+      ],
+      "source_file": "zde.txt"
+    },
+    {
+      "case_number": "25/01989",
+      "case_year": null,
+      "case_type": "جنحة",
+      "case_category": "",
+      "subject": "الضرب و الجرح العمدي على قاصر أقل من 16 سنة",
+      "litigation_stage": "افتتاحية (ابتدائي)",
+      "original_case_number": "",
+      "custom_stage": "",
+      "status": "مؤرشفة",
+      "council": "مجلس قضاء الجزائر",
+      "court": "شراقة",
+      "chamber": "قسم الجنح",
+      "bar_phone": "0549111248",
+      "lawyer": "الاستاذ سايج محمد",
+      "total_fees": 40000.0,
+      "paid_amount": 40000.0,
+      "remaining_amount": 0.0,
+      "filing_date": "2024-02-18",
+      "first_session_date": "2025-02-24",
+      "delib_date": "2025-06-02",
+      "notes": "",
+      "verdict": "في الدعوى المدنية تعويض ممئة الف دينار عن الضرر \nفي الدعوى العمومية عام حبس نافذ لكل منهما و خمسون الف دينار جزائري تعويض",
+      "delays": [],
+      "parties": [
+        {
+          "role": "ضحية",
+          "name": "عباسي رتيبة",
+          "phone": "رقم الهاتف",
+          "lawyer_name": "سايج محمد",
+          "lawyer_phone": ""
+        },
+        {
+          "role": "ضحية",
+          "name": "فوغالي أميمة",
+          "phone": "قاصرة",
+          "lawyer_name": "سايج محمد",
+          "lawyer_phone": ""
+        },
+        {
+          "role": "ضحية",
+          "name": "فوغالي سيرين",
+          "phone": "قاصر",
+          "lawyer_name": "سايج محمد",
+          "lawyer_phone": ""
+        },
+        {
+          "role": "معارض ضده",
+          "name": "بوشيرب امال حديجة",
+          "phone": "رقم الهاتف",
+          "lawyer_name": "حسان نسرين",
+          "lawyer_phone": "0549351590"
+        },
+        {
+          "role": "متهم",
+          "name": "بوقريوة عائشة",
+          "phone": "رقم الهاتف",
+          "lawyer_name": "حسان نسرين",
+          "lawyer_phone": ""
+        }
+      ],
+      "source_file": "zdezeze.txt"
+    },
+    {
+      "case_number": "25/02438",
+      "case_year": null,
+      "case_type": "مخالفة",
+      "case_category": "",
+      "subject": "الضرب و الجرح العمدي على قاصر أقل من 16 سنة",
+      "litigation_stage": "افتتاحية (ابتدائي)",
+      "original_case_number": "",
+      "custom_stage": "",
+      "status": "مؤرشفة",
+      "council": "مجلس قضاء الجزائر",
+      "court": "شراقة",
+      "chamber": "قسم الجنح",
+      "bar_phone": "0549111248",
+      "lawyer": "الأستاذ سايج محمدالأستاذ سايج محمد",
+      "total_fees": 0.0,
+      "paid_amount": 0.0,
+      "remaining_amount": 0.0,
+      "filing_date": "2024-03-07",
+      "first_session_date": "2025-03-03",
+      "delib_date": "2025-05-05",
+      "notes": "",
+      "verdict": "إدانة المتهمين بعام حكم نافذ\nو غرامة مالية نافذة لكل واحدة منهن في الدعوى المدنية\n80000 دج للضرر عن كل واحدة\nحكم غيابي للمتهمين",
+      "delays": [],
+      "parties": [
+        {
+          "role": "ضحية",
+          "name": "عباسي رتيبة",
+          "phone": "رقم الهاتف",
+          "lawyer_name": "سايج محمد",
+          "lawyer_phone": ""
+        },
+        {
+          "role": "ضحية",
+          "name": "فوغالي أميمة",
+          "phone": "قاصرة",
+          "lawyer_name": "سايج محمد",
+          "lawyer_phone": ""
+        },
+        {
+          "role": "ضحية",
+          "name": "فوغالي ياسر",
+          "phone": "قاصر",
+          "lawyer_name": "سايج محمد",
+          "lawyer_phone": ""
+        },
+        {
+          "role": "معارض ضده",
+          "name": "بوشيرب امال خديجة/ بوشيرب امينة",
+          "phone": "رقم الهاتف",
+          "lawyer_name": "حسان نسرين",
+          "lawyer_phone": "0549351590"
+        },
+        {
+          "role": "متهم",
+          "name": "بوقريوة عائشة",
+          "phone": "رقم الهاتف",
+          "lawyer_name": "حسان نسرين",
+          "lawyer_phone": ""
+        }
+      ],
+      "source_file": "zer.txt"
+    },
+    {
+      "case_number": "26/04216",
+      "case_year": null,
+      "case_type": "جنحة",
+      "case_category": "",
+      "subject": "الضرب و الجرح العمدي على قاصر أقل من 16 سنة",
+      "litigation_stage": "معارضة",
+      "original_case_number": "25/02438",
+      "custom_stage": "",
+      "status": "جارية",
+      "council": "مجلس قضاء الجزائر",
+      "court": "شراقة",
+      "chamber": "قسم الجنح",
+      "bar_phone": "0549111248",
+      "lawyer": "الاستاذ سايج محمدالأستاذ سايج محمد",
+      "total_fees": 40000.0,
+      "paid_amount": 0.0,
+      "remaining_amount": 40000.0,
+      "filing_date": "2026-04-08",
+      "first_session_date": "2026-05-04",
+      "delib_date": "",
+      "notes": "",
+      "verdict": "",
+      "delays": [
+        {
+          "date": "2026-06-01",
+          "reason": "لحضور الاطراف"
+        }
+      ],
+      "parties": [
+        {
+          "role": "ضحية",
+          "name": "عباسي رتيبة",
+          "phone": "رقم الهاتف",
+          "lawyer_name": "سايج محمد",
+          "lawyer_phone": ""
+        },
+        {
+          "role": "ضحية",
+          "name": "فوغالي أميمة",
+          "phone": "قاصرة",
+          "lawyer_name": "سايج محمد",
+          "lawyer_phone": ""
+        },
+        {
+          "role": "ضحية",
+          "name": "فوغالي ياسر",
+          "phone": "قاصر",
+          "lawyer_name": "سايج محمد",
+          "lawyer_phone": ""
+        },
+        {
+          "role": "معارض ضده",
+          "name": "بوشيرب امال خديجة/ بوشيرب امينة",
+          "phone": "رقم الهاتف",
+          "lawyer_name": "حسان نسرين",
+          "lawyer_phone": "0549351590"
+        },
+        {
+          "role": "متهم",
+          "name": "بوقريوة عائشة",
+          "phone": "رقم الهاتف",
+          "lawyer_name": "حسان نسرين",
+          "lawyer_phone": ""
+        }
+      ],
+      "source_file": "zez.txt"
+    },
+    {
+      "case_number": "26/04221",
+      "case_year": null,
+      "case_type": "جنحة",
+      "case_category": "",
+      "subject": "الضرب و الجرح العمدي على قاصر أقل من 16 سنة",
+      "litigation_stage": "معارضة",
+      "original_case_number": "25/01989",
+      "custom_stage": "",
+      "status": "جارية",
+      "council": "مجلس قضاء الجزائر",
+      "court": "شراقة",
+      "chamber": "قسم الجنح",
+      "bar_phone": "0549111248",
+      "lawyer": "مكتب الاستاذ سايج محمد",
+      "total_fees": 40000.0,
+      "paid_amount": 0.0,
+      "remaining_amount": 40000.0,
+      "filing_date": "2026-04-08",
+      "first_session_date": "2026-05-04",
+      "delib_date": "",
+      "notes": "",
+      "verdict": "",
+      "delays": [
+        {
+          "date": "2026-06-01",
+          "reason": "لحضور الاطراف"
+        }
+      ],
+      "parties": [
+        {
+          "role": "ضحية",
+          "name": "عباسي رتيبة",
+          "phone": "رقم الهاتف",
+          "lawyer_name": "سايج محمد",
+          "lawyer_phone": ""
+        },
+        {
+          "role": "ضحية",
+          "name": "فوغالي أميمة",
+          "phone": "قاصرة",
+          "lawyer_name": "سايج محمد",
+          "lawyer_phone": ""
+        },
+        {
+          "role": "ضحية",
+          "name": "فوغالي سيرين",
+          "phone": "قاصر",
+          "lawyer_name": "سايج محمد",
+          "lawyer_phone": ""
+        },
+        {
+          "role": "معارض ضده",
+          "name": "بوشيرب امال خديجة",
+          "phone": "رقم الهاتف",
+          "lawyer_name": "حسان نسرين",
+          "lawyer_phone": "0549351590"
+        },
+        {
+          "role": "متهم",
+          "name": "بوقريوة عائشة",
+          "phone": "رقم الهاتف",
+          "lawyer_name": "حسان نسرين",
+          "lawyer_phone": ""
+        }
+      ],
+      "source_file": "zezez.txt"
+    },
+    {
+      "case_number": "26/002",
+      "case_year": null,
+      "case_type": "جنحة",
+      "case_category": "",
+      "subject": "النصب الموجه للجمهور ( النصب الثلاثي)",
+      "litigation_stage": "معارضة",
+      "original_case_number": "",
+      "custom_stage": "",
+      "status": "مؤرشفة",
+      "council": "مجلس قضاء البويرة",
+      "court": "محكمة امشدالة",
+      "chamber": "جنح",
+      "bar_phone": "0655572567",
+      "lawyer": "الأستاذ سايج محمد",
+      "total_fees": 0.0,
+      "paid_amount": 0.0,
+      "remaining_amount": 0.0,
+      "filing_date": "2026-04-30",
+      "first_session_date": "2026-04-30",
+      "delib_date": "2026-04-30",
+      "notes": "",
+      "verdict": "البراء للمتهم\nفي حق بودبة منير",
+      "delays": [],
+      "parties": [
+        {
+          "role": "متهم",
+          "name": "بودبة منير",
+          "phone": "00213791449280",
+          "lawyer_name": "سايج محمد",
+          "lawyer_phone": ""
+        },
+        {
+          "role": "طرف مدني",
+          "name": "سحنون ليلى",
+          "phone": "",
+          "lawyer_name": "",
+          "lawyer_phone": ""
+        }
+      ],
+      "source_file": "é.txt"
+    }
+  ],
+  "clients": [
+    {
+      "name": "مدور كريمو",
+      "phone": "00213555390201"
+    },
+    {
+      "name": "بلخوجة محمد ياسر",
+      "phone": "00213542819233"
+    },
+    {
+      "name": "كبور صالح",
+      "phone": "00213551050488"
+    },
+    {
+      "name": "بدر الدين عبد الرحيم",
+      "phone": "00213551525881"
+    },
+    {
+      "name": "عماري سي احمد",
+      "phone": "00213698084523"
+    },
+    {
+      "name": "بودبة منير",
+      "phone": "00213791449280"
+    },
+    {
+      "name": "بن يمنية نصرالدين",
+      "phone": "00213774968339"
+    },
+    {
+      "name": "بوجادي محمد زكرياء",
+      "phone": "00213676169592"
+    },
+    {
+      "name": "عباسي رتيبة",
+      "phone": "رقم الهاتف"
+    },
+    {
+      "name": "بلقاسم بوزيدة اسامة",
+      "phone": "00213777250603"
+    },
+    {
+      "name": "خلالفة عزالدين",
+      "phone": "00213783257551"
+    },
+    {
+      "name": "عباسي رتيبة و فوغالي اميمة و فوغالي ياسر",
+      "phone": "رقم الهاتف"
+    },
+    {
+      "name": "حمزة ميباركي",
+      "phone": ""
+    },
+    {
+      "name": "فوغالي أميمة",
+      "phone": "قاصرة"
+    },
+    {
+      "name": "فوغالي سيرين",
+      "phone": "قاصر"
+    },
+    {
+      "name": "فوغالي ياسر",
+      "phone": "قاصر"
+    }
+  ],
+  "courts": [
+    {
+      "name": "المحكمة العليا",
+      "council": "المحكمة العليا",
+      "type": ""
+    },
+    {
+      "name": "محكمة الاربعاء ناث ايراثن",
+      "council": "مجلس قضاء تيزي وزو",
+      "type": ""
+    },
+    {
+      "name": "محكمة بئرمرادراريس",
+      "council": "مجلس قضاء الجزائر",
+      "type": ""
+    },
+    {
+      "name": "مجلس قضاء الجزائر",
+      "council": "مجلس قضاء الجزائر",
+      "type": ""
+    },
+    {
+      "name": "المحمة الادارية الاستئنافية بالجزائر",
+      "council": "مجلس قضاء الجزائر",
+      "type": ""
+    },
+    {
+      "name": "الغرفة الجزائية السادسة",
+      "council": "مجلس قضاء الجزائر",
+      "type": ""
+    },
+    {
+      "name": "تيبازة",
+      "council": "مجلس قضاء تيبازة",
+      "type": ""
+    },
+    {
+      "name": "محكمة الشراقة",
+      "council": "مجلس قضاء الجزائر",
+      "type": ""
+    },
+    {
+      "name": "غرفة جزائية",
+      "council": "مجلس قضاء المدية",
+      "type": ""
+    },
+    {
+      "name": "الغرفة المدنية",
+      "council": "مجلس قضاء الجزائر",
+      "type": ""
+    },
+    {
+      "name": "بئرمرادراريس",
+      "council": "مجلس قضاء  الجزائر",
+      "type": ""
+    },
+    {
+      "name": "مجلس قضاء البويرة",
+      "council": "مجلس قضاء البويرة",
+      "type": ""
+    },
+    {
+      "name": "شراقة",
+      "council": "مجلس قضاء الجزائر",
+      "type": ""
+    },
+    {
+      "name": "محكمة امشدالة",
+      "council": "مجلس قضاء البويرة",
+      "type": ""
+    }
+  ],
+  "metadata": {
+    "total_cases": 19,
+    "total_clients": 16,
+    "total_courts": 14,
+    "active_cases": 9,
+    "archived_cases": 10,
+    "total_fees": 1570000.0,
+    "total_paid": 925000.0,
+    "total_remaining": 645000.0
+  }
+}
