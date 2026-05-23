@@ -4,7 +4,7 @@ import React from 'react';
 import { db, getSetting, type Case, type Party, type Delay, type Session } from '@/lib/db';
 import { WILAYAS, formatDate } from '@/lib/constants';
 import { Button } from '@/components/ui/button';
-import { FileText } from 'lucide-react';
+import { FileText, Printer } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface CasePrintProps {
@@ -20,7 +20,6 @@ export function CasePrintButton({ caseData, parties, delays, sessions }: CasePri
   async function generateAndPrint() {
     setLoading(true);
     try {
-      // Fetch lawyer settings
       const lawyerName = await getSetting<string>('lawyerName') || 'سايج محمد';
       const lawyerTitle = await getSetting<string>('lawyerTitle') || 'محام لدى المجلس';
       const lawyerAddress = await getSetting<string>('lawyerAddress') || '';
@@ -29,85 +28,59 @@ export function CasePrintButton({ caseData, parties, delays, sessions }: CasePri
 
       const wilayaName = WILAYAS.find(w => w.code === caseData.wilayaId)?.name || '';
 
-      // Build parties - split into في حق and ضد
+      // تقسيم الأطراف
       const inFavorParties = parties.filter(p =>
-        p.role === 'مدعي' || p.role === 'مستأنف' || p.role === 'طالب' || p.role === 'مقدم الشكوى'
+        p.role === 'مدعي' || p.role === 'مستأنف' || p.role === 'طالب' || p.role === 'مقدم الشكوى' || p.role === 'ضحية' || p.role === 'مشتكي'
       );
       const againstParties = parties.filter(p =>
-        p.role === 'مدعى عليه' || p.role === 'مستأنف ضده' || p.role === 'مطلوب' || p.role === 'متهم' || p.role === 'مشكو في حقه'
+        p.role === 'مدعى عليه' || p.role === 'مستأنف ضده' || p.role === 'مستأنف عليه' || p.role === 'مطلوب' || p.role === 'متهم' || p.role === 'مشكو في حقه' || p.role === 'مشتكى منه' || p.role === 'معارض ضده'
       );
       const otherParties = parties.filter(p =>
         !inFavorParties.includes(p) && !againstParties.includes(p)
       );
 
-      // Build في حق rows
-      let inFavorRows = '';
-      for (const p of inFavorParties.length > 0 ? inFavorParties : [null as any]) {
-        inFavorRows += `
+      // بناء صفوف الأطراف
+      function buildPartyRows(partyList: Party[], bgColor: string) {
+        if (partyList.length === 0) return '';
+        return partyList.map(p => `
           <tr>
-            <td style="border:1px solid #555;padding:4px 6px;text-align:center;font-size:11px;background:#f0f7f4;">${p?.name || ''}</td>
-            <td style="border:1px solid #555;padding:4px 6px;text-align:center;font-size:11px;">${p?.role || ''}</td>
-            <td style="border:1px solid #555;padding:4px 6px;text-align:center;font-size:11px;">${p?.phone || ''}</td>
-            <td style="border:1px solid #555;padding:4px 6px;text-align:center;font-size:11px;">${p?.lawyerName || ''}</td>
-          </tr>`;
+            <td style="padding:6px 10px;border:1px solid #d1d5db;font-size:11px;background:${bgColor};">${p.name || '—'}</td>
+            <td style="padding:6px 10px;border:1px solid #d1d5db;font-size:11px;text-align:center;">${p.role || '—'}</td>
+            <td style="padding:6px 10px;border:1px solid #d1d5db;font-size:11px;text-align:center;">${p.phone || '—'}</td>
+            <td style="padding:6px 10px;border:1px solid #d1d5db;font-size:11px;text-align:center;">${p.lawyerName || '—'}</td>
+            <td style="padding:6px 10px;border:1px solid #d1d5db;font-size:11px;text-align:center;">${p.lawyerPhone || '—'}</td>
+          </tr>
+        `).join('');
       }
 
-      // Build ضد rows
-      let againstRows = '';
-      for (const p of againstParties.length > 0 ? againstParties : [null as any]) {
-        againstRows += `
+      const inFavorRows = buildPartyRows(inFavorParties, '#f0fdf4');
+      const againstRows = buildPartyRows(againstParties, '#fef2f2');
+      const otherRows = buildPartyRows(otherParties, '#f9fafb');
+
+      // بناء التأجيلات
+      function buildDelayRows() {
+        if (delays.length === 0) return '<tr><td colspan="3" style="padding:8px;text-align:center;color:#9ca3af;font-size:11px;">لا توجد تأجيلات</td></tr>';
+        return delays.map((d, i) => `
           <tr>
-            <td style="border:1px solid #555;padding:4px 6px;text-align:center;font-size:11px;background:#fdf2f2;">${p?.name || ''}</td>
-            <td style="border:1px solid #555;padding:4px 6px;text-align:center;font-size:11px;">${p?.role || ''}</td>
-            <td style="border:1px solid #555;padding:4px 6px;text-align:center;font-size:11px;">${p?.phone || ''}</td>
-            <td style="border:1px solid #555;padding:4px 6px;text-align:center;font-size:11px;">${p?.lawyerName || ''}</td>
-          </tr>`;
+            <td style="padding:5px 10px;border:1px solid #d1d5db;font-size:11px;text-align:center;width:40px;background:#f9fafb;">${i + 1}</td>
+            <td style="padding:5px 10px;border:1px solid #d1d5db;font-size:11px;text-align:center;width:120px;">${formatDate(d.delayDate)}</td>
+            <td style="padding:5px 10px;border:1px solid #d1d5db;font-size:11px;">${d.reason || '—'}</td>
+          </tr>
+        `).join('');
       }
 
-      // Other parties rows
-      let otherRows = '';
-      for (const p of otherParties) {
-        otherRows += `
+      // بناء الجلسات
+      function buildSessionRows() {
+        if (sessions.length === 0) return '<tr><td colspan="4" style="padding:8px;text-align:center;color:#9ca3af;font-size:11px;">لا توجد جلسات</td></tr>';
+        return sessions.map((s, i) => `
           <tr>
-            <td style="border:1px solid #555;padding:4px 6px;text-align:center;font-size:11px;">${p?.name || ''}</td>
-            <td style="border:1px solid #555;padding:4px 6px;text-align:center;font-size:11px;">${p?.role || ''}</td>
-            <td style="border:1px solid #555;padding:4px 6px;text-align:center;font-size:11px;">${p?.phone || ''}</td>
-            <td style="border:1px solid #555;padding:4px 6px;text-align:center;font-size:11px;">${p?.lawyerName || ''}</td>
-          </tr>`;
+            <td style="padding:5px 10px;border:1px solid #d1d5db;font-size:11px;text-align:center;width:40px;background:#f9fafb;">${i + 1}</td>
+            <td style="padding:5px 10px;border:1px solid #d1d5db;font-size:11px;text-align:center;width:120px;">${formatDate(s.date)}</td>
+            <td style="padding:5px 10px;border:1px solid #d1d5db;font-size:11px;text-align:center;">${s.court || s.chamber || '—'}</td>
+            <td style="padding:5px 10px;border:1px solid #d1d5db;font-size:11px;">${s.notes || s.result || '—'}</td>
+          </tr>
+        `).join('');
       }
-
-      // Build delays - 4 rows in 2x2 layout
-      const delayEntries = delays.slice(0, 4);
-      while (delayEntries.length < 4) {
-        delayEntries.push({ delayDate: '', reason: '' } as any);
-      }
-      const delayRow1 = delayEntries.slice(0, 2);
-      const delayRow2 = delayEntries.slice(2, 4);
-
-      let delaysTable = `
-        <table style="width:100%;border-collapse:collapse;margin-top:6px;font-size:11px;">
-          <tr>
-            <th style="border:1px solid #555;padding:4px;background:#1a5276;color:#fff;font-size:10px;" colspan="4">تأجيلات الجلسات</th>
-          </tr>
-          <tr>
-            <th style="border:1px solid #555;padding:3px;background:#2980b9;color:#fff;font-size:9px;width:25%;">التاريخ</th>
-            <th style="border:1px solid #555;padding:3px;background:#2980b9;color:#fff;font-size:9px;width:25%;">السبب</th>
-            <th style="border:1px solid #555;padding:3px;background:#2980b9;color:#fff;font-size:9px;width:25%;">التاريخ</th>
-            <th style="border:1px solid #555;padding:3px;background:#2980b9;color:#fff;font-size:9px;width:25%;">السبب</th>
-          </tr>
-          <tr>
-            <td style="border:1px solid #555;padding:3px;text-align:center;font-size:10px;">${formatDate(delayRow1[0]?.delayDate) || '___/___/202_'}</td>
-            <td style="border:1px solid #555;padding:3px;text-align:center;font-size:10px;">${delayRow1[0]?.reason || ''}</td>
-            <td style="border:1px solid #555;padding:3px;text-align:center;font-size:10px;">${formatDate(delayRow1[1]?.delayDate) || '___/___/202_'}</td>
-            <td style="border:1px solid #555;padding:3px;text-align:center;font-size:10px;">${delayRow1[1]?.reason || ''}</td>
-          </tr>
-          <tr>
-            <td style="border:1px solid #555;padding:3px;text-align:center;font-size:10px;">${formatDate(delayRow2[0]?.delayDate) || '___/___/202_'}</td>
-            <td style="border:1px solid #555;padding:3px;text-align:center;font-size:10px;">${delayRow2[0]?.reason || ''}</td>
-            <td style="border:1px solid #555;padding:3px;text-align:center;font-size:10px;">${formatDate(delayRow2[1]?.delayDate) || '___/___/202_'}</td>
-            <td style="border:1px solid #555;padding:3px;text-align:center;font-size:10px;">${delayRow2[1]?.reason || ''}</td>
-          </tr>
-        </table>`;
 
       const html = `<!DOCTYPE html>
 <html dir="rtl" lang="ar">
@@ -117,7 +90,7 @@ export function CasePrintButton({ caseData, parties, delays, sessions }: CasePri
   <style>
     @page {
       size: A4;
-      margin: 10mm;
+      margin: 12mm 10mm;
     }
     * {
       margin: 0;
@@ -127,149 +100,152 @@ export function CasePrintButton({ caseData, parties, delays, sessions }: CasePri
     body {
       font-family: 'Segoe UI', Tahoma, 'Noto Sans Arabic', Arial, sans-serif;
       direction: rtl;
-      color: #000;
+      color: #1f2937;
       font-size: 12px;
-      line-height: 1.5;
+      line-height: 1.6;
       background: #fff;
-    }
-    .page {
-      width: 210mm;
-      height: 297mm;
-      padding: 10mm;
-      margin: 0 auto;
-      background: #fff;
-      overflow: hidden;
     }
 
-    /* الديباجة - في الوسط بخط جميل */
+    /* الديباجة */
     .letterhead {
       text-align: center;
-      margin-bottom: 12px;
-      padding-bottom: 10px;
-      border-bottom: 2px solid #1a5276;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 2.5px double #0f766e;
     }
     .letterhead h1 {
-      font-size: 16px;
+      font-size: 18px;
       font-weight: bold;
-      color: #1a5276;
+      color: #0f766e;
       margin-bottom: 2px;
-      letter-spacing: 0.5px;
     }
     .letterhead h2 {
-      font-size: 12px;
+      font-size: 13px;
       font-weight: normal;
-      color: #2c3e50;
+      color: #374151;
       margin-bottom: 4px;
     }
     .letterhead .contact {
       font-size: 10px;
-      color: #555;
-      line-height: 1.6;
+      color: #6b7280;
+      line-height: 1.7;
     }
     .letterhead .contact span {
       display: inline-block;
-      margin: 0 8px;
-    }
-    .letterhead .divider {
-      width: 60%;
-      margin: 6px auto 0;
-      border-top: 1px solid #bdc3c7;
+      margin: 0 6px;
     }
 
     /* عنوان القضية */
     .case-title {
       text-align: center;
-      font-size: 13px;
+      font-size: 15px;
       font-weight: bold;
-      color: #1a5276;
-      margin-bottom: 8px;
-      padding: 4px 0;
-      border-bottom: 1px solid #ddd;
+      color: #0f766e;
+      margin-bottom: 14px;
+      padding: 8px 0;
+      background: linear-gradient(to left, #f0fdfa, #fff, #f0fdfa);
+      border-top: 1px solid #99f6e4;
+      border-bottom: 1px solid #99f6e4;
     }
 
+    /* عناوين الأقسام */
     .section-title {
-      font-size: 11px;
+      font-size: 12px;
       font-weight: bold;
-      color: #1a5276;
-      border-bottom: 1px solid #2980b9;
-      padding-bottom: 2px;
-      margin-bottom: 5px;
-      margin-top: 8px;
+      color: #fff;
+      background: #0f766e;
+      padding: 5px 12px;
+      margin-bottom: 6px;
+      margin-top: 14px;
+      border-radius: 3px;
+      display: inline-block;
     }
 
+    /* جداول المعلومات */
     table {
       width: 100%;
       border-collapse: collapse;
-      margin-bottom: 4px;
+      margin-bottom: 6px;
     }
     th {
-      background: #1a5276;
+      background: #0f766e;
       color: #fff;
       font-weight: bold;
-      padding: 4px 6px;
+      padding: 6px 10px;
       text-align: center;
       font-size: 10px;
     }
-    td {
-      border: 1px solid #555;
-      padding: 4px 6px;
+    .info-table td {
+      border: 1px solid #d1d5db;
+      padding: 5px 10px;
       font-size: 11px;
+      vertical-align: middle;
     }
     .info-table td:first-child {
       font-weight: bold;
-      color: #1a5276;
-      width: 22%;
-      background: #f0f4f8;
+      color: #0f766e;
+      width: 24%;
+      background: #f0fdfa;
       font-size: 10px;
     }
     .info-table td:nth-child(2) {
-      width: 28%;
+      width: 26%;
     }
     .info-table td:nth-child(3) {
       font-weight: bold;
-      color: #1a5276;
-      width: 22%;
-      background: #f0f4f8;
+      color: #0f766e;
+      width: 24%;
+      background: #f0fdfa;
       font-size: 10px;
     }
 
-    .party-header {
+    /* تسمية الأطراف */
+    .party-label {
       font-size: 11px;
       font-weight: bold;
-      padding: 3px 8px;
-      margin-top: 4px;
+      padding: 3px 10px;
+      margin-top: 8px;
+      margin-bottom: 2px;
       display: inline-block;
       border-radius: 3px 3px 0 0;
-    }
-    .party-favor {
-      background: #27ae60;
       color: #fff;
     }
-    .party-against {
-      background: #c0392b;
-      color: #fff;
-    }
+    .party-favor { background: #059669; }
+    .party-against { background: #dc2626; }
+    .party-other { background: #6b7280; }
 
-    .judgment-area {
-      border: 1px solid #555;
-      min-height: 50px;
-      padding: 6px;
-      margin-top: 4px;
+    /* منطوق الحكم */
+    .judgment-box {
+      border: 1px solid #d1d5db;
+      border-radius: 4px;
+      padding: 10px;
+      margin-top: 6px;
+      min-height: 40px;
       white-space: pre-wrap;
       line-height: 1.8;
       font-size: 11px;
+      background: #fefce8;
+    }
+
+    /* تذييل */
+    .footer {
+      margin-top: 20px;
+      padding-top: 8px;
+      border-top: 1px solid #e5e7eb;
+      display: flex;
+      justify-content: space-between;
+      font-size: 9px;
+      color: #9ca3af;
     }
 
     @media print {
       body { margin: 0; }
-      .page { margin: 0; padding: 10mm; }
     }
   </style>
 </head>
 <body>
 
-<div class="page">
-  <!-- الديباجة في الوسط -->
+  <!-- الديباجة -->
   <div class="letterhead">
     <h1>${lawyerName}</h1>
     <h2>${lawyerTitle}</h2>
@@ -278,7 +254,6 @@ export function CasePrintButton({ caseData, parties, delays, sessions }: CasePri
       ${lawyerPhone ? `<span>الهاتف: ${lawyerPhone}</span>` : ''}
       ${lawyerEmail ? `<span>${lawyerEmail}</span>` : ''}
     </div>
-    <div class="divider"></div>
   </div>
 
   <!-- عنوان القضية -->
@@ -289,42 +264,48 @@ export function CasePrintButton({ caseData, parties, delays, sessions }: CasePri
   <table class="info-table">
     <tr>
       <td>رقم القضية</td>
-      <td>${caseData.caseNumber || ''}</td>
+      <td>${caseData.caseNumber || '—'}</td>
       <td>الموضوع</td>
-      <td>${caseData.subject || ''}</td>
+      <td>${caseData.subject || '—'}</td>
     </tr>
     <tr>
       <td>طبيعة القضية</td>
-      <td>${caseData.caseNature || ''}</td>
+      <td>${caseData.caseNature || '—'}</td>
       <td>مرحلة التقاضي</td>
-      <td>${caseData.litigationStage || ''}</td>
+      <td>${caseData.litigationStage || '—'}</td>
     </tr>
     <tr>
-      <td>المجلس/المحكمة</td>
-      <td>${caseData.councilName || caseData.courtName || ''}</td>
-      <td>الغرفة/القسم</td>
-      <td>${caseData.chamber || ''}</td>
+      <td>المجلس</td>
+      <td>${caseData.councilName || '—'}</td>
+      <td>المحكمة</td>
+      <td>${caseData.courtName || '—'}</td>
+    </tr>
+    <tr>
+      <td>الغرفة / القسم</td>
+      <td>${caseData.chamber || '—'}</td>
+      <td>الولاية</td>
+      <td>${wilayaName || '—'}</td>
     </tr>
     <tr>
       <td>تاريخ التسجيل</td>
-      <td>${formatDate(caseData.registrationDate) || ''}</td>
+      <td>${formatDate(caseData.registrationDate)}</td>
       <td>أول جلسة</td>
-      <td>${formatDate(caseData.firstSessionDate) || ''}</td>
+      <td>${formatDate(caseData.firstSessionDate)}</td>
     </tr>
     <tr>
       <td>رقم القضية الأصلية</td>
-      <td>${caseData.origCaseNumber || ''}</td>
+      <td>${caseData.origCaseNumber || '—'}</td>
       <td>تاريخ المداولة</td>
-      <td>${formatDate(caseData.delibDate) || ''}</td>
+      <td>${formatDate(caseData.delibDate)}</td>
     </tr>
-    ${wilayaName ? `<tr><td>الولاية</td><td>${wilayaName}</td><td>هاتف قاعة المحامين</td><td>${caseData.barPhone || ''}</td></tr>` : ''}
+    ${caseData.barPhone ? `<tr><td>هاتف قاعة المحامين</td><td>${caseData.barPhone}</td><td></td><td></td></tr>` : ''}
   </table>
 
-  <!-- أطراف النزاع - في حق و ضد -->
+  <!-- أطراف النزاع -->
   <div class="section-title">أطراف النزاع</div>
 
-  ${inFavorParties.length > 0 || inFavorRows ? `
-  <div class="party-header party-favor">في حق</div>
+  ${inFavorParties.length > 0 ? `
+  <div class="party-label party-favor">في حق</div>
   <table>
     <thead>
       <tr>
@@ -332,13 +313,14 @@ export function CasePrintButton({ caseData, parties, delays, sessions }: CasePri
         <th>المركز القانوني</th>
         <th>الهاتف</th>
         <th>محاميه</th>
+        <th>هاتف المحامي</th>
       </tr>
     </thead>
     <tbody>${inFavorRows}</tbody>
   </table>` : ''}
 
-  ${againstParties.length > 0 || againstRows ? `
-  <div class="party-header party-against">ضد</div>
+  ${againstParties.length > 0 ? `
+  <div class="party-label party-against">ضد</div>
   <table>
     <thead>
       <tr>
@@ -346,13 +328,14 @@ export function CasePrintButton({ caseData, parties, delays, sessions }: CasePri
         <th>المركز القانوني</th>
         <th>الهاتف</th>
         <th>محاميه</th>
+        <th>هاتف المحامي</th>
       </tr>
     </thead>
     <tbody>${againstRows}</tbody>
   </table>` : ''}
 
   ${otherParties.length > 0 ? `
-  <div class="party-header" style="background:#7f8c8d;color:#fff;">أطراف أخرى</div>
+  <div class="party-label party-other">أطراف أخرى</div>
   <table>
     <thead>
       <tr>
@@ -360,30 +343,70 @@ export function CasePrintButton({ caseData, parties, delays, sessions }: CasePri
         <th>المركز القانوني</th>
         <th>الهاتف</th>
         <th>محاميه</th>
+        <th>هاتف المحامي</th>
       </tr>
     </thead>
     <tbody>${otherRows}</tbody>
   </table>` : ''}
 
-  <!-- تأجيلات الجلسات 2×2 -->
-  ${delaysTable}
+  ${parties.length === 0 ? '<p style="color:#9ca3af;font-size:11px;padding:4px 0;">لا توجد أطراف مسجلة</p>' : ''}
+
+  <!-- تأجيلات الجلسات -->
+  <div class="section-title">تأجيلات الجلسات</div>
+  <table>
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>التاريخ</th>
+        <th>السبب</th>
+      </tr>
+    </thead>
+    <tbody>${buildDelayRows()}</tbody>
+  </table>
+
+  <!-- الجلسات -->
+  ${sessions.length > 0 ? `
+  <div class="section-title">الجلسات</div>
+  <table>
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>التاريخ</th>
+        <th>المحكمة / الغرفة</th>
+        <th>الملاحظات</th>
+      </tr>
+    </thead>
+    <tbody>${buildSessionRows()}</tbody>
+  </table>` : ''}
 
   <!-- منطوق الحكم -->
-  <div class="section-title">منطوق الحكم/القرار</div>
-  <div class="judgment-area">${caseData.judgment || ''}</div>
-</div>
+  ${caseData.judgment ? `
+  <div class="section-title">منطوق الحكم / القرار</div>
+  <div class="judgment-box">${caseData.judgment}</div>` : ''}
+
+  <!-- ملاحظات -->
+  ${caseData.notes ? `
+  <div class="section-title">ملاحظات</div>
+  <div style="border:1px solid #d1d5db;border-radius:4px;padding:8px;margin-top:6px;font-size:11px;white-space:pre-wrap;line-height:1.8;background:#f9fafb;">${caseData.notes}</div>` : ''}
+
+  <!-- تذييل -->
+  <div class="footer">
+    <span>مكتب الاستاذ ${lawyerName} - ${lawyerTitle}</span>
+    <span>طبع بتاريخ: ${new Date().toLocaleDateString('ar-DZ')}</span>
+  </div>
 
 </body>
 </html>`;
 
-      // Open in new window for printing / saving as PDF
       const printWindow = window.open('', '_blank');
       if (printWindow) {
         printWindow.document.write(html);
         printWindow.document.close();
-        toast.success('تم فتح ملف القضية');
+        setTimeout(() => {
+          printWindow.print();
+        }, 500);
+        toast.success('تم فتح ملف القضية للطباعة');
       } else {
-        // Fallback: download as HTML file
         const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -411,8 +434,8 @@ export function CasePrintButton({ caseData, parties, delays, sessions }: CasePri
       disabled={loading}
       className="touch-target"
     >
-      <FileText className="w-3 h-3 ml-1" />
-      {loading ? 'جاري التحميل...' : 'إنشاء صفحة القضية'}
+      <Printer className="w-3 h-3 ml-1" />
+      {loading ? 'جاري التحميل...' : 'طباعة'}
     </Button>
   );
 }

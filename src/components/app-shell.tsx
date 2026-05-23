@@ -26,7 +26,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/sheet';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
-import { cn } from '@/lib/utils';
+import { GlobalSearch } from '@/components/global-search';
 
 const APP_NAME = 'مكتب الاستاذ سايج محمد محام لدى المجلس';
 
@@ -72,6 +72,11 @@ function SidebarContent({ activeSection, onNavigate }: { activeSection: Section;
         </div>
       </div>
       <Separator />
+
+      {/* بحث ذكي */}
+      <div className="px-2 pt-2">
+        <GlobalSearch />
+      </div>
 
       {/* Navigation */}
       <ScrollArea className="flex-1 px-2 py-2 smooth-scroll">
@@ -171,6 +176,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </div>
           </div>
           <div className="flex items-center gap-1">
+            <div className="w-32">
+              <GlobalSearch />
+            </div>
             {mounted && (
               <Button
                 variant="ghost"

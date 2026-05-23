@@ -5,6 +5,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db, formatCurrency, type Case, type Client, type JudicialBody } from '@/lib/db';
 import { STATUS_COLORS, CASE_NATURES, CASE_STATUSES, LITIGATION_STAGES, PARTY_ROLES, JUDICIAL_CHAMBERS, WILAYAS, JUDICIARY_TYPES, ORDINARY_COURT_LEVELS, ADMIN_COURT_LEVELS, CHAMBER_NUMBERS, formatDate } from '@/lib/constants';
 import { CasePrintButton } from '@/components/case-print';
+import { CaseAnnouncementButton } from '@/components/case-announcement';
 import { useAppStore } from '@/lib/store';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -512,6 +513,10 @@ export function Cases() {
                   parties={caseParties || []}
                   delays={caseDelays || []}
                   sessions={caseSessions || []}
+                />
+                <CaseAnnouncementButton
+                  caseData={selectedCase}
+                  parties={caseParties || []}
                 />
                 <Button variant="outline" size="sm" onClick={() => openEditForm(selectedCase)} className="touch-target">
                   <Pencil className="w-3 h-3 ml-1" />
