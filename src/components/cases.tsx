@@ -343,6 +343,8 @@ export function Cases() {
       }
 
       toast.success('تم تحديث القضية بنجاح');
+      setShowForm(false);
+      resetForm();
     } else {
       // إضافة قضية جديدة
       const caseId = await db.cases.add({
@@ -480,14 +482,15 @@ export function Cases() {
     return <CasesSkeleton />;
   }
 
-  // ========================================================================
-  // عرض التفاصيل
-  // ========================================================================
-  if (view === 'detail' && selectedCase) {
-    const remaining = (selectedCase.totalFees || 0) - (selectedCase.paidAmount || 0);
+  const remaining = (selectedCase?.totalFees || 0) - (selectedCase?.paidAmount || 0);
 
-    return (
-      <div className="space-y-4">
+  return (
+    <>
+      {/* ========================================================================
+          عرض التفاصيل
+          ======================================================================== */}
+      {view === 'detail' && selectedCase ? (
+        <div className="space-y-4">
         <div className="flex items-center gap-2 mb-4">
           <Button variant="ghost" size="sm" onClick={() => { setView('list'); setSelectedCaseId(null); }} className="touch-target">
             <ChevronRight className="w-4 h-4 ml-1" />
@@ -667,68 +670,9 @@ export function Cases() {
           )}
         </div>
 
-        {/* تأكيد حذف الطرف */}
-        <AlertDialog open={deletePartyConfirm !== null} onOpenChange={() => setDeletePartyConfirm(null)}>
-          <AlertDialogContent dir="rtl">
-            <AlertDialogHeader>
-              <AlertDialogTitle>تأكيد حذف الطرف</AlertDialogTitle>
-              <AlertDialogDescription>
-                هل أنت متأكد من حذف هذا الطرف من أطراف النزاع؟
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>إلغاء</AlertDialogCancel>
-              <AlertDialogAction onClick={() => deletePartyConfirm && deleteParty(deletePartyConfirm)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                حذف
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-
-        {/* تأكيد الحذف */}
-        <AlertDialog open={deleteConfirm !== null} onOpenChange={() => setDeleteConfirm(null)}>
-          <AlertDialogContent dir="rtl">
-            <AlertDialogHeader>
-              <AlertDialogTitle>تأكيد الحذف</AlertDialogTitle>
-              <AlertDialogDescription>
-                هل أنت متأكد من حذف هذه القضية؟ لا يمكن التراجع عن هذا الإجراء.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>إلغاء</AlertDialogCancel>
-              <AlertDialogAction onClick={() => deleteConfirm && deleteCase(deleteConfirm)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                حذف
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-
-        {/* تأكيد الأرشفة */}
-        <AlertDialog open={archiveConfirm !== null} onOpenChange={() => setArchiveConfirm(null)}>
-          <AlertDialogContent dir="rtl">
-            <AlertDialogHeader>
-              <AlertDialogTitle>تأكيد الأرشفة</AlertDialogTitle>
-              <AlertDialogDescription>
-                سيتم أرشفة هذه القضية ويمكن استرجاعها من قسم الأرشيف.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>إلغاء</AlertDialogCancel>
-              <AlertDialogAction onClick={() => archiveConfirm && archiveCase(archiveConfirm)}>
-                أرشفة
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-      </div>
-    );
-  }
-
-  // ========================================================================
-  // عرض القائمة
-  // ========================================================================
-  return (
-    <div className="space-y-4">
+        </div>
+      ) : (
+        <div className="space-y-4">
       {/* شريط البحث والفلاتر */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
@@ -840,11 +784,13 @@ export function Cases() {
             </CardContent>
           </Card>
         )}
-      </div>
+        </div>
+        </div>
+      )}
 
       {/* نافذة إضافة/تعديل القضية */}
       <Dialog open={showForm} onOpenChange={(open) => { setShowForm(open); if (!open) resetForm(); }}>
-        <DialogContent className="w-full max-w-3xl max-h-[90vh] overflow-y-auto smooth-scroll" dir="rtl">
+        <DialogContent className="w-[calc(100%-1rem)] sm:max-w-3xl max-h-[90vh] overflow-y-auto smooth-scroll p-4 sm:p-6" dir="rtl">
           <DialogHeader>
             <DialogTitle className="text-lg font-extrabold">{editingCase ? 'تعديل القضية' : 'إضافة قضية جديدة'}</DialogTitle>
           </DialogHeader>
@@ -1453,16 +1399,69 @@ export function Cases() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+
+      {/* تأكيد حذف الطرف */}
+      <AlertDialog open={deletePartyConfirm !== null} onOpenChange={() => setDeletePartyConfirm(null)}>
+        <AlertDialogContent dir="rtl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>تأكيد حذف الطرف</AlertDialogTitle>
+            <AlertDialogDescription>
+              هل أنت متأكد من حذف هذا الطرف من أطراف النزاع؟
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>إلغاء</AlertDialogCancel>
+            <AlertDialogAction onClick={() => deletePartyConfirm && deleteParty(deletePartyConfirm)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              حذف
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* تأكيد الحذف */}
+      <AlertDialog open={deleteConfirm !== null} onOpenChange={() => setDeleteConfirm(null)}>
+        <AlertDialogContent dir="rtl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>تأكيد الحذف</AlertDialogTitle>
+          </AlertDialogHeader>
+          <AlertDialogDescription>
+            هل أنت متأكد من حذف هذه القضية؟ لا يمكن التراجع عن هذا الإجراء.
+          </AlertDialogDescription>
+          <AlertDialogFooter>
+            <AlertDialogCancel>إلغاء</AlertDialogCancel>
+            <AlertDialogAction onClick={() => deleteConfirm && deleteCase(deleteConfirm)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              حذف
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* تأكيد الأرشفة */}
+      <AlertDialog open={archiveConfirm !== null} onOpenChange={() => setArchiveConfirm(null)}>
+        <AlertDialogContent dir="rtl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>تأكيد الأرشفة</AlertDialogTitle>
+            <AlertDialogDescription>
+              سيتم أرشفة هذه القضية ويمكن استرجاعها من قسم الأرشيف.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>إلغاء</AlertDialogCancel>
+            <AlertDialogAction onClick={() => archiveConfirm && archiveCase(archiveConfirm)}>
+              أرشفة
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
 
 function DetailField({ label, value }: { label: string; value?: string | null }) {
-  if (!value) return null;
   return (
     <div>
       <p className="text-xs text-muted-foreground">{label}</p>
-      <p className="text-sm font-semibold">{value}</p>
+      <p className="text-sm font-medium">{value || '—'}</p>
     </div>
   );
 }
