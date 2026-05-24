@@ -95,6 +95,8 @@ model Party {
   phone       String?  @default("")
   lawyerName  String?  @default("")
   lawyerPhone String?  @default("")
+  lawyerId    Int?     // ربط اختياري بجدول المحامين
+  lawyer      Lawyer?  @relation(fields: [lawyerId], references: [id], onDelete: SetNull)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
@@ -161,6 +163,27 @@ model Archive {
   archiveDate String  @default("")
   reason     String?  @default("")
   createdAt  DateTime @default(now())
+}
+
+// ============================================================================
+// دفتر المحامين
+// ============================================================================
+model Lawyer {
+  id          Int      @id @default(autoincrement())
+  name        String   @default("")
+  phone       String   @default("")
+  phone2      String?  @default("")
+  email       String?  @default("")
+  address     String?  @default("")
+  wilaya      Int?     @default(16)
+  barNumber   String?  @default("")  // رقم القيد في نقابة المحامين
+  specialty   String?  @default("")  // التخصص
+  notes       String?  @default("")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // العلاقات - القضايا التي يترافع فيها هذا المحامي كطرف مقابل
+  parties Party[]
 }
 
 // ============================================================================

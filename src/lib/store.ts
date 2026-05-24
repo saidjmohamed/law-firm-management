@@ -8,6 +8,7 @@ type Section =
   | 'calendar'
   | 'payments'
   | 'delays'
+  | 'lawyers'
   | 'courts'
   | 'archives'
   | 'backup'

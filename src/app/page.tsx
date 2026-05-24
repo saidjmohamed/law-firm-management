@@ -9,6 +9,7 @@ import { Cases } from '@/components/cases';
 import { Sessions } from '@/components/sessions';
 import { CalendarView } from '@/components/calendar';
 import { CourtsManager } from '@/components/courts';
+import { Lawyers } from '@/components/lawyers';
 import { PaymentsManager } from '@/components/payments';
 import { DelaysManager } from '@/components/delays';
 import { ArchivesManager } from '@/components/archives';
@@ -100,6 +101,7 @@ function AppContent() {
     sessions: <Sessions />,
     calendar: <CalendarView />,
     courts: <CourtsManager />,
+    lawyers: <Lawyers />,
     payments: <PaymentsManager />,
     delays: <DelaysManager />,
     archives: <ArchivesManager />,

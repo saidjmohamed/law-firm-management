@@ -19,6 +19,7 @@ import {
   Moon,
   Sun,
   LogOut,
+  BookOpen,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -39,6 +40,7 @@ const navItems: { id: Section; label: string; icon: React.ElementType }[] = [
   { id: 'courts', label: 'الهيئات القضائية', icon: Scale },
   { id: 'payments', label: 'المدفوعات', icon: Banknote },
   { id: 'delays', label: 'التأجيلات', icon: Clock },
+  { id: 'lawyers', label: 'دفتر المحامين', icon: BookOpen },
   { id: 'archives', label: 'الأرشيف', icon: Archive },
   { id: 'backup', label: 'النسخ الاحتياطي', icon: HardDrive },
   { id: 'settings', label: 'الإعدادات', icon: Settings },

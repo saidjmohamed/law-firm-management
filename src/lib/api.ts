@@ -296,6 +296,53 @@ export async function deleteArchive(id: number) {
 }
 
 // ============================================================================
+// المحامون
+// ============================================================================
+export function useLawyers() {
+  const { data, error, isLoading } = useSWR('/api/lawyers', fetcher);
+  return { lawyers: data || [], error, isLoading };
+}
+
+export function useLawyer(id: number | null) {
+  const { data, error, isLoading } = useSWR(
+    id ? `/api/lawyers/${id}` : null,
+    fetcher
+  );
+  return { lawyer: data, error, isLoading };
+}
+
+export async function createLawyer(data: Record<string, unknown>) {
+  const res = await fetch('/api/lawyers', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error('فشل في إنشاء المحامي');
+  const result = await res.json();
+  await mutate('/api/lawyers');
+  return result;
+}
+
+export async function updateLawyer(id: number, data: Record<string, unknown>) {
+  const res = await fetch(`/api/lawyers/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error('فشل في تحديث المحامي');
+  const result = await res.json();
+  await mutate('/api/lawyers');
+  await mutate(`/api/lawyers/${id}`);
+  return result;
+}
+
+export async function deleteLawyer(id: number) {
+  const res = await fetch(`/api/lawyers/${id}`, { method: 'DELETE' });
+  if (!res.ok) throw new Error('فشل في حذف المحامي');
+  await mutate('/api/lawyers');
+}
+
+// ============================================================================
 // الهيئات القضائية
 // ============================================================================
 export function useJudicialBodies() {
@@ -372,6 +419,7 @@ export async function refreshAll() {
   await mutate('/api/delays');
   await mutate('/api/parties');
   await mutate('/api/archives');
+  await mutate('/api/lawyers');
   await mutate('/api/judicial-bodies');
   await mutate('/api/settings');
 }
