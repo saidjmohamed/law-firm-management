@@ -21,6 +21,10 @@ interface AppState {
   setSidebarOpen: (open: boolean) => void;
   selectedCaseId: number | null;
   setSelectedCaseId: (id: number | null) => void;
+  selectedClientId: number | null;
+  setSelectedClientId: (id: number | null) => void;
+  selectedLawyerId: number | null;
+  setSelectedLawyerId: (id: number | null) => void;
 }
 
 export const useAppStore = create<AppState>((set) => ({
@@ -30,6 +34,10 @@ export const useAppStore = create<AppState>((set) => ({
   setSidebarOpen: (open) => set({ sidebarOpen: open }),
   selectedCaseId: null,
   setSelectedCaseId: (id) => set({ selectedCaseId: id }),
+  selectedClientId: null,
+  setSelectedClientId: (id) => set({ selectedClientId: id }),
+  selectedLawyerId: null,
+  setSelectedLawyerId: (id) => set({ selectedLawyerId: id }),
 }));
 
 export type { Section };

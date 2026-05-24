@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
+import { Calendar as CalendarIcon } from 'lucide-react';
 import { useCases, useClients, useParties, useDelays, useSessions, useJudicialBodies, createCase, updateCase, deleteCase as apiDeleteCase, createParty, deleteParty as apiDeleteParty, createDelay, deleteDelay as apiDeleteDelay, createClient, createJudicialBody, createArchive } from '@/lib/api';
 import { formatCurrency, STATUS_COLORS, CASE_NATURES, CASE_STATUSES, LITIGATION_STAGES, PARTY_ROLES, JUDICIAL_CHAMBERS, WILAYAS, JUDICIARY_TYPES, ORDINARY_COURT_LEVELS, ADMIN_COURT_LEVELS, CHAMBER_NUMBERS, formatDate } from '@/lib/constants';
 import { CasePrintButton } from '@/components/case-print';
@@ -240,6 +241,7 @@ export function Cases() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [filterNature, setFilterNature] = useState<string>('all');
+  const [activeTab, setActiveTab] = useState<'active' | 'archived' | 'pending'>('active');
 
   // بيانات النموذج
   const [formData, setFormData] = useState<Partial<CaseType>>({});
@@ -316,6 +318,12 @@ export function Cases() {
   const filteredCases = useMemo(() => {
     if (!cases) return [];
     return cases.filter((c) => {
+      // فلتر التبويب
+      let matchTab = false;
+      if (activeTab === 'active')   matchTab = c.status === 'جارية';
+      if (activeTab === 'archived') matchTab = c.status === 'مؤرشفة' || c.status === 'مفصول فيها';
+      if (activeTab === 'pending')  matchTab = c.status === 'للجدولة' || !c.caseNumber;
+
       const clientName = c.clientId ? clientMap[c.clientId]?.name : '';
       const matchSearch = !searchTerm ||
         c.caseNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -323,11 +331,10 @@ export function Cases() {
         c.courtName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         c.councilName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         clientName?.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchStatus = filterStatus === 'all' || c.status === filterStatus;
       const matchNature = filterNature === 'all' || c.caseNature === filterNature;
-      return matchSearch && matchStatus && matchNature;
+      return matchTab && matchSearch && matchNature;
     });
-  }, [cases, clientMap, searchTerm, filterStatus, filterNature]);
+  }, [cases, clientMap, searchTerm, activeTab, filterNature]);
 
   // عدد القضايا لكل حالة (للفلاتر)
   const statusCounts = useMemo(() => {
@@ -406,6 +413,7 @@ export function Cases() {
   }
 
   async function saveCase() {
+    try {
     // تنظيف البيانات من الحقول العلاقية قبل الإرسال
     const { client, parties: _p, delays: _d, sessions: _s, payments: _pay, archives: _a, createdAt: _ca, updatedAt: _ua, ...cleanFormData } = formData as any;
 
@@ -502,12 +510,21 @@ export function Cases() {
         resetForm();
       }
     }
+    } catch (error) {
+      console.error('Save case error:', error);
+      toast.error('فشل في حفظ القضية');
+    }
   }
 
   async function handleDeleteParty(id: number) {
-    await apiDeleteParty(id);
-    setDeletePartyConfirm(null);
-    toast.success('تم حذف الطرف');
+    try {
+      await apiDeleteParty(id);
+      setDeletePartyConfirm(null);
+      toast.success('تم حذف الطرف');
+    } catch (error) {
+      console.error('Delete party error:', error);
+      toast.error('فشل في حذف الطرف');
+    }
   }
 
   async function saveNewClient() {
@@ -515,14 +532,19 @@ export function Cases() {
       toast.error('اسم الموكل مطلوب');
       return;
     }
-    const result = await createClient({
-      name: newClientData.name,
-      phone: newClientData.phone || '',
-    });
-    setFormData({ ...formData, clientId: result.id });
-    setNewClientData({});
-    setShowNewClientDialog(false);
-    toast.success('تم إضافة الموكل بنجاح');
+    try {
+      const result = await createClient({
+        name: newClientData.name,
+        phone: newClientData.phone || '',
+      });
+      setFormData({ ...formData, clientId: result.id });
+      setNewClientData({});
+      setShowNewClientDialog(false);
+      toast.success('تم إضافة الموكل بنجاح');
+    } catch (error) {
+      console.error('Save new client error:', error);
+      toast.error('فشل في إضافة الموكل');
+    }
   }
 
   async function saveNewCourt() {
@@ -530,55 +552,70 @@ export function Cases() {
       toast.error('اسم الهيئة مطلوب');
       return;
     }
-    const result = await createJudicialBody({
-      name: newCourtData.name!,
-      type: newCourtData.type || formData.courtLevel || '',
-      wilayaId: newCourtData.wilayaId,
-    });
-    const bodyType = newCourtData.type || formData.courtLevel || '';
-    setFormData({
-      ...formData,
-      courtId: result.id,
-      courtName: newCourtData.name!,
-      councilName: bodyType === 'council' ? newCourtData.name! : formData.councilName,
-      chamber: '',
-    });
-    setNewCourtData({});
-    setShowNewCourtDialog(false);
-    toast.success('تم إضافة الهيئة القضائية بنجاح');
+    try {
+      const result = await createJudicialBody({
+        name: newCourtData.name!,
+        type: newCourtData.type || formData.courtLevel || '',
+        wilayaId: newCourtData.wilayaId,
+      });
+      const bodyType = newCourtData.type || formData.courtLevel || '';
+      setFormData({
+        ...formData,
+        courtId: result.id,
+        courtName: newCourtData.name!,
+        councilName: bodyType === 'council' ? newCourtData.name! : formData.councilName,
+        chamber: '',
+      });
+      setNewCourtData({});
+      setShowNewCourtDialog(false);
+      toast.success('تم إضافة الهيئة القضائية بنجاح');
+    } catch (error) {
+      console.error('Save new court error:', error);
+      toast.error('فشل في إضافة الهيئة القضائية');
+    }
   }
 
   async function handleDeleteCase(id: number) {
-    await apiDeleteCase(id);
-    if (selectedCaseId === id) {
-      setSelectedCaseId(null);
-      setView('list');
+    try {
+      await apiDeleteCase(id);
+      if (selectedCaseId === id) {
+        setSelectedCaseId(null);
+        setView('list');
+      }
+      setDeleteConfirm(null);
+      toast.success('تم حذف القضية');
+    } catch (error) {
+      console.error('Delete case error:', error);
+      toast.error('فشل في حذف القضية');
     }
-    setDeleteConfirm(null);
-    toast.success('تم حذف القضية');
   }
 
   async function archiveCase(id: number) {
-    const c = cases?.find((ca) => ca.id === id);
-    if (!c) return;
+    try {
+      const c = cases?.find((ca) => ca.id === id);
+      if (!c) return;
 
-    const cParties = c.parties?.length
-      ? c.parties
-      : allParties?.filter((p) => p.caseId === id) || [];
-    const cDelays = c.delays?.length
-      ? c.delays
-      : allDelays?.filter((d) => d.caseId === id) || [];
+      const cParties = c.parties?.length
+        ? c.parties
+        : allParties?.filter((p) => p.caseId === id) || [];
+      const cDelays = c.delays?.length
+        ? c.delays
+        : allDelays?.filter((d) => d.caseId === id) || [];
 
-    await createArchive({
-      caseId: id,
-      caseData: JSON.stringify({ ...c, parties: cParties, delays: cDelays }),
-      archiveDate: new Date().toISOString(),
-      reason: 'أرشفة',
-    });
+      await createArchive({
+        caseId: id,
+        caseData: JSON.stringify({ ...c, parties: cParties, delays: cDelays }),
+        archiveDate: new Date().toISOString(),
+        reason: 'أرشفة',
+      });
 
-    await updateCase(id, { status: 'مؤرشفة', updatedAt: new Date().toISOString() });
-    setArchiveConfirm(null);
-    toast.success('تم أرشفة القضية');
+      await updateCase(id, { status: 'مؤرشفة', updatedAt: new Date().toISOString() });
+      setArchiveConfirm(null);
+      toast.success('تم أرشفة القضية');
+    } catch (error) {
+      console.error('Archive case error:', error);
+      toast.error('فشل في أرشفة القضية');
+    }
   }
 
   // Loading state
@@ -763,6 +800,61 @@ export function Cases() {
           </CardContent>
         </Card>
 
+        {/* الجلسات */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base font-bold flex items-center gap-2">
+              <CalendarIcon className="w-4 h-4" />
+              الجلسات
+              {caseSessions && caseSessions.length > 0 && (
+                <Badge variant="secondary" className="text-xs">
+                  {caseSessions.length.toLocaleString('en-US')}
+                </Badge>
+              )}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {caseSessions && caseSessions.length > 0 ? (
+              <div className="space-y-2">
+                {[...caseSessions]
+                  .sort((a, b) => (b.date || '').localeCompare(a.date || ''))
+                  .map((s) => (
+                  <div key={s.id} className="p-2.5 rounded-lg border space-y-1">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <Badge className={`text-xs ${
+                          s.status === 'completed' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' :
+                          s.status === 'postponed' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' :
+                          s.status === 'cancelled' ? 'bg-gray-100 text-gray-700 dark:bg-gray-800/50 dark:text-gray-400' :
+                          'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400'
+                        }`}>
+                          {s.status === 'completed' ? 'مكتملة' :
+                           s.status === 'postponed' ? 'مؤجلة' :
+                           s.status === 'cancelled' ? 'ملغاة' : 'مجدولة'}
+                        </Badge>
+                        <span className="text-sm font-semibold tabular-nums">{formatDate(s.date)}</span>
+                        {s.time && <span className="text-xs text-muted-foreground">{s.time}</span>}
+                      </div>
+                    </div>
+                    {(s.chamber || s.roomNumber || s.notes) && (
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
+                        {s.chamber && <span>{s.chamber}</span>}
+                        {s.roomNumber && <span>• قاعة {s.roomNumber}</span>}
+                        {s.notes && <span className="truncate">• {s.notes}</span>}
+                      </div>
+                    )}
+                    {s.result && (
+                      <p className="text-xs font-medium text-teal-700 dark:text-teal-400">النتيجة: {s.result}</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground text-center py-3">لا توجد جلسات مسجلة</p>
+            )}
+          </CardContent>
+        </Card>
+
         {/* أزرار الإجراءات */}
         <div className="flex flex-wrap gap-2">
           <Button
@@ -801,26 +893,6 @@ export function Cases() {
             className="pr-9 h-11"
           />
         </div>
-        <Select value={filterStatus} onValueChange={setFilterStatus}>
-          <SelectTrigger className="w-full sm:w-auto h-11 min-w-[140px]">
-            <SelectValue placeholder="الحالة" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">
-              كل الحالات ({(cases?.length ?? 0).toLocaleString('en-US')})
-            </SelectItem>
-            {CASE_STATUSES.map((s) => (
-              <SelectItem key={s} value={s}>
-                <div className="flex items-center gap-2">
-                  <span>{s}</span>
-                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 tabular-nums">
-                    {(statusCounts[s] || 0).toLocaleString('en-US')}
-                  </Badge>
-                </div>
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
         <Select value={filterNature} onValueChange={setFilterNature}>
           <SelectTrigger className="w-full sm:w-auto h-11 min-w-[140px]">
             <SelectValue placeholder="الطبيعة" />
@@ -836,6 +908,33 @@ export function Cases() {
           <Plus className="w-4 h-4 ml-1" />
           إضافة قضية
         </Button>
+      </div>
+
+      {/* تبويبات الفلترة */}
+      <div className="flex gap-1 p-1 bg-muted rounded-lg">
+        {[
+          { id: 'active' as const,   label: 'الجارية',            filter: (c: CaseType) => c.status === 'جارية' },
+          { id: 'archived' as const, label: 'مؤرشفة / مفصول فيها', filter: (c: CaseType) => c.status === 'مؤرشفة' || c.status === 'مفصول فيها' },
+          { id: 'pending' as const,  label: 'للجدولة',             filter: (c: CaseType) => c.status === 'للجدولة' || !c.caseNumber },
+        ].map((tab) => {
+          const count = cases?.filter(tab.filter).length || 0;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-md text-xs font-semibold transition-all ${
+                activeTab === tab.id
+                  ? 'bg-background shadow-sm text-teal-700 dark:text-teal-400'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              {tab.label}
+              <Badge variant={activeTab === tab.id ? 'default' : 'secondary'} className="text-[10px] px-1.5 h-4 tabular-nums">
+                {count.toLocaleString('en-US')}
+              </Badge>
+            </button>
+          );
+        })}
       </div>
 
       {/* قائمة القضايا */}
@@ -874,6 +973,20 @@ export function Cases() {
                           {c.chamber && <span>• {c.chamber}</span>}
                           {c.registrationDate && <span>• {formatDate(c.registrationDate)}</span>}
                         </div>
+                        {/* آخر تأجيل */}
+                        {(() => {
+                          const cDelays = allDelays?.filter((d: any) => d.caseId === c.id) || [];
+                          const lastDelay = cDelays.sort((a: any, b: any) => (b.delayDate||'').localeCompare(a.delayDate||''))[0];
+                          return lastDelay ? (
+                            <div className="flex items-center gap-1 mt-1">
+                              <Clock className="w-3 h-3 text-amber-500" />
+                              <span className="text-xs text-amber-600 dark:text-amber-400 font-medium">
+                                آخر تأجيل: {formatDate(lastDelay.delayDate)}
+                                {lastDelay.reason ? ` — ${lastDelay.reason}` : ''}
+                              </span>
+                            </div>
+                          ) : null;
+                        })()}
                       </div>
                       <div className="text-left shrink-0 space-y-1">
                         {c.totalFees ? (
@@ -947,15 +1060,13 @@ export function Cases() {
                 </div>
                 <div>
                   <Label className="text-xs">حالة القضية</Label>
-                  <Select value={formData.status || ''} onValueChange={(v) => setFormData({ ...formData, status: v === '_empty' ? '' : v })}>
-                    <SelectTrigger className="h-11"><SelectValue placeholder="اختر الحالة" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="_empty">—</SelectItem>
-                      {CASE_STATUSES.map((s) => (
-                        <SelectItem key={s} value={s}>{s}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <SelectWithCustom
+                    field="caseStatus"
+                    value={formData.status || ''}
+                    onChange={v => setFormData({ ...formData, status: v })}
+                    staticOptions={CASE_STATUSES.map(s => ({ value: s, label: s }))}
+                    placeholder="اختر الحالة..."
+                  />
                 </div>
                 <div>
                   <Label className="text-xs">مرحلة التقاضي</Label>

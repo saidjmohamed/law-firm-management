@@ -26,7 +26,7 @@ import {
 
 export function GlobalSearch() {
   const [open, setOpen] = useState(false);
-  const { setActiveSection, setSelectedCaseId } = useAppStore();
+  const { setActiveSection, setSelectedCaseId, setSelectedClientId, setSelectedLawyerId } = useAppStore();
 
   const { cases, isLoading: casesLoading } = useCases();
   const { clients, isLoading: clientsLoading } = useClients();
@@ -51,16 +51,18 @@ export function GlobalSearch() {
     if (type === 'case' && id) {
       setSelectedCaseId(id);
       setActiveSection('cases');
-    } else if (type === 'client') {
+    } else if (type === 'client' && id) {
+      setSelectedClientId(id);
       setActiveSection('clients');
     } else if (type === 'session') {
       setActiveSection('sessions');
     } else if (type === 'court') {
       setActiveSection('courts');
-    } else if (type === 'lawyer') {
+    } else if (type === 'lawyer' && id) {
+      setSelectedLawyerId(id);
       setActiveSection('lawyers');
     }
-  }, [setActiveSection, setSelectedCaseId]);
+  }, [setActiveSection, setSelectedCaseId, setSelectedClientId, setSelectedLawyerId]);
 
   // بناء عناصر القضايا للبحث
   const caseItems = useMemo(() => {
@@ -245,9 +247,9 @@ export function GlobalSearch() {
                 <CommandItem
                   key={`lawyer-${item.id}`}
                   value={item.value}
-                  onSelect={() => { setOpen(false); setActiveSection('lawyers'); }}
+                  onSelect={() => handleSelect('lawyer', item.id)}
                 >
-                  <Scale className="w-4 h-4 ml-2 shrink-0 text-indigo-600" />
+                  <BookOpen className="w-4 h-4 ml-2 shrink-0 text-indigo-600" />
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium truncate">{item.title}</p>
                     {item.subtitle && (

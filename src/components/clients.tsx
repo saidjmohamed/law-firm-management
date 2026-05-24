@@ -99,7 +99,7 @@ export function Clients() {
   const [viewingClient, setViewingClient] = useState<Client | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const { setActiveSection, setSelectedCaseId } = useAppStore();
+  const { setActiveSection, setSelectedCaseId, selectedClientId, setSelectedClientId } = useAppStore();
 
   const [formData, setFormData] = useState<Partial<Client>>({});
 
@@ -114,6 +114,17 @@ export function Clients() {
       c.nationalId?.includes(searchTerm)
     );
   }, [clients, searchTerm]);
+
+  // عند اختيار موكل من البحث الشامل
+  React.useEffect(() => {
+    if (selectedClientId) {
+      const client = clients.find(c => c.id === selectedClientId);
+      if (client) {
+        setViewingClient(client);
+        setSelectedClientId(null);
+      }
+    }
+  }, [selectedClientId, clients, setSelectedClientId]);
 
   // Loading state
   if (clientsLoading || casesLoading) {
@@ -155,10 +166,15 @@ export function Clients() {
   }
 
   async function handleDeleteClient(id: number) {
-    await deleteClient(id);
-    setDeleteConfirm(null);
-    if (viewingClient?.id === id) setViewingClient(null);
-    toast.success('تم حذف الموكل');
+    try {
+      await deleteClient(id);
+      setDeleteConfirm(null);
+      if (viewingClient?.id === id) setViewingClient(null);
+      toast.success('تم حذف الموكل');
+    } catch (error) {
+      console.error('Delete client error:', error);
+      toast.error('فشل في حذف الموكل');
+    }
   }
 
   // عرض تفاصيل الموكل

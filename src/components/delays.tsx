@@ -107,8 +107,13 @@ export function DelaysManager() {
   }
 
   async function handleDeleteDelay(id: number) {
-    await deleteDelay(id);
-    toast.success('تم حذف التأجيل');
+    try {
+      await deleteDelay(id);
+      toast.success('تم حذف التأجيل');
+    } catch (error) {
+      console.error('Delete delay error:', error);
+      toast.error('فشل في حذف التأجيل');
+    }
   }
 
   const isUpcoming = (date?: string) => date && new Date(date) >= now;

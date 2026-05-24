@@ -40,6 +40,8 @@ export default function RootLayout({
             position="top-center"
             dir="rtl"
             richColors
+            closeButton
+            duration={4000}
           />
         </ThemeProvider>
       </body>

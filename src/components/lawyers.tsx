@@ -3,6 +3,7 @@
 import React, { useState, useMemo } from 'react';
 import { useLawyers, useParties, useBarAssociations, createLawyer, updateLawyer, deleteLawyer } from '@/lib/api';
 import { WILAYAS } from '@/lib/constants';
+import { useAppStore } from '@/lib/store';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -110,9 +111,22 @@ export function Lawyers() {
   const [searchTerm, setSearchTerm] = useState('');
   const [formData, setFormData] = useState<Partial<Lawyer>>({});
 
+  const { selectedLawyerId, setSelectedLawyerId } = useAppStore();
+
   const { lawyers, isLoading } = useLawyers();
   const { parties } = useParties();
   const { barAssociations } = useBarAssociations();
+
+  // استخراج أسماء محامي الأطراف من كل القضايا
+  const partiesLawyerNames = useMemo(() => {
+    const names = new Set<string>();
+    parties?.forEach((p: any) => {
+      if (p.lawyerName?.trim()) names.add(p.lawyerName.trim());
+    });
+    // استبعاد الأسماء الموجودة بالفعل في دفتر المحامين
+    const lawyerNames = new Set(lawyers.map((l: Lawyer) => l.name?.trim()).filter(Boolean));
+    return Array.from(names).filter(n => !lawyerNames.has(n));
+  }, [parties, lawyers]);
 
   const filteredLawyers = useMemo(() => {
     return lawyers.filter((l: Lawyer) =>
@@ -124,6 +138,17 @@ export function Lawyers() {
       l.specialty?.toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [lawyers, searchTerm]);
+
+  // عند اختيار محامي من البحث الشامل
+  React.useEffect(() => {
+    if (selectedLawyerId) {
+      const lawyer = lawyers.find((l: Lawyer) => l.id === selectedLawyerId);
+      if (lawyer) {
+        setViewingLawyer(lawyer);
+        setSelectedLawyerId(null);
+      }
+    }
+  }, [selectedLawyerId, lawyers, setSelectedLawyerId]);
 
   if (isLoading) {
     return <LawyersSkeleton />;
@@ -170,10 +195,15 @@ export function Lawyers() {
   }
 
   async function handleDeleteLawyer(id: number) {
-    await deleteLawyer(id);
-    setDeleteConfirm(null);
-    if (viewingLawyer?.id === id) setViewingLawyer(null);
-    toast.success('تم حذف المحامي');
+    try {
+      await deleteLawyer(id);
+      setDeleteConfirm(null);
+      if (viewingLawyer?.id === id) setViewingLawyer(null);
+      toast.success('تم حذف المحامي');
+    } catch (error) {
+      console.error('Delete lawyer error:', error);
+      toast.error('فشل في حذف المحامي');
+    }
   }
 
   // عرض تفاصيل المحامي
@@ -336,15 +366,17 @@ export function Lawyers() {
 
             <div className="grid grid-cols-2 gap-3 text-sm">
               {viewingLawyer.phone && (
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 cursor-pointer hover:text-teal-600 transition-colors" onClick={() => { navigator.clipboard.writeText(viewingLawyer.phone!); toast.success('تم نسخ رقم الهاتف'); }}>
                   <Phone className="w-4 h-4 text-muted-foreground shrink-0" />
                   <span className="tabular-nums">{viewingLawyer.phone}</span>
+                  <span className="text-[10px] text-muted-foreground">(نسخ)</span>
                 </div>
               )}
               {viewingLawyer.phone2 && (
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 cursor-pointer hover:text-teal-600 transition-colors" onClick={() => { navigator.clipboard.writeText(viewingLawyer.phone2!); toast.success('تم نسخ رقم الهاتف'); }}>
                   <Phone className="w-4 h-4 text-muted-foreground shrink-0" />
                   <span className="tabular-nums">{viewingLawyer.phone2}</span>
+                  <span className="text-[10px] text-muted-foreground">(نسخ)</span>
                 </div>
               )}
               {viewingLawyer.email && (
@@ -460,6 +492,50 @@ export function Lawyers() {
           إضافة محامي
         </Button>
       </div>
+
+      {/* محامو الأطراف المستخرجون من القضايا */}
+      {partiesLawyerNames.length > 0 && (
+        <div className="space-y-2">
+          <p className="text-xs font-semibold text-muted-foreground flex items-center gap-1">
+            <Briefcase className="w-3 h-3" />
+            محامو الأطراف المستخرجون من القضايا ({partiesLawyerNames.length.toLocaleString('en-US')})
+          </p>
+          <div className="space-y-1">
+            {partiesLawyerNames.map((name) => {
+              const relatedCount = parties?.filter((p: any) => p.lawyerName?.trim() === name).length || 0;
+              return (
+                <Card key={name} className="border-r-4 border-r-gray-300">
+                  <CardContent className="p-3">
+                    <div className="flex items-center justify-between">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium text-sm">{name}</span>
+                          <Badge variant="outline" className="text-[10px] text-muted-foreground">مستخرج من القضايا</Badge>
+                        </div>
+                        {relatedCount > 0 && (
+                          <span className="text-xs text-muted-foreground">{relatedCount.toLocaleString('en-US')} قضية مرتبطة</span>
+                        )}
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-xs text-indigo-600 hover:text-indigo-700"
+                        onClick={() => {
+                          setFormData({ name, source: 'auto' });
+                          setShowForm(true);
+                        }}
+                      >
+                        <Plus className="w-3 h-3 ml-1" />
+                        إضافة للدفتر
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* قائمة المحامين */}
       <div className="space-y-2">

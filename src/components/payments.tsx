@@ -116,8 +116,13 @@ export function PaymentsManager() {
   }
 
   async function handleDeletePayment(id: number) {
-    await deletePayment(id);
-    toast.success('تم حذف الدفعة');
+    try {
+      await deletePayment(id);
+      toast.success('تم حذف الدفعة');
+    } catch (error) {
+      console.error('Delete payment error:', error);
+      toast.error('فشل في حذف الدفعة');
+    }
   }
 
   return (

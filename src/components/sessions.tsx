@@ -3,6 +3,7 @@
 import React, { useState, useMemo } from 'react';
 import { useSessions, createSession, updateSession, deleteSession } from '@/lib/api';
 import { SESSION_STATUSES, formatDate } from '@/lib/constants';
+import { SelectWithCustom } from '@/components/ui/select-with-custom';
 import { useAppStore } from '@/lib/store';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -141,8 +142,13 @@ export function Sessions() {
   }
 
   async function handleDeleteSession(id: number) {
-    await deleteSession(id);
-    toast.success('تم حذف الجلسة');
+    try {
+      await deleteSession(id);
+      toast.success('تم حذف الجلسة');
+    } catch (error) {
+      console.error('Delete session error:', error);
+      toast.error('فشل في حذف الجلسة');
+    }
   }
 
   // حساب الجلسات القادمة اليوم
@@ -345,15 +351,13 @@ export function Sessions() {
             </div>
             <div>
               <Label className="text-xs">الحالة</Label>
-              <Select value={formData.status || ''} onValueChange={(v) => setFormData({ ...formData, status: v === '_empty' ? '' : v })}>
-                <SelectTrigger><SelectValue placeholder="اختر الحالة" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="_empty">—</SelectItem>
-                  {SESSION_STATUSES.map((s) => (
-                    <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <SelectWithCustom
+                field="sessionStatus"
+                value={formData.status || 'scheduled'}
+                onChange={v => setFormData({ ...formData, status: v })}
+                staticOptions={SESSION_STATUSES.map(s => ({ value: s.value, label: s.label }))}
+                placeholder="اختر الحالة..."
+              />
             </div>
             <div>
               <Label className="text-xs">النتيجة</Label>

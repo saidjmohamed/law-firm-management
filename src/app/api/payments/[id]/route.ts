@@ -38,10 +38,37 @@ export async function PUT(
     const { id } = await params;
     const body = await request.json();
 
+    // جلب بيانات الدفعة قبل التحديث لإعادة حساب paidAmount
+    const oldPayment = await prisma.payment.findUnique({
+      where: { id: parseInt(id) },
+    });
+
+    // تنظيف البيانات - فقط الحقول المسموح بتحديثها
+    const { id: _id, createdAt: _ca, updatedAt: _ua, case: _case, ...updateData } = body;
+    if (updateData.amount !== undefined && updateData.amount !== null) {
+      updateData.amount = parseInt(String(updateData.amount));
+    }
+
     const payment = await prisma.payment.update({
       where: { id: parseInt(id) },
-      data: body,
+      data: updateData,
     });
+
+    // إعادة حساب paidAmount إذا تغير المبلغ أو النوع أو القضية
+    const caseId = payment.caseId || oldPayment?.caseId;
+    if (caseId) {
+      const totalPaid = await prisma.payment.aggregate({
+        where: {
+          caseId,
+          type: 'income',
+        },
+        _sum: { amount: true },
+      });
+      await prisma.case.update({
+        where: { id: caseId },
+        data: { paidAmount: totalPaid._sum.amount || 0 },
+      });
+    }
 
     return NextResponse.json(payment);
   } catch (error) {

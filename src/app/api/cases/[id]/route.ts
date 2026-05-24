@@ -65,7 +65,9 @@ export async function PUT(
     if (updateData.clientId !== undefined && updateData.clientId !== null) updateData.clientId = parseInt(String(updateData.clientId));
     if (updateData.wilayaId !== undefined && updateData.wilayaId !== null) updateData.wilayaId = parseInt(String(updateData.wilayaId));
     if (updateData.totalFees !== undefined && updateData.totalFees !== null) updateData.totalFees = parseInt(String(updateData.totalFees));
+    if (updateData.paidAmount !== undefined && updateData.paidAmount !== null) updateData.paidAmount = parseInt(String(updateData.paidAmount));
     if (updateData.chamberNumber !== undefined && updateData.chamberNumber !== null) updateData.chamberNumber = parseInt(String(updateData.chamberNumber));
+    if (updateData.courtId !== undefined && updateData.courtId !== null) updateData.courtId = parseInt(String(updateData.courtId));
 
     const updatedCase = await prisma.case.update({
       where: { id: parseInt(id) },
@@ -108,7 +110,9 @@ export async function PATCH(
     if (updateData.clientId !== undefined && updateData.clientId !== null) updateData.clientId = parseInt(String(updateData.clientId));
     if (updateData.wilayaId !== undefined && updateData.wilayaId !== null) updateData.wilayaId = parseInt(String(updateData.wilayaId));
     if (updateData.totalFees !== undefined && updateData.totalFees !== null) updateData.totalFees = parseInt(String(updateData.totalFees));
+    if (updateData.paidAmount !== undefined && updateData.paidAmount !== null) updateData.paidAmount = parseInt(String(updateData.paidAmount));
     if (updateData.chamberNumber !== undefined && updateData.chamberNumber !== null) updateData.chamberNumber = parseInt(String(updateData.chamberNumber));
+    if (updateData.courtId !== undefined && updateData.courtId !== null) updateData.courtId = parseInt(String(updateData.courtId));
 
     const updatedCase = await prisma.case.update({
       where: { id: parseInt(id) },
