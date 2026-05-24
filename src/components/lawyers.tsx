@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { useLawyers, useParties, useBarAssociations, createLawyer, updateLawyer, deleteLawyer } from '@/lib/api';
-import { WILAYAS } from '@/lib/constants';
+import { useLawyers, useCases, useParties, useBarAssociations, createLawyer, updateLawyer, deleteLawyer } from '@/lib/api';
+import { WILAYAS, STATUS_COLORS } from '@/lib/constants';
 import { useAppStore } from '@/lib/store';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -111,9 +111,10 @@ export function Lawyers() {
   const [searchTerm, setSearchTerm] = useState('');
   const [formData, setFormData] = useState<Partial<Lawyer>>({});
 
-  const { selectedLawyerId, setSelectedLawyerId } = useAppStore();
+  const { selectedLawyerId, setSelectedLawyerId, setSelectedCaseId, setActiveSection } = useAppStore();
 
   const { lawyers, isLoading } = useLawyers();
+  const { cases } = useCases();
   const { parties } = useParties();
   const { barAssociations } = useBarAssociations();
 
@@ -208,7 +209,9 @@ export function Lawyers() {
 
   // عرض تفاصيل المحامي
   if (viewingLawyer) {
-    const lawyerParties = parties.filter((p: any) => p.lawyerId === viewingLawyer.id);
+    const lawyerParties = parties.filter((p: any) =>
+      p.lawyerName?.trim() && p.lawyerName.trim() === viewingLawyer.name?.trim()
+    );
     const wilayaName = WILAYAS.find((w) => w.code === viewingLawyer.wilaya)?.name;
 
     return (
@@ -416,32 +419,64 @@ export function Lawyers() {
             )}
 
             {/* القضايا المرتبطة */}
-            {lawyerParties && lawyerParties.length > 0 && (
-              <div className="space-y-2">
-                <p className="text-xs text-muted-foreground flex items-center gap-1 font-semibold">
-                  <Briefcase className="w-3 h-3" />
-                  القضايا المرتبطة ({lawyerParties.length.toLocaleString('en-US')})
-                </p>
-                {lawyerParties.map((p: any) => (
-                  <div
-                    key={p.id}
-                    className="flex items-center justify-between p-2.5 rounded-lg border"
-                  >
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium truncate">{p.name || '—'}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {p.role === 'plaintiff' ? 'مدعي' : p.role === 'defendant' ? 'مدعى عليه' : p.role}
-                      </p>
+            <div className="space-y-2">
+              <p className="text-xs text-muted-foreground flex items-center gap-1 font-semibold">
+                <Briefcase className="w-3 h-3" />
+                القضايا المرتبطة ({lawyerParties.length.toLocaleString('en-US')})
+              </p>
+              {lawyerParties.length > 0 ? (
+                lawyerParties.map((p: any) => {
+                  const relatedCase = cases?.find((c: any) => c.id === p.caseId);
+                  return (
+                    <div
+                      key={p.id}
+                      className="flex items-center justify-between p-2.5 rounded-lg border"
+                    >
+                      <div className="min-w-0 flex-1">
+                        {relatedCase ? (
+                          <>
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-bold truncate">{relatedCase.caseNumber || '—'}</span>
+                              {relatedCase.status && (
+                                <Badge className={`text-[10px] px-1.5 ${STATUS_COLORS[relatedCase.status] || ''}`}>
+                                  {relatedCase.status}
+                                </Badge>
+                              )}
+                            </div>
+                            <p className="text-xs text-muted-foreground truncate">{relatedCase.subject || '—'}</p>
+                          </>
+                        ) : (
+                          <p className="text-sm font-medium truncate">{p.name || '—'}</p>
+                        )}
+                        <p className="text-xs text-muted-foreground">
+                          {p.name && <span>يمثل: {p.name}</span>}
+                          {p.name && p.role && <span> — </span>}
+                          {p.role === 'plaintiff' ? 'مدعي' : p.role === 'defendant' ? 'مدعى عليه' : p.role || ''}
+                        </p>
+                      </div>
+                      {relatedCase && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-xs text-indigo-600 hover:text-indigo-700 shrink-0"
+                          onClick={() => {
+                            setSelectedCaseId(relatedCase.id);
+                            setActiveSection('cases');
+                          }}
+                        >
+                          عرض القضية
+                        </Button>
+                      )}
                     </div>
-                    {p.case && (
-                      <Badge variant="outline" className="text-xs shrink-0 mr-2">
-                        {p.case.caseNumber || '—'}
-                      </Badge>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
+                  );
+                })
+              ) : (
+                <div className="text-center py-3 space-y-1">
+                  <p className="text-sm text-muted-foreground">لا توجد قضايا مرتبطة بهذا المحامي</p>
+                  <p className="text-[10px] text-muted-foreground/60">يتم الربط تلقائياً عند إضافة اسم المحامي في أطراف القضية</p>
+                </div>
+              )}
+            </div>
 
             <Button
               variant="destructive"

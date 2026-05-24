@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { Calendar as CalendarIcon } from 'lucide-react';
-import { useCases, useClients, useParties, useDelays, useSessions, useJudicialBodies, createCase, updateCase, deleteCase as apiDeleteCase, createParty, deleteParty as apiDeleteParty, createDelay, deleteDelay as apiDeleteDelay, createClient, createJudicialBody, createArchive } from '@/lib/api';
+import { useCases, useClients, useParties, useDelays, useSessions, useJudicialBodies, createCase, updateCase, deleteCase as apiDeleteCase, createParty, updateParty as apiUpdateParty, deleteParty as apiDeleteParty, createDelay, updateDelay as apiUpdateDelay, deleteDelay as apiDeleteDelay, createClient, createJudicialBody, createArchive } from '@/lib/api';
 import { formatCurrency, STATUS_COLORS, CASE_NATURES, CASE_STATUSES, LITIGATION_STAGES, PARTY_ROLES, JUDICIAL_CHAMBERS, WILAYAS, JUDICIARY_TYPES, ORDINARY_COURT_LEVELS, ADMIN_COURT_LEVELS, CHAMBER_NUMBERS, formatDate } from '@/lib/constants';
 import { CasePrintButton } from '@/components/case-print';
 import { CaseAnnouncementButton } from '@/components/case-announcement';
@@ -424,41 +424,118 @@ export function Cases() {
         updatedAt: new Date().toISOString(),
       });
 
-      // حذف الأطراف القديمة وإضافة الجديدة
-      if (caseParties) {
-        for (const p of caseParties) {
-          if (p.id) await apiDeleteParty(p.id);
-        }
-      }
-      for (const party of parties) {
-        if (party.name || party.role) {
-          await createParty({
-            caseId: editingCase.id,
-            role: party.role,
-            side: party.side,
-            name: party.name,
-            phone: party.phone,
-            lawyerName: party.lawyerName,
-            lawyerPhone: party.lawyerPhone,
-          });
+      // فرق ذكي للأطراف: تحديث الموجودة، إنشاء الجديدة، حذف المحذوفة
+      const existingParties = caseParties || [];
+      // خريطة الأطراف القديمة: id رقمي → PartyType
+      const existingById = new Map<number, PartyType>();
+      existingParties.forEach((p) => { if (p.id) existingById.set(p.id, p); });
+
+      // تحديد الأطراف المرسلة: لها id رقمي (موجودة) أو UUID فقط (جديدة)
+      const isNumericId = (id: string) => /^\d+$/.test(id);
+
+      const partiesToUpdate: { row: PartyRow; existing: PartyType }[] = [];
+      const partiesToCreate: PartyRow[] = [];
+      const updatedExistingIds = new Set<number>();
+
+      for (const row of parties) {
+        if (!row.name && !row.role) continue; // تجاهل الأسطر الفارغة
+        if (isNumericId(row.id)) {
+          const numericId = parseInt(row.id, 10);
+          const existing = existingById.get(numericId);
+          if (existing) {
+            partiesToUpdate.push({ row, existing });
+            updatedExistingIds.add(numericId);
+          } else {
+            // id رقمي لكن غير موجود → إنشاء جديد
+            partiesToCreate.push(row);
+          }
+        } else {
+          // UUID فقط → طرف جديد
+          partiesToCreate.push(row);
         }
       }
 
-      // حذف التأجيلات القديمة وإضافة الجديدة
-      if (caseDelays) {
-        for (const d of caseDelays) {
-          if (d.id) await apiDeleteDelay(d.id);
+      // الأطراف المحذوفة: موجودة قديماً ولم تُحدَّث
+      const partiesToDelete = existingParties.filter(
+        (p) => p.id && !updatedExistingIds.has(p.id)
+      );
+
+      // تنفيذ العمليات
+      for (const { row, existing } of partiesToUpdate) {
+        await apiUpdateParty(existing.id, {
+          caseId: editingCase.id,
+          role: row.role,
+          side: row.side,
+          name: row.name,
+          phone: row.phone,
+          lawyerName: row.lawyerName,
+          lawyerPhone: row.lawyerPhone,
+          updatedAt: new Date().toISOString(),
+        });
+      }
+      for (const row of partiesToCreate) {
+        await createParty({
+          caseId: editingCase.id,
+          role: row.role,
+          side: row.side,
+          name: row.name,
+          phone: row.phone,
+          lawyerName: row.lawyerName,
+          lawyerPhone: row.lawyerPhone,
+        });
+      }
+      for (const p of partiesToDelete) {
+        await apiDeleteParty(p.id);
+      }
+
+      // فرق ذكي للتأجيلات: نفس المنطق
+      const existingDelays = caseDelays || [];
+      const existingDelaysById = new Map<number, DelayType>();
+      existingDelays.forEach((d) => { if (d.id) existingDelaysById.set(d.id, d); });
+
+      const delaysToUpdate: { row: DelayRow; existing: DelayType }[] = [];
+      const delaysToCreate: DelayRow[] = [];
+      const updatedDelayIds = new Set<number>();
+
+      for (const row of delays) {
+        if (!row.delayDate && !row.reason) continue;
+        if (isNumericId(row.id)) {
+          const numericId = parseInt(row.id, 10);
+          const existing = existingDelaysById.get(numericId);
+          if (existing) {
+            delaysToUpdate.push({ row, existing });
+            updatedDelayIds.add(numericId);
+          } else {
+            delaysToCreate.push(row);
+          }
+        } else {
+          delaysToCreate.push(row);
         }
       }
-      for (const delay of delays) {
-        if (delay.delayDate || delay.reason) {
-          await createDelay({
-            caseId: editingCase.id,
-            delayDate: delay.delayDate,
-            reason: delay.reason,
-            notes: delay.notes,
-          });
-        }
+
+      const delaysToDelete = existingDelays.filter(
+        (d) => d.id && !updatedDelayIds.has(d.id)
+      );
+
+      for (const { row, existing } of delaysToUpdate) {
+        await apiUpdateDelay(existing.id, {
+          caseId: editingCase.id,
+          delayDate: row.delayDate,
+          reason: row.reason,
+          notes: row.notes,
+          updatedAt: new Date().toISOString(),
+        });
+      }
+      for (const row of delaysToCreate) {
+        await createDelay({
+          caseId: editingCase.id,
+          delayDate: row.delayDate,
+          reason: row.reason,
+          notes: row.notes,
+        });
+      }
+      for (const d of delaysToDelete) {
+        await apiDeleteDelay(d.id);
       }
 
       toast.success('تم تحديث القضية بنجاح');
