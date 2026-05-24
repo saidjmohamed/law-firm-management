@@ -320,6 +320,7 @@ export async function createLawyer(data: Record<string, unknown>) {
   if (!res.ok) throw new Error('فشل في إنشاء المحامي');
   const result = await res.json();
   await mutate('/api/lawyers');
+  await mutate('/api/lawyers/bar-associations');
   return result;
 }
 
@@ -333,6 +334,7 @@ export async function updateLawyer(id: number, data: Record<string, unknown>) {
   const result = await res.json();
   await mutate('/api/lawyers');
   await mutate(`/api/lawyers/${id}`);
+  await mutate('/api/lawyers/bar-associations');
   return result;
 }
 
@@ -340,6 +342,24 @@ export async function deleteLawyer(id: number) {
   const res = await fetch(`/api/lawyers/${id}`, { method: 'DELETE' });
   if (!res.ok) throw new Error('فشل في حذف المحامي');
   await mutate('/api/lawyers');
+}
+
+// ============================================================================
+// النقابات (Autocomplete تراكمي)
+// ============================================================================
+export function useBarAssociations() {
+  const { data, error, isLoading } = useSWR<string[]>(
+    '/api/lawyers/bar-associations',
+    fetcher,
+    {
+      revalidateOnFocus: false,
+      dedupingInterval: 30000,
+    }
+  );
+  return {
+    barAssociations: data || [],
+    isLoading: !error && !data,
+  };
 }
 
 // ============================================================================

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { useLawyers, useParties, createLawyer, updateLawyer, deleteLawyer } from '@/lib/api';
+import { useLawyers, useParties, useBarAssociations, createLawyer, updateLawyer, deleteLawyer } from '@/lib/api';
 import { WILAYAS } from '@/lib/constants';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -35,6 +35,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
+import { ComboboxInput } from '@/components/ui/combobox-input';
 import {
   Plus,
   Search,
@@ -48,6 +49,7 @@ import {
   UserCircle,
   Briefcase,
   Hash,
+  Building2,
 } from 'lucide-react';
 
 interface Lawyer {
@@ -59,7 +61,9 @@ interface Lawyer {
   address?: string;
   wilaya?: number;
   barNumber?: string;
+  barAssociation?: string;
   specialty?: string;
+  source?: string;
   notes?: string;
   createdAt?: Date;
   updatedAt?: Date;
@@ -108,6 +112,7 @@ export function Lawyers() {
 
   const { lawyers, isLoading } = useLawyers();
   const { parties } = useParties();
+  const { barAssociations } = useBarAssociations();
 
   const filteredLawyers = useMemo(() => {
     return lawyers.filter((l: Lawyer) =>
@@ -115,6 +120,7 @@ export function Lawyers() {
       l.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       l.phone?.includes(searchTerm) ||
       l.barNumber?.includes(searchTerm) ||
+      l.barAssociation?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       l.specialty?.toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [lawyers, searchTerm]);
@@ -151,6 +157,8 @@ export function Lawyers() {
     } else {
       await createLawyer({
         ...formData,
+        barAssociation: formData.barAssociation?.trim() || null,
+        source: 'manual',
         createdAt: now,
         updatedAt: now,
       });
@@ -231,6 +239,12 @@ export function Lawyers() {
                 <div className="flex items-center gap-2">
                   <Hash className="w-4 h-4 text-muted-foreground shrink-0" />
                   <span>رقم القيد: {viewingLawyer.barNumber}</span>
+                </div>
+              )}
+              {viewingLawyer.barAssociation && (
+                <div className="flex items-center gap-2">
+                  <Building2 className="w-4 h-4 text-muted-foreground shrink-0" />
+                  <span>{viewingLawyer.barAssociation}</span>
                 </div>
               )}
               {viewingLawyer.address && (
@@ -352,6 +366,7 @@ export function Lawyers() {
                             {lawyer.phone && <span className="tabular-nums">{lawyer.phone}</span>}
                             {wilayaName && <span>{wilayaName}</span>}
                             {lawyer.barNumber && <span>قيد: {lawyer.barNumber}</span>}
+                            {lawyer.barAssociation && <span className="flex items-center gap-0.5"><Building2 className="w-3 h-3" />{lawyer.barAssociation}</span>}
                             {partiesCount > 0 && (
                               <span className="text-indigo-600 dark:text-indigo-400 font-semibold">
                                 {partiesCount.toLocaleString('en-US')} قضية
@@ -469,6 +484,20 @@ export function Lawyers() {
                   </SelectContent>
                 </Select>
               </div>
+            </div>
+            <div>
+              <Label className="text-xs">النقابة</Label>
+              <ComboboxInput
+                value={formData.barAssociation || ''}
+                onChange={(v) => setFormData({ ...formData, barAssociation: v })}
+                suggestions={barAssociations}
+                placeholder="مثال: نقابة قسنطينة..."
+              />
+              {barAssociations.length === 0 && (
+                <p className="text-[10px] text-muted-foreground mt-1">
+                  اكتب اسم النقابة — ستُحفظ وتظهر تلقائياً في المرات القادمة
+                </p>
+              )}
             </div>
             <div>
               <Label className="text-xs">الولاية</Label>

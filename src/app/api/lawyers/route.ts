@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import prisma from '@/lib/prisma';
 
 // GET /api/lawyers - جلب جميع المحامين
 export async function GET() {
@@ -25,7 +23,7 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { name, phone, phone2, email, address, wilaya, barNumber, specialty, notes } = body;
+    const { name, phone, phone2, email, address, wilaya, barNumber, barAssociation, specialty, source, notes } = body;
 
     if (!name) {
       return NextResponse.json({ error: 'اسم المحامي مطلوب' }, { status: 400 });
@@ -40,7 +38,9 @@ export async function POST(request: NextRequest) {
         address: address || '',
         wilaya: wilaya ?? 16,
         barNumber: barNumber || '',
+        barAssociation: barAssociation?.trim() || '',
         specialty: specialty || '',
+        source: source || 'manual',
         notes: notes || '',
       },
     });

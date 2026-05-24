@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import prisma from '@/lib/prisma';
 
 // GET /api/lawyers/[id] - جلب محامي بالمعرف
 export async function GET(
@@ -58,6 +56,7 @@ export async function PUT(
         address: body.address,
         wilaya: body.wilaya,
         barNumber: body.barNumber,
+        ...(body.barAssociation !== undefined && { barAssociation: body.barAssociation?.trim() || '' }),
         specialty: body.specialty,
         notes: body.notes,
       },
