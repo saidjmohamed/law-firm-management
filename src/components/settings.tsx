@@ -1,8 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useLiveQuery } from 'dexie-react-hooks';
-import { db, getSetting, setSetting } from '@/lib/db';
+import { useSettings, updateSetting, getSettingValue } from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,38 +11,31 @@ import { toast } from 'sonner';
 import { Save, User, Phone, MapPin } from 'lucide-react';
 
 export function SettingsManager() {
-  const [lawyerName, setLawyerName] = useState('');
-  const [lawyerTitle, setLawyerTitle] = useState('');
-  const [lawyerAddress, setLawyerAddress] = useState('');
-  const [lawyerPhone, setLawyerPhone] = useState('');
-  const [loaded, setLoaded] = useState(false);
+  const { settings, isLoading } = useSettings();
 
-  // تحميل الإعدادات
-  React.useEffect(() => {
-    async function loadSettings() {
-      const name = await getSetting<string>('lawyerName');
-      const title = await getSetting<string>('lawyerTitle');
-      const address = await getSetting<string>('lawyerAddress');
-      const phone = await getSetting<string>('lawyerPhone');
+  // Local edits track only changes; displayed value falls back to server data
+  const [localEdits, setLocalEdits] = useState<Record<string, string>>({});
 
-      if (name) setLawyerName(name);
-      if (title) setLawyerTitle(title);
-      if (address) setLawyerAddress(address);
-      if (phone) setLawyerPhone(phone);
-      setLoaded(true);
-    }
-    loadSettings();
-  }, []);
+  const lawyerName = localEdits.lawyerName ?? getSettingValue(settings, 'lawyerName');
+  const lawyerTitle = localEdits.lawyerTitle ?? getSettingValue(settings, 'lawyerTitle');
+  const lawyerAddress = localEdits.lawyerAddress ?? getSettingValue(settings, 'lawyerAddress');
+  const lawyerPhone = localEdits.lawyerPhone ?? getSettingValue(settings, 'lawyerPhone');
 
   async function saveSettings() {
-    await setSetting('lawyerName', lawyerName);
-    await setSetting('lawyerTitle', lawyerTitle);
-    await setSetting('lawyerAddress', lawyerAddress);
-    await setSetting('lawyerPhone', lawyerPhone);
-    toast.success('تم حفظ الإعدادات بنجاح');
+    try {
+      await updateSetting('lawyerName', lawyerName);
+      await updateSetting('lawyerTitle', lawyerTitle);
+      await updateSetting('lawyerAddress', lawyerAddress);
+      await updateSetting('lawyerPhone', lawyerPhone);
+      setLocalEdits({});
+      toast.success('تم حفظ الإعدادات بنجاح');
+    } catch (err) {
+      toast.error('حدث خطأ أثناء حفظ الإعدادات');
+      console.error(err);
+    }
   }
 
-  if (!loaded) return null;
+  if (isLoading) return null;
 
   return (
     <div className="space-y-6">
@@ -60,7 +52,7 @@ export function SettingsManager() {
             <Label className="text-xs">الاسم واللقب</Label>
             <Input
               value={lawyerName}
-              onChange={(e) => setLawyerName(e.target.value)}
+              onChange={(e) => setLocalEdits((prev) => ({ ...prev, lawyerName: e.target.value }))}
               placeholder="الاسم واللقب"
             />
           </div>
@@ -68,7 +60,7 @@ export function SettingsManager() {
             <Label className="text-xs">الصفة</Label>
             <Input
               value={lawyerTitle}
-              onChange={(e) => setLawyerTitle(e.target.value)}
+              onChange={(e) => setLocalEdits((prev) => ({ ...prev, lawyerTitle: e.target.value }))}
               placeholder="محام لدى المجلس"
             />
           </div>
@@ -76,7 +68,7 @@ export function SettingsManager() {
             <Label className="text-xs">العنوان</Label>
             <Input
               value={lawyerAddress}
-              onChange={(e) => setLawyerAddress(e.target.value)}
+              onChange={(e) => setLocalEdits((prev) => ({ ...prev, lawyerAddress: e.target.value }))}
               placeholder="عنوان المكتب"
             />
           </div>
@@ -84,7 +76,7 @@ export function SettingsManager() {
             <Label className="text-xs">الهاتف</Label>
             <Input
               value={lawyerPhone}
-              onChange={(e) => setLawyerPhone(e.target.value)}
+              onChange={(e) => setLocalEdits((prev) => ({ ...prev, lawyerPhone: e.target.value }))}
               placeholder="رقم الهاتف"
             />
           </div>

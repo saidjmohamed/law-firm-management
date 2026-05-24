@@ -1,9 +1,8 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { useLiveQuery } from 'dexie-react-hooks';
-import { db, formatCurrency, type Payment } from '@/lib/db';
-import { PAYMENT_CATEGORIES, formatDate } from '@/lib/constants';
+import { usePayments, createPayment, updatePayment, deletePayment } from '@/lib/api';
+import { formatCurrency, PAYMENT_CATEGORIES, formatDate } from '@/lib/constants';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -35,6 +34,18 @@ import {
   Trash2,
 } from 'lucide-react';
 
+interface Payment {
+  id?: number;
+  type?: string;
+  category?: string;
+  amount?: number;
+  caseNumber?: string;
+  date?: string;
+  notes?: string;
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
 export function PaymentsManager() {
   const [showForm, setShowForm] = useState(false);
   const [editingPayment, setEditingPayment] = useState<Payment | null>(null);
@@ -43,11 +54,9 @@ export function PaymentsManager() {
   const [filterDateFrom, setFilterDateFrom] = useState('');
   const [filterDateTo, setFilterDateTo] = useState('');
 
-  const payments = useLiveQuery(() => db.payments.toArray());
-  const cases = useLiveQuery(() => db.cases.toArray());
+  const { payments } = usePayments();
 
   const filteredPayments = useMemo(() => {
-    if (!payments) return [];
     let filtered = [...payments];
     if (filterType !== 'all') {
       filtered = filtered.filter((p) => p.type === filterType);
@@ -92,13 +101,13 @@ export function PaymentsManager() {
     const now = new Date();
 
     if (editingPayment?.id) {
-      await db.payments.update(editingPayment.id, {
+      await updatePayment(editingPayment.id, {
         ...formData,
         updatedAt: now,
       });
       toast.success('تم تحديث الدفعة بنجاح');
     } else {
-      await db.payments.add({
+      await createPayment({
         ...formData,
         createdAt: now,
         updatedAt: now,
@@ -110,8 +119,8 @@ export function PaymentsManager() {
     resetForm();
   }
 
-  async function deletePayment(id: number) {
-    await db.payments.delete(id);
+  async function handleDeletePayment(id: number) {
+    await deletePayment(id);
     toast.success('تم حذف الدفعة');
   }
 
@@ -210,7 +219,7 @@ export function PaymentsManager() {
                     <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEditForm(payment)}>
                       <Pencil className="w-3 h-3" />
                     </Button>
-                    <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => payment.id && deletePayment(payment.id)}>
+                    <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => payment.id && handleDeletePayment(payment.id)}>
                       <Trash2 className="w-3 h-3" />
                     </Button>
                   </div>

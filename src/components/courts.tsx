@@ -1,8 +1,7 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { useLiveQuery } from 'dexie-react-hooks';
-import { db, type JudicialBody } from '@/lib/db';
+import { useJudicialBodies, useCases, createJudicialBody, updateJudicialBody, deleteJudicialBody } from '@/lib/api';
 import { WILAYAS, SUPREME_CHAMBERS, COUNCIL_CHAMBERS, COURT_SECTIONS, CHAMBER_NUMBERS, JUDICIARY_TYPES, ORDINARY_COURT_LEVELS, ADMIN_COURT_LEVELS } from '@/lib/constants';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -47,6 +46,17 @@ import {
   ChevronLeft,
   AlertCircle,
 } from 'lucide-react';
+
+interface JudicialBody {
+  id?: number;
+  name: string;
+  type: string;
+  wilayaId?: number;
+  parentCouncilId?: number;
+  chambers?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
 
 interface ChamberItem {
   name: string;
@@ -97,8 +107,8 @@ export function CourtsManager() {
   const [chambers, setChambers] = useState<ChamberItem[]>([]);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
-  const courts = useLiveQuery(() => db.judicialBodies.toArray());
-  const cases = useLiveQuery(() => db.cases.toArray());
+  const { judicialBodies: courts, isLoading } = useJudicialBodies();
+  const { cases } = useCases();
 
   const filteredCourts = useMemo(() => {
     if (!courts) return [];
@@ -246,14 +256,14 @@ export function CourtsManager() {
     const chambersJson = chambers.length > 0 ? JSON.stringify(chambers) : undefined;
 
     if (editingCourt?.id) {
-      await db.judicialBodies.update(editingCourt.id, {
+      await updateJudicialBody(editingCourt.id, {
         ...formData,
         chambers: chambersJson,
         updatedAt: now,
       });
       toast.success('تم تحديث الهيئة القضائية بنجاح');
     } else {
-      await db.judicialBodies.add({
+      await createJudicialBody({
         name: formData.name || '',
         type: formData.type || 'council',
         wilayaId: formData.wilayaId,
@@ -269,15 +279,15 @@ export function CourtsManager() {
     resetForm();
   }
 
-  async function deleteCourt(id: number) {
-    const linkedCases = cases?.filter((c) => c.courtId === id).length ?? 0;
+  async function handleDeleteCourt(id: number) {
+    const linkedCases = cases.filter((c) => c.courtId === id).length;
     if (linkedCases > 0) {
       toast.error(`لا يمكن حذف هذه الهيئة لأنها مرتبطة بـ ${linkedCases.toLocaleString('en-US')} قضية`);
       setDeleteConfirm(null);
       return;
     }
 
-    await db.judicialBodies.delete(id);
+    await deleteJudicialBody(id);
     setDeleteConfirm(null);
     toast.success('تم حذف الهيئة القضائية');
   }
@@ -288,7 +298,7 @@ export function CourtsManager() {
     setChambers(updated);
   }
 
-  if (!courts) {
+  if (isLoading) {
     return (
       <div className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -350,7 +360,7 @@ export function CourtsManager() {
               const Icon = TYPE_ICONS[court.type] || Building2;
               const isExpanded = expandedId === court.id;
               const parsedChambers = court.chambers ? JSON.parse(court.chambers) as ChamberItem[] : [];
-              const linkedCasesCount = cases?.filter((c) => c.courtId === court.id).length ?? 0;
+              const linkedCasesCount = cases.filter((c) => c.courtId === court.id).length;
               return (
                 <Card key={court.id} className="overflow-hidden">
                   <CardContent className="p-4">
@@ -418,7 +428,7 @@ export function CourtsManager() {
               const isExpanded = expandedId === court.id;
               const parsedChambers = court.chambers ? JSON.parse(court.chambers) as ChamberItem[] : [];
               const wilayaName = WILAYAS.find((w) => w.code === court.wilayaId)?.name;
-              const linkedCasesCount = cases?.filter((c) => c.courtId === court.id).length ?? 0;
+              const linkedCasesCount = cases.filter((c) => c.courtId === court.id).length;
               return (
                 <Card key={court.id} className="overflow-hidden">
                   <CardContent className="p-4">
@@ -482,7 +492,7 @@ export function CourtsManager() {
               const parsedChambers = court.chambers ? JSON.parse(court.chambers) as ChamberItem[] : [];
               const wilayaName = WILAYAS.find((w) => w.code === court.wilayaId)?.name;
               const parentCouncil = courts.find((c) => c.id === court.parentCouncilId);
-              const linkedCasesCount = cases?.filter((c) => c.courtId === court.id).length ?? 0;
+              const linkedCasesCount = cases.filter((c) => c.courtId === court.id).length;
               return (
                 <Card key={court.id} className="overflow-hidden">
                   <CardContent className="p-3">
@@ -887,7 +897,7 @@ export function CourtsManager() {
           <AlertDialogFooter>
             <AlertDialogCancel>إلغاء</AlertDialogCancel>
             <AlertDialogAction
-              onClick={() => deleteConfirm && deleteCourt(deleteConfirm)}
+              onClick={() => deleteConfirm && handleDeleteCourt(deleteConfirm)}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               حذف

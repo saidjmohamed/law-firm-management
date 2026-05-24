@@ -1,8 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { useLiveQuery } from 'dexie-react-hooks';
-import { db, type Case, type Client, type Session as SessionType } from '@/lib/db';
+import { useCases, useClients, useSessions, useJudicialBodies } from '@/lib/api';
 import { useAppStore, type Section } from '@/lib/store';
 import { formatDate } from '@/lib/constants';
 import {
@@ -28,10 +27,10 @@ export function GlobalSearch() {
   const [open, setOpen] = useState(false);
   const { setActiveSection, setSelectedCaseId } = useAppStore();
 
-  const cases = useLiveQuery(() => db.cases.toArray());
-  const clients = useLiveQuery(() => db.clients.toArray());
-  const sessions = useLiveQuery(() => db.sessions.toArray());
-  const courts = useLiveQuery(() => db.judicialBodies.toArray());
+  const { cases, isLoading: casesLoading } = useCases();
+  const { clients, isLoading: clientsLoading } = useClients();
+  const { sessions } = useSessions();
+  const { judicialBodies: courts } = useJudicialBodies();
 
   // Ctrl+K
   useEffect(() => {
@@ -61,9 +60,9 @@ export function GlobalSearch() {
 
   // بناء عناصر القضايا للبحث
   const caseItems = useMemo(() => {
-    if (!cases || !clients) return [];
-    return cases.map(c => {
-      const clientName = c.clientId ? clients.find(cl => cl.id === c.clientId)?.name : '';
+    if (casesLoading || clientsLoading) return [];
+    return cases.map((c: any) => {
+      const clientName = c.clientId ? clients.find((cl: any) => cl.id === c.clientId)?.name : '';
       return {
         id: c.id!,
         value: `${c.caseNumber || ''} ${c.subject || ''} ${c.courtName || ''} ${c.councilName || ''} ${c.caseNature || ''} ${clientName || ''} ${c.status || ''}`,
@@ -71,13 +70,13 @@ export function GlobalSearch() {
         subtitle: `${c.courtName || c.councilName || ''}${clientName ? ` | ${clientName}` : ''}`,
       };
     });
-  }, [cases, clients]);
+  }, [cases, clients, casesLoading, clientsLoading]);
 
   // بناء عناصر الموكلين للبحث
   const clientItems = useMemo(() => {
-    if (!clients || !cases) return [];
-    return clients.map(cl => {
-      const caseCount = cases.filter(c => c.clientId === cl.id).length;
+    if (clientsLoading || casesLoading) return [];
+    return clients.map((cl: any) => {
+      const caseCount = cases.filter((c: any) => c.clientId === cl.id).length;
       return {
         id: cl.id!,
         value: `${cl.name || ''} ${cl.phone || ''} ${cl.phone2 || ''} ${cl.nationalId || ''} ${cl.address || ''}`,
@@ -85,12 +84,11 @@ export function GlobalSearch() {
         subtitle: `${cl.phone || ''}${caseCount > 0 ? ` | ${caseCount} قضية` : ''}`,
       };
     });
-  }, [clients, cases]);
+  }, [clients, cases, clientsLoading, casesLoading]);
 
   // بناء عناصر الجلسات للبحث
   const sessionItems = useMemo(() => {
-    if (!sessions) return [];
-    return sessions.map(s => ({
+    return sessions.map((s: any) => ({
       id: s.id!,
       value: `${s.caseNumber || ''} ${s.court || ''} ${s.chamber || ''} ${s.notes || ''} ${s.result || ''} ${formatDate(s.date)}`,
       title: `${s.caseNumber || '—'} — ${formatDate(s.date)}`,
@@ -100,8 +98,7 @@ export function GlobalSearch() {
 
   // بناء عناصر الهيئات القضائية للبحث
   const courtItems = useMemo(() => {
-    if (!courts) return [];
-    return courts.map(ct => ({
+    return courts.map((ct: any) => ({
       id: ct.id!,
       value: `${ct.name || ''} ${ct.type || ''}`,
       title: ct.name,

@@ -1,11 +1,54 @@
 'use client';
 
 import React from 'react';
-import { db, getSetting, type Case, type Party } from '@/lib/db';
+import { useSettings, getSettingValue } from '@/lib/api';
 import { WILAYAS, formatDate, ARABIC_DAYS, ARABIC_MONTHS } from '@/lib/constants';
 import { Button } from '@/components/ui/button';
 import { Scale, Printer } from 'lucide-react';
 import { toast } from 'sonner';
+
+interface Case {
+  id?: number;
+  caseNumber?: string;
+  subject?: string;
+  caseNature?: string;
+  litigationStage?: string;
+  origCaseNumber?: string;
+  customStage?: string;
+  status?: string;
+  clientId?: number;
+  wilayaId?: number;
+  judiciaryType?: string;
+  courtLevel?: string;
+  courtId?: number;
+  chamber?: string;
+  chamberNumber?: number;
+  councilName?: string;
+  courtName?: string;
+  totalFees?: number;
+  paidAmount?: number;
+  registrationDate?: string;
+  firstSessionDate?: string;
+  delibDate?: string;
+  barPhone?: string;
+  lawyer?: string;
+  notes?: string;
+  judgment?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+interface Party {
+  id?: number;
+  caseId: number;
+  role?: string;
+  name?: string;
+  phone?: string;
+  lawyerName?: string;
+  lawyerPhone?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
 
 interface CaseAnnouncementProps {
   caseData: Case;
@@ -28,15 +71,16 @@ function formatArabicDate(dateStr: string | undefined): string {
 
 export function CaseAnnouncementButton({ caseData, parties }: CaseAnnouncementProps) {
   const [loading, setLoading] = React.useState(false);
+  const { settings } = useSettings();
 
   async function generateAnnouncement() {
     setLoading(true);
     try {
-      const lawyerName = await getSetting<string>('lawyerName') || 'سايج محمد';
-      const lawyerTitle = await getSetting<string>('lawyerTitle') || 'محام لدى المجلس';
-      const lawyerAddress = await getSetting<string>('lawyerAddress') || '';
-      const lawyerPhone = await getSetting<string>('lawyerPhone') || '';
-      const lawyerEmail = await getSetting<string>('lawyerEmail') || '';
+      const lawyerName = await getSettingValue(settings, 'lawyerName') || 'سايج محمد';
+      const lawyerTitle = await getSettingValue(settings, 'lawyerTitle') || 'محام لدى المجلس';
+      const lawyerAddress = await getSettingValue(settings, 'lawyerAddress') || '';
+      const lawyerPhone = await getSettingValue(settings, 'lawyerPhone') || '';
+      const lawyerEmail = await getSettingValue(settings, 'lawyerEmail') || '';
 
       const wilayaName = WILAYAS.find(w => w.code === caseData.wilayaId)?.name || '';
 

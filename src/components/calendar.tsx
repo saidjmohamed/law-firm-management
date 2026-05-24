@@ -1,8 +1,7 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { useLiveQuery } from 'dexie-react-hooks';
-import { db, type Session } from '@/lib/db';
+import { useSessions, useCases, useDelays } from '@/lib/api';
 import { SESSION_STATUSES, formatDate, ARABIC_DAYS, ARABIC_MONTHS } from '@/lib/constants';
 import { useAppStore } from '@/lib/store';
 import { Card, CardContent } from '@/components/ui/card';
@@ -13,6 +12,20 @@ import {
   ChevronLeft,
   CalendarDays,
 } from 'lucide-react';
+
+interface Session {
+  id?: number;
+  date?: string;
+  time?: string;
+  caseNumber?: string;
+  court?: string;
+  chamber?: string;
+  roomNumber?: string;
+  status?: string;
+  result?: string;
+  notes?: string;
+  caseId?: number;
+}
 
 const STATUS_BADGE_CLASSES: Record<string, string> = {
   scheduled: 'bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-400',
@@ -33,9 +46,9 @@ export function CalendarView() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
-  const sessions = useLiveQuery(() => db.sessions.toArray());
-  const cases = useLiveQuery(() => db.cases.toArray());
-  const delays = useLiveQuery(() => db.delays.toArray());
+  const { sessions } = useSessions();
+  const { cases } = useCases();
+  const { delays } = useDelays();
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
@@ -51,7 +64,7 @@ export function CalendarView() {
   // بناء خريطة الجلسات حسب التاريخ
   const sessionsByDate = useMemo(() => {
     const map: Record<string, Session[]> = {};
-    sessions?.forEach((s) => {
+    sessions.forEach((s) => {
       if (s.date) {
         if (!map[s.date]) map[s.date] = [];
         map[s.date].push(s);
@@ -63,7 +76,7 @@ export function CalendarView() {
   // خريطة التأجيلات
   const delaysByDate = useMemo(() => {
     const map: Record<string, number> = {};
-    delays?.forEach((d) => {
+    delays.forEach((d) => {
       if (d.delayDate) {
         map[d.delayDate] = (map[d.delayDate] || 0) + 1;
       }
@@ -211,7 +224,7 @@ export function CalendarView() {
           {selectedSessions.length > 0 ? (
             <div className="space-y-2">
               {selectedSessions.map((session) => {
-                const caseData = cases?.find((c) => c.id === session.caseId);
+                const caseData = cases.find((c) => c.id === session.caseId);
                 return (
                   <Card
                     key={session.id}

@@ -1,8 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useLiveQuery } from 'dexie-react-hooks';
-import { db } from '@/lib/db';
+import { useArchives, updateCase, deleteArchive } from '@/lib/api';
 import { STATUS_COLORS, formatDate } from '@/lib/constants';
 import { useAppStore } from '@/lib/store';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -33,36 +32,43 @@ import {
   ChevronLeft,
 } from 'lucide-react';
 
+interface ArchiveItem {
+  id?: number;
+  caseId?: number;
+  caseData: string;
+  archiveDate?: string;
+  createdAt?: Date;
+}
+
 export function ArchivesManager() {
   const { setSelectedCaseId, setActiveSection } = useAppStore();
   const [viewingArchive, setViewingArchive] = useState<number | null>(null);
   const [restoreConfirm, setRestoreConfirm] = useState<number | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
 
-  const archives = useLiveQuery(() => db.archives.toArray());
-  const cases = useLiveQuery(() => db.cases.toArray());
+  const { archives } = useArchives();
 
-  const selectedArchive = archives?.find((a) => a.id === viewingArchive);
+  const selectedArchive = archives.find((a) => a.id === viewingArchive);
   const archiveData = selectedArchive ? JSON.parse(selectedArchive.caseData) : null;
 
   async function restoreFromArchive(archiveId: number) {
-    const archive = await db.archives.get(archiveId);
-    if (!archive) return;
+    const archive = archives.find((a) => a.id === archiveId);
+    if (!archive || !archive.caseId) return;
 
     // إعادة حالة القضية إلى جارية
-    await db.cases.update(archive.caseId, {
+    await updateCase(archive.caseId, {
       status: 'جارية',
       updatedAt: new Date(),
     });
 
     // حذف من الأرشيف
-    await db.archives.delete(archiveId);
+    await deleteArchive(archiveId);
     setRestoreConfirm(null);
     toast.success('تم استعادة القضية من الأرشيف');
   }
 
-  async function deleteArchive(archiveId: number) {
-    await db.archives.delete(archiveId);
+  async function handleDeleteArchive(archiveId: number) {
+    await deleteArchive(archiveId);
     setDeleteConfirm(null);
     setViewingArchive(null);
     toast.success('تم حذف الأرشيف');
@@ -200,7 +206,7 @@ export function ArchivesManager() {
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>إلغاء</AlertDialogCancel>
-              <AlertDialogAction onClick={() => deleteConfirm && deleteArchive(deleteConfirm)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              <AlertDialogAction onClick={() => deleteConfirm && handleDeleteArchive(deleteConfirm)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
                 حذف
               </AlertDialogAction>
             </AlertDialogFooter>
@@ -212,7 +218,7 @@ export function ArchivesManager() {
 
   return (
     <div className="space-y-4">
-      {archives && archives.length > 0 ? (
+      {archives.length > 0 ? (
         <div className="space-y-2">
           {archives.map((archive) => {
             let data: { caseNumber?: string; subject?: string; courtName?: string } = {};

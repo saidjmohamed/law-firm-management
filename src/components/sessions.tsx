@@ -1,8 +1,7 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { useLiveQuery } from 'dexie-react-hooks';
-import { db, type Session } from '@/lib/db';
+import { useSessions, createSession, updateSession, deleteSession } from '@/lib/api';
 import { SESSION_STATUSES, formatDate } from '@/lib/constants';
 import { useAppStore } from '@/lib/store';
 import { Card, CardContent } from '@/components/ui/card';
@@ -36,6 +35,22 @@ import {
   Filter,
 } from 'lucide-react';
 
+interface Session {
+  id?: number;
+  date?: string;
+  time?: string;
+  caseNumber?: string;
+  court?: string;
+  chamber?: string;
+  roomNumber?: string;
+  status?: string;
+  result?: string;
+  notes?: string;
+  caseId?: number;
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
 const STATUS_LABELS: Record<string, string> = {
   scheduled: 'مجدولة',
   completed: 'مكتملة',
@@ -57,12 +72,10 @@ export function Sessions() {
   const [formData, setFormData] = useState<Partial<Session>>({});
   const [showAll, setShowAll] = useState(false);
 
-  const sessions = useLiveQuery(() => db.sessions.toArray());
-  const cases = useLiveQuery(() => db.cases.toArray());
+  const { sessions } = useSessions();
 
   // الجلسات القادمة فقط (تاريخها في المستقبل وحالتها ليست مكتملة أو ملغاة)
   const upcomingSessions = useMemo(() => {
-    if (!sessions) return [];
     const now = new Date();
     now.setHours(0, 0, 0, 0);
     return sessions
@@ -77,7 +90,6 @@ export function Sessions() {
 
   // كل الجلسات (عند تفعيل "عرض الكل")
   const allSessionsSorted = useMemo(() => {
-    if (!sessions) return [];
     return [...sessions].sort((a, b) => (b.date || '').localeCompare(a.date || ''));
   }, [sessions]);
 
@@ -114,13 +126,13 @@ export function Sessions() {
     const now = new Date();
 
     if (editingSession?.id) {
-      await db.sessions.update(editingSession.id, {
+      await updateSession(editingSession.id, {
         ...formData,
         updatedAt: now,
       });
       toast.success('تم تحديث الجلسة بنجاح');
     } else {
-      await db.sessions.add({
+      await createSession({
         ...formData,
         createdAt: now,
         updatedAt: now,
@@ -132,8 +144,8 @@ export function Sessions() {
     resetForm();
   }
 
-  async function deleteSession(id: number) {
-    await db.sessions.delete(id);
+  async function handleDeleteSession(id: number) {
+    await deleteSession(id);
     toast.success('تم حذف الجلسة');
   }
 
@@ -163,7 +175,7 @@ export function Sessions() {
         <div className="flex-1" />
         <div className="text-sm text-muted-foreground">
           {showAll
-            ? `${(sessions?.length ?? 0).toLocaleString('en-US')} جلسة`
+            ? `${sessions.length.toLocaleString('en-US')} جلسة`
             : `${upcomingSessions.length.toLocaleString('en-US')} جلسة قادمة`
           }
         </div>
@@ -245,7 +257,7 @@ export function Sessions() {
                           <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEditForm(session)}>
                             <Pencil className="w-3 h-3" />
                           </Button>
-                          <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => session.id && deleteSession(session.id)}>
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => session.id && handleDeleteSession(session.id)}>
                             <Trash2 className="w-3 h-3" />
                           </Button>
                         </div>

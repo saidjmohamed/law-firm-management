@@ -296,6 +296,12 @@ export const ARABIC_DAYS = [
   'السبت',
 ] as const;
 
+/** تنسيق العملة */
+export function formatCurrency(amount: number | undefined | null): string {
+  if (amount == null) return '0 د.ج';
+  return `${amount.toLocaleString('en-US')} د.ج`;
+}
+
 /** الأشهر بالعربية */
 export const ARABIC_MONTHS = [
   'جانفي',

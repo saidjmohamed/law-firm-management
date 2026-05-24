@@ -1,9 +1,8 @@
 'use client';
 
 import React from 'react';
-import { useLiveQuery } from 'dexie-react-hooks';
-import { db, formatCurrency } from '@/lib/db';
-import { STATUS_COLORS, CASE_NATURES, formatDate } from '@/lib/constants';
+import { useCases, useClients, useDelays, useSessions, usePayments, useParties } from '@/lib/api';
+import { formatCurrency, STATUS_COLORS, CASE_NATURES, formatDate } from '@/lib/constants';
 import { useAppStore } from '@/lib/store';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -67,51 +66,51 @@ export function Dashboard() {
   const setActiveSection = useAppStore((s) => s.setActiveSection);
   const setSelectedCaseId = useAppStore((s) => s.setSelectedCaseId);
 
-  const cases = useLiveQuery(() => db.cases.toArray());
-  const clients = useLiveQuery(() => db.clients.toArray());
-  const delays = useLiveQuery(() => db.delays.toArray());
-  const sessions = useLiveQuery(() => db.sessions.toArray());
-  const payments = useLiveQuery(() => db.payments.toArray());
-  const parties = useLiveQuery(() => db.parties.toArray());
+  const { cases, isLoading: casesLoading } = useCases();
+  const { clients, isLoading: clientsLoading } = useClients();
+  const { delays } = useDelays();
+  const { sessions } = useSessions();
+  const { payments } = usePayments();
+  const { parties } = useParties();
 
-  const isLoading = !cases || !clients;
+  const isLoading = casesLoading || clientsLoading;
 
-  const totalCases = cases?.length ?? 0;
-  const totalClients = clients?.length ?? 0;
-  const activeCases = cases?.filter((c) => c.status === 'جارية').length ?? 0;
-  const archivedCases = cases?.filter((c) => c.status === 'مؤرشفة').length ?? 0;
-  const totalFees = cases?.reduce((sum, c) => sum + (c.totalFees || 0), 0) ?? 0;
-  const totalPaid = cases?.reduce((sum, c) => sum + (c.paidAmount || 0), 0) ?? 0;
+  const totalCases = cases.length;
+  const totalClients = clients.length;
+  const activeCases = cases.filter((c: any) => c.status === 'جارية').length;
+  const archivedCases = cases.filter((c: any) => c.status === 'مؤرشفة').length;
+  const totalFees = cases.reduce((sum: number, c: any) => sum + (c.totalFees || 0), 0);
+  const totalPaid = cases.reduce((sum: number, c: any) => sum + (c.paidAmount || 0), 0);
   const totalRemaining = totalFees - totalPaid;
   const paymentRate = totalFees > 0 ? Math.round((totalPaid / totalFees) * 100) : 0;
 
   // القضايا حسب الطبيعة
   const casesByNature = CASE_NATURES.map((nature) => ({
     nature,
-    count: cases?.filter((c) => c.caseNature === nature).length ?? 0,
+    count: cases.filter((c: any) => c.caseNature === nature).length,
   })).filter((n) => n.count > 0).sort((a, b) => b.count - a.count);
 
   // توزيع الحالات
   const statusDistribution = [
-    { status: 'جارية', count: cases?.filter((c) => c.status === 'جارية').length ?? 0 },
-    { status: 'للجدولة', count: cases?.filter((c) => c.status === 'للجدولة').length ?? 0 },
-    { status: 'مفصول فيها', count: cases?.filter((c) => c.status === 'مفصول فيها').length ?? 0 },
-    { status: 'مؤرشفة', count: cases?.filter((c) => c.status === 'مؤرشفة').length ?? 0 },
+    { status: 'جارية', count: cases.filter((c: any) => c.status === 'جارية').length },
+    { status: 'للجدولة', count: cases.filter((c: any) => c.status === 'للجدولة').length },
+    { status: 'مفصول فيها', count: cases.filter((c: any) => c.status === 'مفصول فيها').length },
+    { status: 'مؤرشفة', count: cases.filter((c: any) => c.status === 'مؤرشفة').length },
   ].filter((s) => s.count > 0);
 
   // التأجيلات القادمة
   const now = new Date();
   const upcomingDelays = delays
-    ?.filter((d) => d.delayDate && new Date(d.delayDate) >= now)
-    .sort((a, b) => (a.delayDate || '').localeCompare(b.delayDate || ''))
-    .slice(0, 5) ?? [];
+    .filter((d: any) => d.delayDate && new Date(d.delayDate) >= now)
+    .sort((a: any, b: any) => (a.delayDate || '').localeCompare(b.delayDate || ''))
+    .slice(0, 5);
 
   // الجلسات القادمة (7 أيام)
   const nextWeek = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
   const upcomingSessions = sessions
-    ?.filter((s) => s.date && new Date(s.date) >= now && new Date(s.date) <= nextWeek)
-    .sort((a, b) => (a.date || '').localeCompare(b.date || ''))
-    .slice(0, 5) ?? [];
+    .filter((s: any) => s.date && new Date(s.date) >= now && new Date(s.date) <= nextWeek)
+    .sort((a: any, b: any) => (a.date || '').localeCompare(b.date || ''))
+    .slice(0, 5);
 
   const maxNatureCount = Math.max(...casesByNature.map((n) => n.count), 1);
 
@@ -365,8 +364,8 @@ export function Dashboard() {
           <CardContent>
             {upcomingDelays.length > 0 ? (
               <div className="space-y-2 max-h-64 overflow-y-auto smooth-scroll">
-                {upcomingDelays.map((delay) => {
-                  const caseData = cases?.find((c) => c.id === delay.caseId);
+                {upcomingDelays.map((delay: any) => {
+                  const caseData = cases.find((c: any) => c.id === delay.caseId);
                   return (
                     <div
                       key={delay.id}
@@ -406,7 +405,7 @@ export function Dashboard() {
           <CardContent>
             {upcomingSessions.length > 0 ? (
               <div className="space-y-2 max-h-64 overflow-y-auto smooth-scroll">
-                {upcomingSessions.map((session) => (
+                {upcomingSessions.map((session: any) => (
                   <div
                     key={session.id}
                     className="flex items-center justify-between p-2.5 rounded-lg bg-teal-50 dark:bg-teal-900/20 cursor-pointer hover:bg-teal-100 dark:hover:bg-teal-900/30 transition-colors"
@@ -449,34 +448,38 @@ export function Dashboard() {
         </CardHeader>
         <CardContent>
           <div className="space-y-2 max-h-72 overflow-y-auto smooth-scroll">
-            {cases
-              ?.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-              .slice(0, 8)
-              .map((c) => (
-                <div
-                  key={c.id}
-                  className="flex items-center justify-between p-2.5 rounded-lg border cursor-pointer hover:bg-muted/50 transition-colors"
-                  onClick={() => {
-                    if (c.id) {
-                      setSelectedCaseId(c.id);
-                      setActiveSection('cases');
-                    }
-                  }}
-                >
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-bold truncate">{c.caseNumber || '—'}</span>
-                      <Badge variant="secondary" className={`${STATUS_COLORS[c.status || ''] || ''} text-xs`}>
-                        {c.status}
-                      </Badge>
+            {cases.length > 0 ? (
+              cases
+                .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                .slice(0, 8)
+                .map((c: any) => (
+                  <div
+                    key={c.id}
+                    className="flex items-center justify-between p-2.5 rounded-lg border cursor-pointer hover:bg-muted/50 transition-colors"
+                    onClick={() => {
+                      if (c.id) {
+                        setSelectedCaseId(c.id);
+                        setActiveSection('cases');
+                      }
+                    }}
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-bold truncate">{c.caseNumber || '—'}</span>
+                        <Badge variant="secondary" className={`${STATUS_COLORS[c.status || ''] || ''} text-xs`}>
+                          {c.status}
+                        </Badge>
+                      </div>
+                      <p className="text-xs text-muted-foreground truncate mt-0.5">{c.subject || '—'}</p>
                     </div>
-                    <p className="text-xs text-muted-foreground truncate mt-0.5">{c.subject || '—'}</p>
+                    <div className="text-left mr-3 shrink-0">
+                      <p className="text-xs text-muted-foreground">{c.courtName || ''}</p>
+                    </div>
                   </div>
-                  <div className="text-left mr-3 shrink-0">
-                    <p className="text-xs text-muted-foreground">{c.courtName || ''}</p>
-                  </div>
-                </div>
-              )) ?? <p className="text-sm text-muted-foreground text-center py-4">لا توجد قضايا</p>}
+                ))
+            ) : (
+              <p className="text-sm text-muted-foreground text-center py-4">لا توجد قضايا</p>
+            )}
           </div>
         </CardContent>
       </Card>

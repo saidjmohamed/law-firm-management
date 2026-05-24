@@ -1,9 +1,8 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { useLiveQuery } from 'dexie-react-hooks';
-import { db, formatCurrency, type Case, type Client, type JudicialBody } from '@/lib/db';
-import { STATUS_COLORS, CASE_NATURES, CASE_STATUSES, LITIGATION_STAGES, PARTY_ROLES, JUDICIAL_CHAMBERS, WILAYAS, JUDICIARY_TYPES, ORDINARY_COURT_LEVELS, ADMIN_COURT_LEVELS, CHAMBER_NUMBERS, formatDate } from '@/lib/constants';
+import { useCases, useClients, useParties, useDelays, useSessions, useJudicialBodies, createCase, updateCase, deleteCase as apiDeleteCase, createParty, deleteParty as apiDeleteParty, createDelay, deleteDelay as apiDeleteDelay, createClient, createJudicialBody, createArchive } from '@/lib/api';
+import { formatCurrency, STATUS_COLORS, CASE_NATURES, CASE_STATUSES, LITIGATION_STAGES, PARTY_ROLES, JUDICIAL_CHAMBERS, WILAYAS, JUDICIARY_TYPES, ORDINARY_COURT_LEVELS, ADMIN_COURT_LEVELS, CHAMBER_NUMBERS, formatDate } from '@/lib/constants';
 import { CasePrintButton } from '@/components/case-print';
 import { CaseAnnouncementButton } from '@/components/case-announcement';
 import { useAppStore } from '@/lib/store';
@@ -54,6 +53,97 @@ import {
   Clock,
   Wallet,
 } from 'lucide-react';
+
+// ============================================================================
+// Types
+// ============================================================================
+interface PartyType {
+  id: number;
+  caseId: number;
+  role?: string;
+  name?: string;
+  phone?: string;
+  lawyerName?: string;
+  lawyerPhone?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface DelayType {
+  id: number;
+  caseId: number;
+  delayDate?: string;
+  reason?: string;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface SessionType {
+  id: number;
+  caseId?: number;
+  caseNumber?: string;
+  date?: string;
+  time?: string;
+  court?: string;
+  chamber?: string;
+  roomNumber?: string;
+  notes?: string;
+  status?: string;
+  result?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface CaseType {
+  id: number;
+  caseNumber?: string;
+  subject?: string;
+  caseNature?: string;
+  litigationStage?: string;
+  origCaseNumber?: string;
+  customStage?: string;
+  status?: string;
+  clientId?: number;
+  wilayaId?: number;
+  judiciaryType?: string;
+  courtLevel?: string;
+  courtId?: number;
+  chamber?: string;
+  chamberNumber?: number;
+  councilName?: string;
+  courtName?: string;
+  totalFees?: number;
+  paidAmount?: number;
+  registrationDate?: string;
+  firstSessionDate?: string;
+  delibDate?: string;
+  barPhone?: string;
+  lawyer?: string;
+  notes?: string;
+  judgment?: string;
+  createdAt: string;
+  updatedAt: string;
+  client?: { id: number; name?: string };
+  parties?: PartyType[];
+  delays?: DelayType[];
+  sessions?: SessionType[];
+}
+
+interface ClientType {
+  id: number;
+  name?: string;
+  phone?: string;
+}
+
+interface JudicialBodyType {
+  id: number;
+  name: string;
+  type: string;
+  wilayaId?: number;
+  parentCouncilId?: number;
+  chambers?: string;
+}
 
 // Status border colors for case cards
 const STATUS_BORDER_COLORS: Record<string, string> = {
@@ -128,7 +218,7 @@ function CasesSkeleton() {
 export function Cases() {
   const { selectedCaseId, setSelectedCaseId } = useAppStore();
   const [view, setView] = useState<'list' | 'detail' | 'form'>('list');
-  const [editingCase, setEditingCase] = useState<Case | null>(null);
+  const [editingCase, setEditingCase] = useState<CaseType | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [cumulativeMode, setCumulativeMode] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
@@ -137,11 +227,11 @@ export function Cases() {
 
   // حوار إنشاء موكل جديد
   const [showNewClientDialog, setShowNewClientDialog] = useState(false);
-  const [newClientData, setNewClientData] = useState<Partial<Client>>({});
+  const [newClientData, setNewClientData] = useState<Partial<ClientType>>({});
 
   // حوار إنشاء هيئة قضائية جديدة
   const [showNewCourtDialog, setShowNewCourtDialog] = useState(false);
-  const [newCourtData, setNewCourtData] = useState<Partial<JudicialBody>>({});
+  const [newCourtData, setNewCourtData] = useState<Partial<JudicialBodyType>>({});
 
   // فلاتر
   const [searchTerm, setSearchTerm] = useState('');
@@ -149,16 +239,16 @@ export function Cases() {
   const [filterNature, setFilterNature] = useState<string>('all');
 
   // بيانات النموذج
-  const [formData, setFormData] = useState<Partial<Case>>({});
+  const [formData, setFormData] = useState<Partial<CaseType>>({});
   const [parties, setParties] = useState<PartyRow[]>([emptyParty()]);
   const [delays, setDelays] = useState<DelayRow[]>([]);
 
-  const cases = useLiveQuery(() => db.cases.toArray());
-  const clients = useLiveQuery(() => db.clients.toArray());
-  const allParties = useLiveQuery(() => db.parties.toArray());
-  const allDelays = useLiveQuery(() => db.delays.toArray());
-  const judicialBodies = useLiveQuery(() => db.judicialBodies.toArray());
-  const allSessions = useLiveQuery(() => db.sessions.toArray());
+  const { cases, isLoading: casesLoading } = useCases();
+  const { clients, isLoading: clientsLoading } = useClients();
+  const { parties: allParties } = useParties();
+  const { delays: allDelays } = useDelays();
+  const { judicialBodies, isLoading: bodiesLoading } = useJudicialBodies();
+  const { sessions: allSessions } = useSessions();
 
   // الهيئات القضائية المفلترة حسب النوع والولاية
   const filteredBodies = useMemo(() => {
@@ -214,7 +304,7 @@ export function Cases() {
 
   // خريطة الموكلين
   const clientMap = useMemo(() => {
-    const map: Record<number, Client> = {};
+    const map: Record<number, ClientType> = {};
     clients?.forEach((c) => { if (c.id) map[c.id] = c; });
     return map;
   }, [clients]);
@@ -248,9 +338,15 @@ export function Cases() {
   }, [cases]);
 
   const selectedCase = cases?.find((c) => c.id === selectedCaseId);
-  const caseParties = allParties?.filter((p) => p.caseId === selectedCaseId);
-  const caseDelays = allDelays?.filter((d) => d.caseId === selectedCaseId);
-  const caseSessions = allSessions?.filter((s) => s.caseId === selectedCaseId);
+  const caseParties = selectedCase?.parties?.length
+    ? selectedCase.parties
+    : allParties?.filter((p) => p.caseId === selectedCaseId);
+  const caseDelays = selectedCase?.delays?.length
+    ? selectedCase.delays
+    : allDelays?.filter((d) => d.caseId === selectedCaseId);
+  const caseSessions = selectedCase?.sessions?.length
+    ? selectedCase.sessions
+    : allSessions?.filter((s) => s.caseId === selectedCaseId);
 
   function resetForm() {
     setFormData({});
@@ -265,12 +361,14 @@ export function Cases() {
     setCumulativeMode(false);
   }
 
-  function openEditForm(c: Case) {
+  function openEditForm(c: CaseType) {
     setEditingCase(c);
     setFormData({ ...c });
 
     // تحميل الأطراف
-    const cParties = allParties?.filter((p) => p.caseId === c.id) || [];
+    const cParties = c.parties?.length
+      ? c.parties
+      : allParties?.filter((p) => p.caseId === c.id) || [];
     if (cParties.length > 0) {
       setParties(cParties.map((p) => ({
         id: String(p.id),
@@ -285,7 +383,9 @@ export function Cases() {
     }
 
     // تحميل التأجيلات
-    const cDelays = allDelays?.filter((d) => d.caseId === c.id) || [];
+    const cDelays = c.delays?.length
+      ? c.delays
+      : allDelays?.filter((d) => d.caseId === c.id) || [];
     if (cDelays.length > 0) {
       setDelays(cDelays.map((d) => ({
         id: String(d.id),
@@ -302,43 +402,45 @@ export function Cases() {
   }
 
   async function saveCase() {
-    const now = new Date();
-
     if (editingCase?.id) {
       // تحديث قضية
-      await db.cases.update(editingCase.id, {
+      await updateCase(editingCase.id, {
         ...formData,
-        updatedAt: now,
+        updatedAt: new Date().toISOString(),
       });
 
       // حذف الأطراف القديمة وإضافة الجديدة
-      await db.parties.where('caseId').equals(editingCase.id).delete();
+      if (caseParties) {
+        for (const p of caseParties) {
+          if (p.id) await apiDeleteParty(p.id);
+        }
+      }
       for (const party of parties) {
         if (party.name || party.role) {
-          await db.parties.add({
+          await createParty({
             caseId: editingCase.id,
             role: party.role,
             name: party.name,
             phone: party.phone,
             lawyerName: party.lawyerName,
             lawyerPhone: party.lawyerPhone,
-            createdAt: now,
-            updatedAt: now,
           });
         }
       }
 
       // حذف التأجيلات القديمة وإضافة الجديدة
-      await db.delays.where('caseId').equals(editingCase.id).delete();
+      if (caseDelays) {
+        for (const d of caseDelays) {
+          if (d.id) await apiDeleteDelay(d.id);
+        }
+      }
       for (const delay of delays) {
         if (delay.delayDate || delay.reason) {
-          await db.delays.add({
+          await createDelay({
             caseId: editingCase.id,
             delayDate: delay.delayDate,
             reason: delay.reason,
             notes: delay.notes,
-            createdAt: now,
-            updatedAt: now,
           });
         }
       }
@@ -348,24 +450,23 @@ export function Cases() {
       resetForm();
     } else {
       // إضافة قضية جديدة
-      const caseId = await db.cases.add({
+      const result = await createCase({
         ...formData,
-        createdAt: now,
-        updatedAt: now,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
       });
+      const caseId = result.id;
 
       // إضافة الأطراف
       for (const party of parties) {
         if (party.name || party.role) {
-          await db.parties.add({
-            caseId: caseId as number,
+          await createParty({
+            caseId,
             role: party.role,
             name: party.name,
             phone: party.phone,
             lawyerName: party.lawyerName,
             lawyerPhone: party.lawyerPhone,
-            createdAt: now,
-            updatedAt: now,
           });
         }
       }
@@ -373,13 +474,11 @@ export function Cases() {
       // إضافة التأجيلات
       for (const delay of delays) {
         if (delay.delayDate || delay.reason) {
-          await db.delays.add({
-            caseId: caseId as number,
+          await createDelay({
+            caseId,
             delayDate: delay.delayDate,
             reason: delay.reason,
             notes: delay.notes,
-            createdAt: now,
-            updatedAt: now,
           });
         }
       }
@@ -396,8 +495,8 @@ export function Cases() {
     }
   }
 
-  async function deleteParty(id: number) {
-    await db.parties.delete(id);
+  async function handleDeleteParty(id: number) {
+    await apiDeleteParty(id);
     setDeletePartyConfirm(null);
     toast.success('تم حذف الطرف');
   }
@@ -407,14 +506,11 @@ export function Cases() {
       toast.error('اسم الموكل مطلوب');
       return;
     }
-    const now = new Date();
-    const clientId = await db.clients.add({
+    const result = await createClient({
       name: newClientData.name,
       phone: newClientData.phone || '',
-      createdAt: now,
-      updatedAt: now,
     });
-    setFormData({ ...formData, clientId: clientId as number });
+    setFormData({ ...formData, clientId: result.id });
     setNewClientData({});
     setShowNewClientDialog(false);
     toast.success('تم إضافة الموكل بنجاح');
@@ -425,18 +521,15 @@ export function Cases() {
       toast.error('اسم الهيئة مطلوب');
       return;
     }
-    const now = new Date();
-    const bodyId = await db.judicialBodies.add({
+    const result = await createJudicialBody({
       name: newCourtData.name!,
       type: newCourtData.type || formData.courtLevel || '',
       wilayaId: newCourtData.wilayaId,
-      createdAt: now,
-      updatedAt: now,
     });
     const bodyType = newCourtData.type || formData.courtLevel || '';
     setFormData({
       ...formData,
-      courtId: bodyId as number,
+      courtId: result.id,
       courtName: newCourtData.name!,
       councilName: bodyType === 'council' ? newCourtData.name! : formData.councilName,
       chamber: '',
@@ -446,10 +539,8 @@ export function Cases() {
     toast.success('تم إضافة الهيئة القضائية بنجاح');
   }
 
-  async function deleteCase(id: number) {
-    await db.parties.where('caseId').equals(id).delete();
-    await db.delays.where('caseId').equals(id).delete();
-    await db.cases.delete(id);
+  async function handleDeleteCase(id: number) {
+    await apiDeleteCase(id);
     if (selectedCaseId === id) {
       setSelectedCaseId(null);
       setView('list');
@@ -459,27 +550,30 @@ export function Cases() {
   }
 
   async function archiveCase(id: number) {
-    const c = await db.cases.get(id);
+    const c = cases?.find((ca) => ca.id === id);
     if (!c) return;
 
-    const cParties = await db.parties.where('caseId').equals(id).toArray();
-    const cDelays = await db.delays.where('caseId').equals(id).toArray();
+    const cParties = c.parties?.length
+      ? c.parties
+      : allParties?.filter((p) => p.caseId === id) || [];
+    const cDelays = c.delays?.length
+      ? c.delays
+      : allDelays?.filter((d) => d.caseId === id) || [];
 
-    await db.archives.add({
+    await createArchive({
       caseId: id,
       caseData: JSON.stringify({ ...c, parties: cParties, delays: cDelays }),
       archiveDate: new Date().toISOString(),
       reason: 'أرشفة',
-      createdAt: new Date(),
     });
 
-    await db.cases.update(id, { status: 'مؤرشفة', updatedAt: new Date() });
+    await updateCase(id, { status: 'مؤرشفة', updatedAt: new Date().toISOString() });
     setArchiveConfirm(null);
     toast.success('تم أرشفة القضية');
   }
 
   // Loading state
-  if (!cases || !clients || !judicialBodies) {
+  if (casesLoading || clientsLoading || bodiesLoading) {
     return <CasesSkeleton />;
   }
 
@@ -1416,7 +1510,7 @@ export function Cases() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>إلغاء</AlertDialogCancel>
-            <AlertDialogAction onClick={() => deletePartyConfirm && deleteParty(deletePartyConfirm)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+            <AlertDialogAction onClick={() => deletePartyConfirm && handleDeleteParty(deletePartyConfirm)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
               حذف
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -1434,7 +1528,7 @@ export function Cases() {
           </AlertDialogDescription>
           <AlertDialogFooter>
             <AlertDialogCancel>إلغاء</AlertDialogCancel>
-            <AlertDialogAction onClick={() => deleteConfirm && deleteCase(deleteConfirm)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+            <AlertDialogAction onClick={() => deleteConfirm && handleDeleteCase(deleteConfirm)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
               حذف
             </AlertDialogAction>
           </AlertDialogFooter>

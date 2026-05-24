@@ -1,8 +1,7 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { useLiveQuery } from 'dexie-react-hooks';
-import { db, type Client } from '@/lib/db';
+import { useClients, useCases, createClient, updateClient, deleteClient } from '@/lib/api';
 import { WILAYAS, formatDate, STATUS_COLORS } from '@/lib/constants';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -49,6 +48,19 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { useAppStore } from '@/lib/store';
 
+interface Client {
+  id?: number;
+  name?: string;
+  phone?: string;
+  phone2?: string;
+  address?: string;
+  wilaya?: number;
+  nationalId?: string;
+  notes?: string;
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
 function ClientsSkeleton() {
   return (
     <div className="space-y-4">
@@ -91,11 +103,10 @@ export function Clients() {
 
   const [formData, setFormData] = useState<Partial<Client>>({});
 
-  const clients = useLiveQuery(() => db.clients.toArray());
-  const cases = useLiveQuery(() => db.cases.toArray());
+  const { clients, isLoading: clientsLoading } = useClients();
+  const { cases, isLoading: casesLoading } = useCases();
 
   const filteredClients = useMemo(() => {
-    if (!clients) return [];
     return clients.filter((c) =>
       !searchTerm ||
       c.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -105,7 +116,7 @@ export function Clients() {
   }, [clients, searchTerm]);
 
   // Loading state
-  if (!clients || !cases) {
+  if (clientsLoading || casesLoading) {
     return <ClientsSkeleton />;
   }
 
@@ -129,13 +140,13 @@ export function Clients() {
     const now = new Date();
 
     if (editingClient?.id) {
-      await db.clients.update(editingClient.id, {
+      await updateClient(editingClient.id, {
         ...formData,
         updatedAt: now,
       });
       toast.success('تم تحديث الموكل بنجاح');
     } else {
-      await db.clients.add({
+      await createClient({
         ...formData,
         createdAt: now,
         updatedAt: now,
@@ -147,8 +158,8 @@ export function Clients() {
     resetForm();
   }
 
-  async function deleteClient(id: number) {
-    await db.clients.delete(id);
+  async function handleDeleteClient(id: number) {
+    await deleteClient(id);
     setDeleteConfirm(null);
     if (viewingClient?.id === id) setViewingClient(null);
     toast.success('تم حذف الموكل');
@@ -156,7 +167,7 @@ export function Clients() {
 
   // عرض تفاصيل الموكل
   if (viewingClient) {
-    const clientCases = cases?.filter((c) => c.clientId === viewingClient.id);
+    const clientCases = cases.filter((c) => c.clientId === viewingClient.id);
 
     const wilayaName = WILAYAS.find((w) => w.code === viewingClient.wilaya)?.name;
 
@@ -276,7 +287,7 @@ export function Clients() {
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>إلغاء</AlertDialogCancel>
-              <AlertDialogAction onClick={() => deleteConfirm && deleteClient(deleteConfirm)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              <AlertDialogAction onClick={() => deleteConfirm && handleDeleteClient(deleteConfirm)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
                 حذف
               </AlertDialogAction>
             </AlertDialogFooter>
@@ -310,7 +321,7 @@ export function Clients() {
         {filteredClients.length > 0 ? (
           filteredClients.map((client) => {
             const wilayaName = WILAYAS.find((w) => w.code === client.wilaya)?.name;
-            const clientCasesCount = cases?.filter((c) => c.clientId === client.id).length ?? 0;
+            const clientCasesCount = cases.filter((c) => c.clientId === client.id).length;
             return (
               <Card
                 key={client.id}
@@ -460,7 +471,7 @@ export function Clients() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>إلغاء</AlertDialogCancel>
-            <AlertDialogAction onClick={() => deleteConfirm && deleteClient(deleteConfirm)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+            <AlertDialogAction onClick={() => deleteConfirm && handleDeleteClient(deleteConfirm)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
               حذف
             </AlertDialogAction>
           </AlertDialogFooter>

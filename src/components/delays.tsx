@@ -1,8 +1,7 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { useLiveQuery } from 'dexie-react-hooks';
-import { db, type Delay } from '@/lib/db';
+import { useDelays, useCases, createDelay, updateDelay, deleteDelay } from '@/lib/api';
 import { formatDate } from '@/lib/constants';
 import { useAppStore } from '@/lib/store';
 import { Card, CardContent } from '@/components/ui/card';
@@ -34,6 +33,16 @@ import {
   AlertCircle,
 } from 'lucide-react';
 
+interface Delay {
+  id?: number;
+  caseId?: number;
+  delayDate?: string;
+  reason?: string;
+  notes?: string;
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
 export function DelaysManager() {
   const { setSelectedCaseId, setActiveSection } = useAppStore();
   const [showForm, setShowForm] = useState(false);
@@ -41,13 +50,12 @@ export function DelaysManager() {
   const [formData, setFormData] = useState<Partial<Delay>>({});
   const [filterUpcoming, setFilterUpcoming] = useState(false);
 
-  const delays = useLiveQuery(() => db.delays.toArray());
-  const cases = useLiveQuery(() => db.cases.toArray());
+  const { delays } = useDelays();
+  const { cases } = useCases();
 
   const now = new Date();
 
   const filteredDelays = useMemo(() => {
-    if (!delays) return [];
     let filtered = [...delays];
     if (filterUpcoming) {
       filtered = filtered.filter((d) => d.delayDate && new Date(d.delayDate) >= now);
@@ -75,7 +83,7 @@ export function DelaysManager() {
     const nowDate = new Date();
 
     if (editingDelay?.id) {
-      await db.delays.update(editingDelay.id, {
+      await updateDelay(editingDelay.id, {
         ...formData,
         updatedAt: nowDate,
       });
@@ -85,7 +93,7 @@ export function DelaysManager() {
         toast.error('يرجى اختيار القضية');
         return;
       }
-      await db.delays.add({
+      await createDelay({
         ...formData,
         caseId: formData.caseId,
         createdAt: nowDate,
@@ -98,8 +106,8 @@ export function DelaysManager() {
     resetForm();
   }
 
-  async function deleteDelay(id: number) {
-    await db.delays.delete(id);
+  async function handleDeleteDelay(id: number) {
+    await deleteDelay(id);
     toast.success('تم حذف التأجيل');
   }
 
@@ -128,7 +136,7 @@ export function DelaysManager() {
       <div className="space-y-2">
         {filteredDelays.length > 0 ? (
           filteredDelays.map((delay) => {
-            const caseData = cases?.find((c) => c.id === delay.caseId);
+            const caseData = cases.find((c) => c.id === delay.caseId);
             const upcoming = isUpcoming(delay.delayDate);
 
             return (
@@ -164,7 +172,7 @@ export function DelaysManager() {
                       <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); openEditForm(delay); }}>
                         <Pencil className="w-3 h-3" />
                       </Button>
-                      <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={(e) => { e.stopPropagation(); if (delay.id) deleteDelay(delay.id); }}>
+                      <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={(e) => { e.stopPropagation(); if (delay.id) handleDeleteDelay(delay.id); }}>
                         <Trash2 className="w-3 h-3" />
                       </Button>
                     </div>
@@ -199,7 +207,7 @@ export function DelaysManager() {
               >
                 <SelectTrigger><SelectValue placeholder="اختر القضية" /></SelectTrigger>
                 <SelectContent>
-                  {cases?.map((c) => (
+                  {cases.map((c) => (
                     <SelectItem key={c.id} value={c.id!.toString()}>
                       {c.caseNumber || '—'} - {c.subject?.substring(0, 30)}
                     </SelectItem>

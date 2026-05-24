@@ -1,9 +1,19 @@
 'use client';
 
 import React, { useState, useRef } from 'react';
-import { useLiveQuery } from 'dexie-react-hooks';
-import { db, getSetting, resetDatabase } from '@/lib/db';
-import { exportBackup, importBackup, importFromTxtFiles } from '@/lib/backup';
+import {
+  useCases,
+  useClients,
+  useSessions,
+  usePayments,
+  useDelays,
+  useParties,
+  useArchives,
+  useSettings,
+  seedDatabase,
+  refreshAll,
+  getSettingValue,
+} from '@/lib/api';
 import { formatDate } from '@/lib/constants';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -33,30 +43,53 @@ export function BackupManager() {
   const [importing, setImporting] = useState(false);
   const [importConfirm, setImportConfirm] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [txtImporting, setTxtImporting] = useState(false);
   const [resetConfirm, setResetConfirm] = useState(false);
   const [resetting, setResetting] = useState(false);
   const jsonInputRef = useRef<HTMLInputElement>(null);
-  const txtInputRef = useRef<HTMLInputElement>(null);
 
-  const lastBackupDate = useLiveQuery(() => getSetting<string>('lastBackupDate'));
+  const { cases } = useCases();
+  const { clients } = useClients();
+  const { sessions } = useSessions();
+  const { payments } = usePayments();
+  const { delays } = useDelays();
+  const { parties } = useParties();
+  const { archives } = useArchives();
+  const { settings } = useSettings();
 
-  const stats = useLiveQuery(async () => {
-    const [clients, cases, sessions, payments, delays, parties, archives] = await Promise.all([
-      db.clients.count(),
-      db.cases.count(),
-      db.sessions.count(),
-      db.payments.count(),
-      db.delays.count(),
-      db.parties.count(),
-      db.archives.count(),
-    ]);
-    return { clients, cases, sessions, payments, delays, parties, archives };
-  });
+  const lastBackupDate = getSettingValue(settings, 'lastBackupDate');
+
+  const stats = {
+    clients: clients.length,
+    cases: cases.length,
+    sessions: sessions.length,
+    payments: payments.length,
+    delays: delays.length,
+    parties: parties.length,
+    archives: archives.length,
+  };
 
   async function handleExport() {
     try {
-      await exportBackup();
+      const backupData = {
+        exportDate: new Date().toISOString(),
+        clients,
+        cases,
+        sessions,
+        payments,
+        delays,
+        parties,
+        archives,
+        settings,
+      };
+      const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `backup-${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
       toast.success('تم تصدير النسخة الاحتياطية بنجاح');
     } catch (err) {
       toast.error('حدث خطأ أثناء التصدير');
@@ -67,7 +100,75 @@ export function BackupManager() {
   async function handleImport(file: File) {
     try {
       setImporting(true);
-      await importBackup(file);
+      const text = await file.text();
+      const data = JSON.parse(text);
+
+      // استيراد البيانات عبر API
+      if (data.clients && Array.isArray(data.clients)) {
+        for (const client of data.clients) {
+          await fetch('/api/clients', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(client),
+          });
+        }
+      }
+      if (data.cases && Array.isArray(data.cases)) {
+        for (const caseItem of data.cases) {
+          await fetch('/api/cases', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(caseItem),
+          });
+        }
+      }
+      if (data.sessions && Array.isArray(data.sessions)) {
+        for (const session of data.sessions) {
+          await fetch('/api/sessions', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(session),
+          });
+        }
+      }
+      if (data.payments && Array.isArray(data.payments)) {
+        for (const payment of data.payments) {
+          await fetch('/api/payments', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payment),
+          });
+        }
+      }
+      if (data.delays && Array.isArray(data.delays)) {
+        for (const delay of data.delays) {
+          await fetch('/api/delays', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(delay),
+          });
+        }
+      }
+      if (data.parties && Array.isArray(data.parties)) {
+        for (const party of data.parties) {
+          await fetch('/api/parties', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(party),
+          });
+        }
+      }
+      if (data.archives && Array.isArray(data.archives)) {
+        for (const archive of data.archives) {
+          await fetch('/api/archives', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(archive),
+          });
+        }
+      }
+
+      await refreshAll();
       toast.success('تم استيراد النسخة الاحتياطية بنجاح');
       setImportConfirm(false);
       setSelectedFile(null);
@@ -79,23 +180,10 @@ export function BackupManager() {
     }
   }
 
-  async function handleTxtImport(files: FileList) {
-    try {
-      setTxtImporting(true);
-      const count = await importFromTxtFiles(files);
-      toast.success(`تم استيراد ${(count).toLocaleString('en-US')} ملف بنجاح`);
-    } catch (err) {
-      toast.error('حدث خطأ أثناء استيراد الملفات النصية');
-      console.error(err);
-    } finally {
-      setTxtImporting(false);
-    }
-  }
-
   async function handleReset() {
     try {
       setResetting(true);
-      await resetDatabase();
+      await seedDatabase();
       toast.success('تم إعادة تعيين قاعدة البيانات بنجاح');
       setResetConfirm(false);
       window.location.reload();
@@ -119,13 +207,13 @@ export function BackupManager() {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <StatBadge label="القضايا" count={stats?.cases ?? 0} />
-            <StatBadge label="الموكلون" count={stats?.clients ?? 0} />
-            <StatBadge label="الجلسات" count={stats?.sessions ?? 0} />
-            <StatBadge label="المدفوعات" count={stats?.payments ?? 0} />
-            <StatBadge label="التأجيلات" count={stats?.delays ?? 0} />
-            <StatBadge label="الأطراف" count={stats?.parties ?? 0} />
-            <StatBadge label="الأرشيف" count={stats?.archives ?? 0} />
+            <StatBadge label="القضايا" count={stats.cases} />
+            <StatBadge label="الموكلون" count={stats.clients} />
+            <StatBadge label="الجلسات" count={stats.sessions} />
+            <StatBadge label="المدفوعات" count={stats.payments} />
+            <StatBadge label="التأجيلات" count={stats.delays} />
+            <StatBadge label="الأطراف" count={stats.parties} />
+            <StatBadge label="الأرشيف" count={stats.archives} />
           </div>
           {lastBackupDate && (
             <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
@@ -165,7 +253,7 @@ export function BackupManager() {
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground mb-3">
-            استيراد بيانات من ملف JSON - سيتم استبدال جميع البيانات الحالية
+            استيراد بيانات من ملف JSON - سيتم إضافة البيانات المستوردة إلى البيانات الحالية
           </p>
           <div className="flex items-center gap-2">
             <input
@@ -189,41 +277,6 @@ export function BackupManager() {
         </CardContent>
       </Card>
 
-      {/* استيراد من ملفات نصية */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base flex items-center gap-2">
-            <FileText className="w-4 h-4 text-blue-500" />
-            استيراد من ملفات نصية
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground mb-3">
-            استيراد بيانات القضايا من ملفات .txt القديمة
-          </p>
-          <input
-            ref={txtInputRef}
-            type="file"
-            accept=".txt"
-            multiple
-            className="hidden"
-            onChange={(e) => {
-              if (e.target.files && e.target.files.length > 0) {
-                handleTxtImport(e.target.files);
-              }
-            }}
-          />
-          <Button
-            variant="outline"
-            onClick={() => txtInputRef.current?.click()}
-            disabled={txtImporting}
-          >
-            <FileText className="w-4 h-4 ml-2" />
-            {txtImporting ? 'جاري الاستيراد...' : 'اختيار ملفات TXT'}
-          </Button>
-        </CardContent>
-      </Card>
-
       {/* تأكيد الاستيراد */}
       <AlertDialog open={importConfirm} onOpenChange={setImportConfirm}>
         <AlertDialogContent dir="rtl">
@@ -233,7 +286,7 @@ export function BackupManager() {
               تأكيد الاستيراد
             </AlertDialogTitle>
             <AlertDialogDescription>
-              سيتم استبدال جميع البيانات الحالية بالبيانات المستوردة. هل أنت متأكد؟
+              سيتم إضافة البيانات المستوردة إلى البيانات الحالية. هل أنت متأكد؟
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
