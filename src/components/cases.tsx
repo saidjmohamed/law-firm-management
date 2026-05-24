@@ -266,6 +266,26 @@ export function Cases() {
     return Array.from(names).sort((a, b) => a.localeCompare(b));
   }, [lawyers, allParties]);
 
+  // قائمة أسماء الموكلين لاقتراحات الأطراف
+  const clientNameSuggestions = useMemo(() => {
+    const names = new Set<string>();
+    clients?.forEach((c: any) => { if (c.name?.trim()) names.add(c.name.trim()); });
+    // إضافة أسماء الأطراف من جميع القضايا
+    allParties?.forEach((p: any) => { if (p.name?.trim()) names.add(p.name.trim()); });
+    return Array.from(names).sort((a, b) => a.localeCompare(b));
+  }, [clients, allParties]);
+
+  // خريطة الموكلين حسب الاسم للبحث السريع
+  const clientByNameMap = useMemo(() => {
+    const map: Record<string, any> = {};
+    clients?.forEach((c: any) => {
+      if (c.name?.trim()) {
+        map[c.name.trim().toLowerCase()] = c;
+      }
+    });
+    return map;
+  }, [clients]);
+
   // الهيئات القضائية المفلترة حسب النوع والولاية
   const filteredBodies = useMemo(() => {
     if (!judicialBodies) return [];
@@ -494,6 +514,8 @@ export function Cases() {
           lawyerName: row.lawyerName,
           lawyerPhone: row.lawyerPhone,
         });
+        // إضافة تلقائية كموكل إذا لم يكن موجوداً
+        await ensureClientForParty(row);
       }
       for (const p of partiesToDelete) {
         await apiDeleteParty(p.id);
@@ -561,7 +583,7 @@ export function Cases() {
       });
       const caseId = result.id;
 
-      // إضافة الأطراف
+      // إضافة الأطراف + إضافة تلقائية للموكلين
       for (const party of parties) {
         if (party.name || party.role) {
           await createParty({
@@ -573,6 +595,8 @@ export function Cases() {
             lawyerName: party.lawyerName,
             lawyerPhone: party.lawyerPhone,
           });
+          // إضافة تلقائية كموكل إذا لم يكن موجوداً
+          await ensureClientForParty(party);
         }
       }
 
@@ -632,6 +656,66 @@ export function Cases() {
     } catch (error) {
       console.error('Save new client error:', error);
       toast.error('فشل في إضافة الموكل');
+    }
+  }
+
+  // إنشاء موكل جديد من داخل نموذج الأطراف
+  const [showPartyClientDialog, setShowPartyClientDialog] = useState(false);
+  const [partyClientData, setPartyClientData] = useState<{ name: string; phone: string; partyIdx: number | null }>({ name: '', phone: '', partyIdx: null });
+
+  function openPartyClientDialog(partyIdx: number) {
+    const party = parties[partyIdx];
+    setPartyClientData({
+      name: party?.name || '',
+      phone: party?.phone || '',
+      partyIdx,
+    });
+    setShowPartyClientDialog(true);
+  }
+
+  async function savePartyClient() {
+    if (!partyClientData.name?.trim()) {
+      toast.error('اسم الموكل مطلوب');
+      return;
+    }
+    try {
+      const result = await createClient({
+        name: partyClientData.name.trim(),
+        phone: partyClientData.phone || '',
+      });
+      // تحديث حقل الاسم والهاتف في الطرف
+      if (partyClientData.partyIdx !== null) {
+        const updated = [...parties];
+        updated[partyClientData.partyIdx] = {
+          ...updated[partyClientData.partyIdx],
+          name: partyClientData.name.trim(),
+          phone: partyClientData.phone || updated[partyClientData.partyIdx]?.phone || '',
+        };
+        setParties(updated);
+      }
+      setPartyClientData({ name: '', phone: '', partyIdx: null });
+      setShowPartyClientDialog(false);
+      toast.success('تم إضافة الموكل بنجاح');
+    } catch (error) {
+      console.error('Save party client error:', error);
+      toast.error('فشل في إضافة الموكل');
+    }
+  }
+
+  // إضافة تلقائية للموكل عند حفظ الطرف (إذا لم يكن موجوداً)
+  async function ensureClientForParty(party: PartyRow) {
+    if (!party.name?.trim()) return;
+    const nameLower = party.name.trim().toLowerCase();
+    // تحقق هل الموكل موجود بالفعل
+    if (clientByNameMap[nameLower]) return;
+    try {
+      await createClient({
+        name: party.name.trim(),
+        phone: party.phone || '',
+      });
+    } catch (error) {
+      // لا نوقف الحفظ إذا فشلت الإضافة التلقائية
+      console.error('Auto-create client error:', error);
     }
   }
 
@@ -1486,16 +1570,37 @@ export function Cases() {
                       </div>
                       <div>
                         <Label className="text-xs">الاسم</Label>
-                        <Input
-                          value={party.name || ''}
-                          onChange={(e) => {
-                            const updated = [...parties];
-                            updated[idx] = { ...updated[idx], name: e.target.value };
-                            setParties(updated);
-                          }}
-                          placeholder="الاسم واللقب"
-                          className="h-10"
-                        />
+                        <div className="flex gap-1">
+                          <ComboboxInput
+                            value={party.name || ''}
+                            onChange={(v) => {
+                              const updated = [...parties];
+                              updated[idx] = { ...updated[idx], name: v };
+                              // ملء الهاتف تلقائياً عند اختيار موكل موجود
+                              if (v && clientByNameMap[v.trim().toLowerCase()]) {
+                                const existingClient = clientByNameMap[v.trim().toLowerCase()];
+                                if (existingClient.phone && !updated[idx].phone) {
+                                  updated[idx] = { ...updated[idx], phone: existingClient.phone };
+                                }
+                              }
+                              setParties(updated);
+                            }}
+                            suggestions={clientNameSuggestions}
+                            placeholder="ابدأ بكتابة الاسم..."
+                            addLabel="كطرف"
+                            className="h-10"
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
+                            className="h-10 w-10 shrink-0"
+                            onClick={() => openPartyClientDialog(idx)}
+                            title="إضافة موكل جديد"
+                          >
+                            <UserPlus className="w-4 h-4" />
+                          </Button>
+                        </div>
                       </div>
                       <div>
                         <Label className="text-xs">الهاتف</Label>
@@ -1669,6 +1774,42 @@ export function Cases() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowNewClientDialog(false)}>إلغاء</Button>
             <Button onClick={saveNewClient} className="bg-teal-600 hover:bg-teal-700">حفظ</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* حوار إضافة موكل جديد من نموذج الأطراف */}
+      <Dialog open={showPartyClientDialog} onOpenChange={setShowPartyClientDialog}>
+        <DialogContent className="max-w-sm" dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="text-base font-bold flex items-center gap-2">
+              <UserPlus className="w-4 h-4" />
+              إضافة موكل جديد
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <Label className="text-xs">الاسم واللقب <span className="text-destructive">*</span></Label>
+              <Input
+                value={partyClientData.name}
+                onChange={(e) => setPartyClientData({ ...partyClientData, name: e.target.value })}
+                placeholder="الاسم واللقب"
+                className="h-11"
+              />
+            </div>
+            <div>
+              <Label className="text-xs">الهاتف</Label>
+              <Input
+                value={partyClientData.phone}
+                onChange={(e) => setPartyClientData({ ...partyClientData, phone: e.target.value })}
+                placeholder="رقم الهاتف"
+                className="h-11"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowPartyClientDialog(false)}>إلغاء</Button>
+            <Button onClick={savePartyClient} className="bg-teal-600 hover:bg-teal-700">إضافة الموكل</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
