@@ -10,6 +10,8 @@ interface ComboboxInputProps {
   suggestions: string[];
   placeholder?: string;
   className?: string;
+  /** نص زر الإضافة عند عدم وجود تطابق، افتراضي: "كنقابة جديدة" */
+  addLabel?: string;
 }
 
 export function ComboboxInput({
@@ -18,6 +20,7 @@ export function ComboboxInput({
   suggestions,
   placeholder,
   className,
+  addLabel = 'كنقابة جديدة',
 }: ComboboxInputProps) {
   const [open, setOpen] = useState(false);
   const [filtered, setFiltered] = useState<string[]>([]);
@@ -48,6 +51,9 @@ export function ComboboxInput({
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  // نص زر الإضافة
+  const addButtonText = `إضافة "${value.trim()}" ${addLabel}`;
 
   return (
     <div ref={containerRef} className="relative">
@@ -116,7 +122,7 @@ export function ComboboxInput({
                   setOpen(false);
                 }}
               >
-                إضافة &quot;{value.trim()}&quot; كنقابة جديدة
+                {addButtonText}
               </button>
             )}
         </div>
@@ -134,7 +140,7 @@ export function ComboboxInput({
               setOpen(false);
             }}
           >
-            إضافة &quot;{value.trim()}&quot; كنقابة جديدة
+            {addButtonText}
           </button>
         </div>
       )}

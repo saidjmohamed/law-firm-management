@@ -6,13 +6,9 @@ import { AppShell } from '@/components/app-shell';
 import { Dashboard } from '@/components/dashboard';
 import { Clients } from '@/components/clients';
 import { Cases } from '@/components/cases';
-
-import { CalendarView } from '@/components/calendar';
 import { CourtsManager } from '@/components/courts';
 import { Lawyers } from '@/components/lawyers';
 import { PaymentsManager } from '@/components/payments';
-
-import { ArchivesManager } from '@/components/archives';
 import { BackupManager } from '@/components/backup';
 import { SettingsManager } from '@/components/settings';
 
@@ -98,11 +94,9 @@ function AppContent() {
     dashboard: <Dashboard />,
     clients: <Clients />,
     cases: <Cases />,
-    calendar: <CalendarView />,
     courts: <CourtsManager />,
     lawyers: <Lawyers />,
     payments: <PaymentsManager />,
-    archives: <ArchivesManager />,
     backup: <BackupManager />,
     settings: <SettingsManager />,
   };

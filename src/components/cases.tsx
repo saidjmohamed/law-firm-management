@@ -2,11 +2,12 @@
 
 import React, { useState, useMemo } from 'react';
 import { Calendar as CalendarIcon } from 'lucide-react';
-import { useCases, useClients, useParties, useDelays, useSessions, useJudicialBodies, createCase, updateCase, deleteCase as apiDeleteCase, createParty, updateParty as apiUpdateParty, deleteParty as apiDeleteParty, createDelay, updateDelay as apiUpdateDelay, deleteDelay as apiDeleteDelay, createClient, createJudicialBody, createArchive } from '@/lib/api';
+import { useCases, useClients, useParties, useDelays, useSessions, useJudicialBodies, useLawyers, createCase, updateCase, deleteCase as apiDeleteCase, createParty, updateParty as apiUpdateParty, deleteParty as apiDeleteParty, createDelay, updateDelay as apiUpdateDelay, deleteDelay as apiDeleteDelay, createClient, createJudicialBody, createArchive } from '@/lib/api';
 import { formatCurrency, STATUS_COLORS, CASE_NATURES, CASE_STATUSES, LITIGATION_STAGES, PARTY_ROLES, JUDICIAL_CHAMBERS, WILAYAS, JUDICIARY_TYPES, ORDINARY_COURT_LEVELS, ADMIN_COURT_LEVELS, CHAMBER_NUMBERS, formatDate } from '@/lib/constants';
 import { CasePrintButton } from '@/components/case-print';
 import { CaseAnnouncementButton } from '@/components/case-announcement';
 import { SelectWithCustom } from '@/components/ui/select-with-custom';
+import { ComboboxInput } from '@/components/ui/combobox-input';
 import { useAppStore } from '@/lib/store';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -254,6 +255,16 @@ export function Cases() {
   const { delays: allDelays } = useDelays();
   const { judicialBodies, isLoading: bodiesLoading } = useJudicialBodies();
   const { sessions: allSessions } = useSessions();
+  const { lawyers } = useLawyers();
+
+  // قائمة أسماء المحامين للاكمال التراكمي
+  const lawyerNameSuggestions = useMemo(() => {
+    const names = new Set<string>();
+    lawyers?.forEach((l: any) => { if (l.name?.trim()) names.add(l.name.trim()); });
+    // إضافة أسماء محامي الأطراف من القضايا
+    allParties?.forEach((p: any) => { if (p.lawyerName?.trim()) names.add(p.lawyerName.trim()); });
+    return Array.from(names).sort((a, b) => a.localeCompare(b));
+  }, [lawyers, allParties]);
 
   // الهيئات القضائية المفلترة حسب النوع والولاية
   const filteredBodies = useMemo(() => {
@@ -1164,29 +1175,7 @@ export function Cases() {
                     className="h-11"
                   />
                 </div>
-                <div>
-                  <div className="flex items-center justify-between">
-                    <Label className="text-xs">الموكل</Label>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-6 text-xs text-teal-600 hover:text-teal-700 px-1"
-                      onClick={() => { setNewClientData({}); setShowNewClientDialog(true); }}
-                    >
-                      <UserPlus className="w-3 h-3 ml-0.5" />
-                      موكل جديد
-                    </Button>
-                  </div>
-                  <Select value={formData.clientId?.toString() || '_empty'} onValueChange={(v) => setFormData({ ...formData, clientId: v === '_empty' ? undefined : Number(v) })}>
-                    <SelectTrigger className="h-11"><SelectValue placeholder="اختر الموكل" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="_empty">— بدون موكل —</SelectItem>
-                      {clients?.sort((a, b) => (a.name || '').localeCompare(b.name || '')).map((cl) => (
-                        <SelectItem key={cl.id} value={cl.id!.toString()}>{cl.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+
               </div>
             </div>
 
@@ -1523,14 +1512,16 @@ export function Cases() {
                       </div>
                       <div>
                         <Label className="text-xs">اسم المحامي</Label>
-                        <Input
+                        <ComboboxInput
                           value={party.lawyerName || ''}
-                          onChange={(e) => {
+                          onChange={(v) => {
                             const updated = [...parties];
-                            updated[idx] = { ...updated[idx], lawyerName: e.target.value };
+                            updated[idx] = { ...updated[idx], lawyerName: v };
                             setParties(updated);
                           }}
-                          placeholder="اسم المحامي"
+                          suggestions={lawyerNameSuggestions}
+                          placeholder="ابدأ بكتابة اسم المحامي..."
+                          addLabel="كاسم محامي"
                           className="h-10"
                         />
                       </div>

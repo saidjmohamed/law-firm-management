@@ -4,7 +4,7 @@ import React from 'react';
 import { useSettings, getSettingValue } from '@/lib/api';
 import { WILAYAS, formatDate } from '@/lib/constants';
 import { Button } from '@/components/ui/button';
-import { FileText, Printer } from 'lucide-react';
+import { Printer } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface Case {
@@ -109,45 +109,45 @@ export function CasePrintButton({ caseData, parties, delays, sessions }: CasePri
         !inFavorParties.includes(p) && !againstParties.includes(p)
       );
 
-      // بناء صفوف الأطراف
-      function buildPartyRows(partyList: Party[], bgColor: string) {
+      // بناء صفوف الأطراف — Monochrome
+      function buildPartyRows(partyList: Party[]) {
         if (partyList.length === 0) return '';
         return partyList.map(p => `
           <tr>
-            <td style="padding:6px 10px;border:1px solid #d1d5db;font-size:11px;background:${bgColor};">${p.name || '—'}</td>
-            <td style="padding:6px 10px;border:1px solid #d1d5db;font-size:11px;text-align:center;">${p.role || '—'}</td>
-            <td style="padding:6px 10px;border:1px solid #d1d5db;font-size:11px;text-align:center;">${p.phone || '—'}</td>
-            <td style="padding:6px 10px;border:1px solid #d1d5db;font-size:11px;text-align:center;">${p.lawyerName || '—'}</td>
-            <td style="padding:6px 10px;border:1px solid #d1d5db;font-size:11px;text-align:center;">${p.lawyerPhone || '—'}</td>
+            <td style="padding:6px 10px;border:1px solid #333;font-size:11px;font-weight:600;">${p.name || '—'}</td>
+            <td style="padding:6px 10px;border:1px solid #333;font-size:11px;text-align:center;">${p.role || '—'}</td>
+            <td style="padding:6px 10px;border:1px solid #333;font-size:11px;text-align:center;">${p.phone || '—'}</td>
+            <td style="padding:6px 10px;border:1px solid #333;font-size:11px;text-align:center;">${p.lawyerName || '—'}</td>
+            <td style="padding:6px 10px;border:1px solid #333;font-size:11px;text-align:center;">${p.lawyerPhone || '—'}</td>
           </tr>
         `).join('');
       }
 
-      const inFavorRows = buildPartyRows(inFavorParties, '#f0fdf4');
-      const againstRows = buildPartyRows(againstParties, '#fef2f2');
-      const otherRows = buildPartyRows(otherParties, '#f9fafb');
+      const inFavorRows = buildPartyRows(inFavorParties);
+      const againstRows = buildPartyRows(againstParties);
+      const otherRows = buildPartyRows(otherParties);
 
       // بناء التأجيلات
       function buildDelayRows() {
-        if (delays.length === 0) return '<tr><td colspan="3" style="padding:8px;text-align:center;color:#9ca3af;font-size:11px;">لا توجد تأجيلات</td></tr>';
+        if (delays.length === 0) return '<tr><td colspan="3" style="padding:8px;text-align:center;color:#666;font-size:11px;">لا توجد تأجيلات</td></tr>';
         return delays.map((d, i) => `
           <tr>
-            <td style="padding:5px 10px;border:1px solid #d1d5db;font-size:11px;text-align:center;width:40px;background:#f9fafb;">${i + 1}</td>
-            <td style="padding:5px 10px;border:1px solid #d1d5db;font-size:11px;text-align:center;width:120px;">${formatDate(d.delayDate)}</td>
-            <td style="padding:5px 10px;border:1px solid #d1d5db;font-size:11px;">${d.reason || '—'}</td>
+            <td style="padding:5px 10px;border:1px solid #333;font-size:11px;text-align:center;width:40px;">${i + 1}</td>
+            <td style="padding:5px 10px;border:1px solid #333;font-size:11px;text-align:center;width:120px;">${formatDate(d.delayDate)}</td>
+            <td style="padding:5px 10px;border:1px solid #333;font-size:11px;">${d.reason || '—'}</td>
           </tr>
         `).join('');
       }
 
       // بناء الجلسات
       function buildSessionRows() {
-        if (sessions.length === 0) return '<tr><td colspan="4" style="padding:8px;text-align:center;color:#9ca3af;font-size:11px;">لا توجد جلسات</td></tr>';
+        if (sessions.length === 0) return '<tr><td colspan="4" style="padding:8px;text-align:center;color:#666;font-size:11px;">لا توجد جلسات</td></tr>';
         return sessions.map((s, i) => `
           <tr>
-            <td style="padding:5px 10px;border:1px solid #d1d5db;font-size:11px;text-align:center;width:40px;background:#f9fafb;">${i + 1}</td>
-            <td style="padding:5px 10px;border:1px solid #d1d5db;font-size:11px;text-align:center;width:120px;">${formatDate(s.date)}</td>
-            <td style="padding:5px 10px;border:1px solid #d1d5db;font-size:11px;text-align:center;">${s.court || s.chamber || '—'}</td>
-            <td style="padding:5px 10px;border:1px solid #d1d5db;font-size:11px;">${s.notes || s.result || '—'}</td>
+            <td style="padding:5px 10px;border:1px solid #333;font-size:11px;text-align:center;width:40px;">${i + 1}</td>
+            <td style="padding:5px 10px;border:1px solid #333;font-size:11px;text-align:center;width:120px;">${formatDate(s.date)}</td>
+            <td style="padding:5px 10px;border:1px solid #333;font-size:11px;text-align:center;">${s.court || s.chamber || '—'}</td>
+            <td style="padding:5px 10px;border:1px solid #333;font-size:11px;">${s.notes || s.result || '—'}</td>
           </tr>
         `).join('');
       }
@@ -170,10 +170,12 @@ export function CasePrintButton({ caseData, parties, delays, sessions }: CasePri
     body {
       font-family: 'Segoe UI', Tahoma, 'Noto Sans Arabic', Arial, sans-serif;
       direction: rtl;
-      color: #1f2937;
+      color: #000;
       font-size: 12px;
       line-height: 1.6;
       background: #fff;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
     }
 
     /* الديباجة */
@@ -181,23 +183,23 @@ export function CasePrintButton({ caseData, parties, delays, sessions }: CasePri
       text-align: center;
       margin-bottom: 16px;
       padding-bottom: 12px;
-      border-bottom: 2.5px double #0f766e;
+      border-bottom: 3px double #000;
     }
     .letterhead h1 {
       font-size: 18px;
-      font-weight: bold;
-      color: #0f766e;
+      font-weight: 900;
+      color: #000;
       margin-bottom: 2px;
     }
     .letterhead h2 {
       font-size: 13px;
-      font-weight: normal;
-      color: #374151;
+      font-weight: 700;
+      color: #000;
       margin-bottom: 4px;
     }
     .letterhead .contact {
       font-size: 10px;
-      color: #6b7280;
+      color: #333;
       line-height: 1.7;
     }
     .letterhead .contact span {
@@ -209,21 +211,20 @@ export function CasePrintButton({ caseData, parties, delays, sessions }: CasePri
     .case-title {
       text-align: center;
       font-size: 15px;
-      font-weight: bold;
-      color: #0f766e;
+      font-weight: 900;
+      color: #000;
       margin-bottom: 14px;
       padding: 8px 0;
-      background: linear-gradient(to left, #f0fdfa, #fff, #f0fdfa);
-      border-top: 1px solid #99f6e4;
-      border-bottom: 1px solid #99f6e4;
+      border-top: 2px solid #000;
+      border-bottom: 2px solid #000;
     }
 
     /* عناوين الأقسام */
     .section-title {
       font-size: 12px;
-      font-weight: bold;
+      font-weight: 900;
       color: #fff;
-      background: #0f766e;
+      background: #000;
       padding: 5px 12px;
       margin-bottom: 6px;
       margin-top: 14px;
@@ -238,41 +239,41 @@ export function CasePrintButton({ caseData, parties, delays, sessions }: CasePri
       margin-bottom: 6px;
     }
     th {
-      background: #0f766e;
+      background: #000;
       color: #fff;
-      font-weight: bold;
+      font-weight: 900;
       padding: 6px 10px;
       text-align: center;
       font-size: 10px;
     }
     .info-table td {
-      border: 1px solid #d1d5db;
+      border: 1px solid #333;
       padding: 5px 10px;
       font-size: 11px;
       vertical-align: middle;
     }
     .info-table td:first-child {
-      font-weight: bold;
-      color: #0f766e;
+      font-weight: 800;
+      color: #000;
       width: 24%;
-      background: #f0fdfa;
+      background: #e5e5e5;
       font-size: 10px;
     }
     .info-table td:nth-child(2) {
       width: 26%;
     }
     .info-table td:nth-child(3) {
-      font-weight: bold;
-      color: #0f766e;
+      font-weight: 800;
+      color: #000;
       width: 24%;
-      background: #f0fdfa;
+      background: #e5e5e5;
       font-size: 10px;
     }
 
     /* تسمية الأطراف */
     .party-label {
       font-size: 11px;
-      font-weight: bold;
+      font-weight: 900;
       padding: 3px 10px;
       margin-top: 8px;
       margin-bottom: 2px;
@@ -280,13 +281,13 @@ export function CasePrintButton({ caseData, parties, delays, sessions }: CasePri
       border-radius: 3px 3px 0 0;
       color: #fff;
     }
-    .party-favor { background: #059669; }
-    .party-against { background: #dc2626; }
-    .party-other { background: #6b7280; }
+    .party-favor { background: #333; }
+    .party-against { background: #000; }
+    .party-other { background: #666; }
 
     /* منطوق الحكم */
     .judgment-box {
-      border: 1px solid #d1d5db;
+      border: 2px solid #000;
       border-radius: 4px;
       padding: 10px;
       margin-top: 6px;
@@ -294,18 +295,20 @@ export function CasePrintButton({ caseData, parties, delays, sessions }: CasePri
       white-space: pre-wrap;
       line-height: 1.8;
       font-size: 11px;
-      background: #fefce8;
+      font-weight: 600;
+      background: #f5f5f5;
     }
 
     /* تذييل */
     .footer {
       margin-top: 20px;
       padding-top: 8px;
-      border-top: 1px solid #e5e7eb;
+      border-top: 1px solid #000;
       display: flex;
       justify-content: space-between;
       font-size: 9px;
-      color: #9ca3af;
+      color: #333;
+      font-weight: 600;
     }
 
     @media print {
@@ -419,7 +422,7 @@ export function CasePrintButton({ caseData, parties, delays, sessions }: CasePri
     <tbody>${otherRows}</tbody>
   </table>` : ''}
 
-  ${parties.length === 0 ? '<p style="color:#9ca3af;font-size:11px;padding:4px 0;">لا توجد أطراف مسجلة</p>' : ''}
+  ${parties.length === 0 ? '<p style="color:#666;font-size:11px;padding:4px 0;">لا توجد أطراف مسجلة</p>' : ''}
 
   <!-- تأجيلات الجلسات -->
   <div class="section-title">تأجيلات الجلسات</div>
@@ -457,7 +460,7 @@ export function CasePrintButton({ caseData, parties, delays, sessions }: CasePri
   <!-- ملاحظات -->
   ${caseData.notes ? `
   <div class="section-title">ملاحظات</div>
-  <div style="border:1px solid #d1d5db;border-radius:4px;padding:8px;margin-top:6px;font-size:11px;white-space:pre-wrap;line-height:1.8;background:#f9fafb;">${caseData.notes}</div>` : ''}
+  <div style="border:2px solid #000;border-radius:4px;padding:8px;margin-top:6px;font-size:11px;white-space:pre-wrap;line-height:1.8;font-weight:600;background:#f5f5f5;">${caseData.notes}</div>` : ''}
 
   <!-- تذييل -->
   <div class="footer">

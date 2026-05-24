@@ -4,11 +4,9 @@ type Section =
   | 'dashboard'
   | 'clients'
   | 'cases'
-  | 'calendar'
   | 'payments'
   | 'lawyers'
   | 'courts'
-  | 'archives'
   | 'backup'
   | 'settings';
 
