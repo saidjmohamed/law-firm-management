@@ -59,7 +59,7 @@ interface Lawyer {
   phone2?: string;
   email?: string;
   address?: string;
-  wilaya?: number;
+  wilaya?: number | null;
   barNumber?: string;
   barAssociation?: string;
   specialty?: string;
@@ -146,27 +146,27 @@ export function Lawyers() {
   }
 
   async function saveLawyer() {
-    const now = new Date();
-
-    if (editingLawyer?.id) {
-      await updateLawyer(editingLawyer.id, {
-        ...formData,
-        updatedAt: now,
-      });
-      toast.success('تم تحديث المحامي بنجاح');
-    } else {
-      await createLawyer({
-        ...formData,
-        barAssociation: formData.barAssociation?.trim() || null,
-        source: 'manual',
-        createdAt: now,
-        updatedAt: now,
-      });
-      toast.success('تم إضافة المحامي بنجاح');
+    try {
+      const now = new Date();
+      if (editingLawyer?.id) {
+        await updateLawyer(editingLawyer.id, { ...formData, updatedAt: now });
+        toast.success('تم تحديث المحامي بنجاح');
+      } else {
+        await createLawyer({
+          ...formData,
+          barAssociation: formData.barAssociation?.trim() || null,
+          source: 'manual',
+          createdAt: now,
+          updatedAt: now,
+        });
+        toast.success('تم إضافة المحامي بنجاح');
+      }
+      setShowForm(false);
+      resetForm();
+    } catch (error) {
+      console.error('Save lawyer error:', error);
+      toast.error('فشل في حفظ المحامي');
     }
-
-    setShowForm(false);
-    resetForm();
   }
 
   async function handleDeleteLawyer(id: number) {
@@ -182,6 +182,130 @@ export function Lawyers() {
     const wilayaName = WILAYAS.find((w) => w.code === viewingLawyer.wilaya)?.name;
 
     return (
+      <>
+      {/* نافذة إضافة/تعديل — موجودة دائماً */}
+      <Dialog open={showForm} onOpenChange={(open) => { setShowForm(open); if (!open) resetForm(); }}>
+        <DialogContent className="max-w-lg" dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-extrabold">
+              {editingLawyer ? 'تعديل المحامي' : 'إضافة محامي جديد'}
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-3">
+            <div>
+              <Label className="text-xs">الاسم واللقب *</Label>
+              <Input
+                value={formData.name || ''}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                placeholder="الاسم واللقب"
+                className="h-11"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className="text-xs">الهاتف</Label>
+                <Input
+                  value={formData.phone || ''}
+                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  placeholder="رقم الهاتف"
+                  className="h-11"
+                />
+              </div>
+              <div>
+                <Label className="text-xs">هاتف ثاني</Label>
+                <Input
+                  value={formData.phone2 || ''}
+                  onChange={(e) => setFormData({ ...formData, phone2: e.target.value })}
+                  placeholder="رقم هاتف ثاني"
+                  className="h-11"
+                />
+              </div>
+            </div>
+            <div>
+              <Label className="text-xs">البريد الإلكتروني</Label>
+              <Input
+                value={formData.email || ''}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                placeholder="البريد الإلكتروني"
+                className="h-11"
+                type="email"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className="text-xs">رقم القيد في النقابة</Label>
+                <Input
+                  value={formData.barNumber || ''}
+                  onChange={(e) => setFormData({ ...formData, barNumber: e.target.value })}
+                  placeholder="رقم القيد"
+                  className="h-11"
+                />
+              </div>
+              <div>
+                <Label className="text-xs">التخصص</Label>
+                <Select value={formData.specialty || ''} onValueChange={(v) => setFormData({ ...formData, specialty: v })}>
+                  <SelectTrigger className="h-11"><SelectValue placeholder="اختر التخصص" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="محام لدى المجلس">محام لدى المجلس</SelectItem>
+                    <SelectItem value="محام معتمد">محام معتمد</SelectItem>
+                    <SelectItem value="محام مسجل">محام مسجل</SelectItem>
+                    <SelectItem value="محام متدرب">محام متدرب</SelectItem>
+                    <SelectItem value="أخرى">أخرى</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div>
+              <Label className="text-xs">النقابة</Label>
+              <ComboboxInput
+                value={formData.barAssociation || ''}
+                onChange={(v) => setFormData({ ...formData, barAssociation: v })}
+                suggestions={barAssociations}
+                placeholder="مثال: نقابة قسنطينة..."
+              />
+            </div>
+            <div>
+              <Label className="text-xs">الولاية</Label>
+              <Select value={formData.wilaya ? String(formData.wilaya) : '0'} onValueChange={(v) => setFormData({ ...formData, wilaya: v === '0' ? null : Number(v) })}>
+                <SelectTrigger className="h-11"><SelectValue placeholder="اختر الولاية" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="0">—</SelectItem>
+                  {WILAYAS.map((w) => (
+                    <SelectItem key={w.code} value={w.code.toString()}>{w.code.toLocaleString('en-US')} - {w.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-xs">العنوان</Label>
+              <Input
+                value={formData.address || ''}
+                onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                placeholder="العنوان"
+                className="h-11"
+              />
+            </div>
+            <div>
+              <Label className="text-xs">ملاحظات</Label>
+              <Textarea
+                value={formData.notes || ''}
+                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                placeholder="ملاحظات إضافية"
+                rows={2}
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setShowForm(false); resetForm(); }}>إلغاء</Button>
+            <Button onClick={saveLawyer} className="bg-indigo-600 hover:bg-indigo-700" disabled={!formData.name?.trim()}>
+              حفظ
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <div className="space-y-4">
         <div className="flex items-center gap-2">
           <Button variant="ghost" size="sm" onClick={() => setViewingLawyer(null)} className="touch-target">
@@ -314,6 +438,7 @@ export function Lawyers() {
           </AlertDialogContent>
         </AlertDialog>
       </div>
+      </>
     );
   }
 
@@ -501,7 +626,7 @@ export function Lawyers() {
             </div>
             <div>
               <Label className="text-xs">الولاية</Label>
-              <Select value={formData.wilaya?.toString() || ''} onValueChange={(v) => setFormData({ ...formData, wilaya: v ? Number(v) : undefined })}>
+              <Select value={formData.wilaya ? String(formData.wilaya) : '0'} onValueChange={(v) => setFormData({ ...formData, wilaya: v === '0' ? null : Number(v) })}>
                 <SelectTrigger className="h-11"><SelectValue placeholder="اختر الولاية" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="0">—</SelectItem>

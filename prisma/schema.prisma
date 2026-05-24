@@ -91,6 +91,7 @@ model Party {
   caseId      Int
   case        Case     @relation(fields: [caseId], references: [id], onDelete: Cascade)
   role        String?  @default("")
+  side        String?  @default("for")  // 'for' = في حقه | 'against' = ضده
   name        String?  @default("")
   phone       String?  @default("")
   lawyerName  String?  @default("")
@@ -208,4 +209,17 @@ model JudicialBody {
 model Setting {
   key   String @id
   value String @default("")
+}
+
+// ============================================================================
+// الخيارات المخصصة
+// ============================================================================
+model CustomOption {
+  id        Int      @id @default(autoincrement())
+  field     String
+  value     String
+  label     String
+  createdAt DateTime @default(now())
+
+  @@unique([field, value])
 }

@@ -55,7 +55,7 @@ function SidebarContent({ activeSection, onNavigate }: { activeSection: Section;
       router.push('/login');
       router.refresh();
     } catch {
-      // تجاهل الأخطاء
+      window.location.href = '/login';
     }
   };
 

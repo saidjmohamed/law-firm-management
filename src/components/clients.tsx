@@ -54,7 +54,7 @@ interface Client {
   phone?: string;
   phone2?: string;
   address?: string;
-  wilaya?: number;
+  wilaya?: number | null;
   nationalId?: string;
   notes?: string;
   createdAt?: Date;
@@ -137,25 +137,21 @@ export function Clients() {
   }
 
   async function saveClient() {
-    const now = new Date();
-
-    if (editingClient?.id) {
-      await updateClient(editingClient.id, {
-        ...formData,
-        updatedAt: now,
-      });
-      toast.success('تم تحديث الموكل بنجاح');
-    } else {
-      await createClient({
-        ...formData,
-        createdAt: now,
-        updatedAt: now,
-      });
-      toast.success('تم إضافة الموكل بنجاح');
+    try {
+      const now = new Date();
+      if (editingClient?.id) {
+        await updateClient(editingClient.id, { ...formData, updatedAt: now });
+        toast.success('تم تحديث الموكل بنجاح');
+      } else {
+        await createClient({ ...formData, createdAt: now, updatedAt: now });
+        toast.success('تم إضافة الموكل بنجاح');
+      }
+      setShowForm(false);
+      resetForm();
+    } catch (error) {
+      console.error('Save client error:', error);
+      toast.error('فشل في حفظ الموكل');
     }
-
-    setShowForm(false);
-    resetForm();
   }
 
   async function handleDeleteClient(id: number) {
@@ -172,6 +168,92 @@ export function Clients() {
     const wilayaName = WILAYAS.find((w) => w.code === viewingClient.wilaya)?.name;
 
     return (
+      <>
+      {/* نافذة إضافة/تعديل — موجودة دائماً */}
+      <Dialog open={showForm} onOpenChange={(open) => { setShowForm(open); if (!open) resetForm(); }}>
+        <DialogContent className="max-w-lg" dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-extrabold">{editingClient ? 'تعديل الموكل' : 'إضافة موكل جديد'}</DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-3">
+            <div>
+              <Label className="text-xs">الاسم واللقب</Label>
+              <Input
+                value={formData.name || ''}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                placeholder="الاسم واللقب"
+                className="h-11"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className="text-xs">الهاتف</Label>
+                <Input
+                  value={formData.phone || ''}
+                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  placeholder="رقم الهاتف"
+                  className="h-11"
+                />
+              </div>
+              <div>
+                <Label className="text-xs">هاتف ثاني</Label>
+                <Input
+                  value={formData.phone2 || ''}
+                  onChange={(e) => setFormData({ ...formData, phone2: e.target.value })}
+                  placeholder="رقم هاتف ثاني"
+                  className="h-11"
+                />
+              </div>
+            </div>
+            <div>
+              <Label className="text-xs">الولاية</Label>
+              <Select value={formData.wilaya ? String(formData.wilaya) : '0'} onValueChange={(v) => setFormData({ ...formData, wilaya: v === '0' ? null : Number(v) })}>
+                <SelectTrigger className="h-11"><SelectValue placeholder="اختر الولاية" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="0">—</SelectItem>
+                  {WILAYAS.map((w) => (
+                    <SelectItem key={w.code} value={w.code.toString()}>{(w.code).toLocaleString('en-US')} - {w.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-xs">العنوان</Label>
+              <Input
+                value={formData.address || ''}
+                onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                placeholder="العنوان"
+                className="h-11"
+              />
+            </div>
+            <div>
+              <Label className="text-xs">رقم الهوية</Label>
+              <Input
+                value={formData.nationalId || ''}
+                onChange={(e) => setFormData({ ...formData, nationalId: e.target.value })}
+                placeholder="رقم بطاقة الهوية"
+                className="h-11"
+              />
+            </div>
+            <div>
+              <Label className="text-xs">ملاحظات</Label>
+              <Textarea
+                value={formData.notes || ''}
+                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                placeholder="ملاحظات إضافية"
+                rows={2}
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setShowForm(false); resetForm(); }}>إلغاء</Button>
+            <Button onClick={saveClient} className="bg-teal-600 hover:bg-teal-700">حفظ</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <div className="space-y-4">
         <div className="flex items-center gap-2">
           <Button variant="ghost" size="sm" onClick={() => setViewingClient(null)} className="touch-target">
@@ -294,6 +376,7 @@ export function Clients() {
           </AlertDialogContent>
         </AlertDialog>
       </div>
+      </>
     );
   }
 
@@ -416,7 +499,7 @@ export function Clients() {
             </div>
             <div>
               <Label className="text-xs">الولاية</Label>
-              <Select value={formData.wilaya?.toString() || ''} onValueChange={(v) => setFormData({ ...formData, wilaya: v ? Number(v) : undefined })}>
+              <Select value={formData.wilaya ? String(formData.wilaya) : '0'} onValueChange={(v) => setFormData({ ...formData, wilaya: v === '0' ? null : Number(v) })}>
                 <SelectTrigger className="h-11"><SelectValue placeholder="اختر الولاية" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="0">—</SelectItem>

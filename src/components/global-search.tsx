@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { useCases, useClients, useSessions, useJudicialBodies } from '@/lib/api';
+import { useCases, useClients, useSessions, useJudicialBodies, useLawyers } from '@/lib/api';
 import { useAppStore, type Section } from '@/lib/store';
 import { formatDate } from '@/lib/constants';
 import {
@@ -21,6 +21,7 @@ import {
   Banknote,
   Clock,
   Search,
+  BookOpen,
 } from 'lucide-react';
 
 export function GlobalSearch() {
@@ -31,6 +32,7 @@ export function GlobalSearch() {
   const { clients, isLoading: clientsLoading } = useClients();
   const { sessions } = useSessions();
   const { judicialBodies: courts } = useJudicialBodies();
+  const { lawyers } = useLawyers();
 
   // Ctrl+K
   useEffect(() => {
@@ -55,6 +57,8 @@ export function GlobalSearch() {
       setActiveSection('sessions');
     } else if (type === 'court') {
       setActiveSection('courts');
+    } else if (type === 'lawyer') {
+      setActiveSection('lawyers');
     }
   }, [setActiveSection, setSelectedCaseId]);
 
@@ -106,6 +110,16 @@ export function GlobalSearch() {
     }));
   }, [courts]);
 
+  // بناء عناصر المحامين للبحث
+  const lawyerItems = useMemo(() => {
+    return lawyers.map((l: any) => ({
+      id: l.id!,
+      value: `${l.name || ''} ${l.phone || ''} ${l.barNumber || ''} ${l.barAssociation || ''} ${l.specialty || ''}`,
+      title: l.name || '—',
+      subtitle: `${l.specialty || ''}${l.barAssociation ? ` | ${l.barAssociation}` : ''}`,
+    }));
+  }, [lawyers]);
+
   // وصول سريع
   const quickItems: { label: string; section: Section; icon: React.ElementType; keywords: string }[] = [
     { label: 'القضايا', section: 'cases', icon: Briefcase, keywords: 'قضية قضايا' },
@@ -114,6 +128,7 @@ export function GlobalSearch() {
     { label: 'الهيئات القضائية', section: 'courts', icon: Scale, keywords: 'محكمة مجلس هيئة' },
     { label: 'المدفوعات', section: 'payments', icon: Banknote, keywords: 'دفع مدفوعات أتعاب' },
     { label: 'التأجيلات', section: 'delays', icon: Clock, keywords: 'تأجيل تأجيلات' },
+    { label: 'المحامون', section: 'lawyers', icon: BookOpen, keywords: 'محامي محامون نقابة دفتر' },
   ];
 
   return (
@@ -218,6 +233,28 @@ export function GlobalSearch() {
                     )}
                   </div>
                   <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded shrink-0">هيئة</span>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          )}
+
+          {/* المحامون */}
+          {lawyerItems.length > 0 && (
+            <CommandGroup heading="المحامون">
+              {lawyerItems.slice(0, 10).map(item => (
+                <CommandItem
+                  key={`lawyer-${item.id}`}
+                  value={item.value}
+                  onSelect={() => { setOpen(false); setActiveSection('lawyers'); }}
+                >
+                  <Scale className="w-4 h-4 ml-2 shrink-0 text-indigo-600" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium truncate">{item.title}</p>
+                    {item.subtitle && (
+                      <p className="text-xs text-muted-foreground truncate">{item.subtitle}</p>
+                    )}
+                  </div>
+                  <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded shrink-0">محامي</span>
                 </CommandItem>
               ))}
             </CommandGroup>

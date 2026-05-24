@@ -5,6 +5,7 @@ import { useCases, useClients, useParties, useDelays, useSessions, useJudicialBo
 import { formatCurrency, STATUS_COLORS, CASE_NATURES, CASE_STATUSES, LITIGATION_STAGES, PARTY_ROLES, JUDICIAL_CHAMBERS, WILAYAS, JUDICIARY_TYPES, ORDINARY_COURT_LEVELS, ADMIN_COURT_LEVELS, CHAMBER_NUMBERS, formatDate } from '@/lib/constants';
 import { CasePrintButton } from '@/components/case-print';
 import { CaseAnnouncementButton } from '@/components/case-announcement';
+import { SelectWithCustom } from '@/components/ui/select-with-custom';
 import { useAppStore } from '@/lib/store';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -61,6 +62,7 @@ interface PartyType {
   id: number;
   caseId: number;
   role?: string;
+  side?: string;
   name?: string;
   phone?: string;
   lawyerName?: string;
@@ -156,6 +158,7 @@ const STATUS_BORDER_COLORS: Record<string, string> = {
 interface PartyRow {
   id: string;
   role?: string;
+  side?: string;
   name?: string;
   phone?: string;
   lawyerName?: string;
@@ -373,6 +376,7 @@ export function Cases() {
       setParties(cParties.map((p) => ({
         id: String(p.id),
         role: p.role,
+        side: p.side,
         name: p.name,
         phone: p.phone,
         lawyerName: p.lawyerName,
@@ -402,10 +406,13 @@ export function Cases() {
   }
 
   async function saveCase() {
+    // تنظيف البيانات من الحقول العلاقية قبل الإرسال
+    const { client, parties: _p, delays: _d, sessions: _s, payments: _pay, archives: _a, createdAt: _ca, updatedAt: _ua, ...cleanFormData } = formData as any;
+
     if (editingCase?.id) {
       // تحديث قضية
       await updateCase(editingCase.id, {
-        ...formData,
+        ...cleanFormData,
         updatedAt: new Date().toISOString(),
       });
 
@@ -420,6 +427,7 @@ export function Cases() {
           await createParty({
             caseId: editingCase.id,
             role: party.role,
+            side: party.side,
             name: party.name,
             phone: party.phone,
             lawyerName: party.lawyerName,
@@ -451,7 +459,7 @@ export function Cases() {
     } else {
       // إضافة قضية جديدة
       const result = await createCase({
-        ...formData,
+        ...cleanFormData,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       });
@@ -463,6 +471,7 @@ export function Cases() {
           await createParty({
             caseId,
             role: party.role,
+            side: party.side,
             name: party.name,
             phone: party.phone,
             lawyerName: party.lawyerName,
@@ -691,6 +700,15 @@ export function Cases() {
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
                         <Badge variant="outline" className="text-xs">{p.role || '—'}</Badge>
+                        {p.side && (
+                          <Badge className={`text-xs ${
+                            p.side === 'for'
+                              ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                              : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                          }`}>
+                            {p.side === 'for' ? 'في حقه' : 'ضده'}
+                          </Badge>
+                        )}
                         <span className="text-sm font-medium">{p.name || '—'}</span>
                       </div>
                       <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
@@ -919,15 +937,13 @@ export function Cases() {
                 </div>
                 <div>
                   <Label className="text-xs">طبيعة القضية</Label>
-                  <Select value={formData.caseNature || ''} onValueChange={(v) => setFormData({ ...formData, caseNature: v === '_empty' ? '' : v })}>
-                    <SelectTrigger className="h-11"><SelectValue placeholder="اختر الطبيعة" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="_empty">—</SelectItem>
-                      {CASE_NATURES.map((n) => (
-                        <SelectItem key={n} value={n}>{n}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <SelectWithCustom
+                    field="caseNature"
+                    value={formData.caseNature || ''}
+                    onChange={v => setFormData({ ...formData, caseNature: v })}
+                    staticOptions={CASE_NATURES.map(n => ({ value: n, label: n }))}
+                    placeholder="اختر طبيعة القضية..."
+                  />
                 </div>
                 <div>
                   <Label className="text-xs">حالة القضية</Label>
@@ -943,15 +959,13 @@ export function Cases() {
                 </div>
                 <div>
                   <Label className="text-xs">مرحلة التقاضي</Label>
-                  <Select value={formData.litigationStage || ''} onValueChange={(v) => setFormData({ ...formData, litigationStage: v === '_empty' ? '' : v })}>
-                    <SelectTrigger className="h-11"><SelectValue placeholder="اختر المرحلة" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="_empty">—</SelectItem>
-                      {LITIGATION_STAGES.map((s) => (
-                        <SelectItem key={s} value={s}>{s}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <SelectWithCustom
+                    field="litigationStage"
+                    value={formData.litigationStage || ''}
+                    onChange={v => setFormData({ ...formData, litigationStage: v })}
+                    staticOptions={LITIGATION_STAGES.map(s => ({ value: s, label: s }))}
+                    placeholder="اختر مرحلة التقاضي..."
+                  />
                 </div>
                 <div>
                   <Label className="text-xs">رقم القضية الأصلية</Label>
@@ -996,7 +1010,7 @@ export function Cases() {
                 <div>
                   <Label className="text-xs">نوع القضاء</Label>
                   <Select value={formData.judiciaryType || ''} onValueChange={(v) => {
-                    const newData = { ...formData, judiciaryType: v, courtLevel: undefined, courtId: undefined, wilayaId: undefined, chamber: '', councilName: '', courtName: '' };
+                    const newData: Partial<CaseType> = { ...formData, judiciaryType: v, courtLevel: undefined, courtId: undefined, wilayaId: undefined, chamber: '', councilName: '', courtName: '' };
                     if (v === 'supreme') {
                       newData.courtLevel = 'supreme';
                       newData.councilName = 'المحكمة العليا';
@@ -1113,15 +1127,13 @@ export function Cases() {
                 {/* الغرفة/القسم */}
                 <div>
                   <Label className="text-xs">الغرفة/القسم</Label>
-                  <Select value={formData.chamber || ''} onValueChange={(v) => setFormData({ ...formData, chamber: v === '_empty' ? '' : v })}>
-                    <SelectTrigger className="h-11"><SelectValue placeholder="اختر الغرفة" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="_empty">—</SelectItem>
-                      {availableChambers.map((c) => (
-                        <SelectItem key={c} value={c}>{c}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <SelectWithCustom
+                    field="chamber"
+                    value={formData.chamber || ''}
+                    onChange={v => setFormData({ ...formData, chamber: v })}
+                    staticOptions={availableChambers.map(c => ({ value: c, label: c }))}
+                    placeholder="اختر الغرفة..."
+                  />
                 </div>
 
                 {/* المجلس - يدوياً أو من الهيئة */}
@@ -1251,19 +1263,49 @@ export function Cases() {
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                       <div>
                         <Label className="text-xs">المركز القانوني</Label>
-                        <Select value={party.role || ''} onValueChange={(v) => {
-                          const updated = [...parties];
-                          updated[idx] = { ...updated[idx], role: v === '_empty' ? '' : v };
-                          setParties(updated);
-                        }}>
-                          <SelectTrigger className="h-10"><SelectValue placeholder="الدور" /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="_empty">—</SelectItem>
-                            {PARTY_ROLES.map((r) => (
-                              <SelectItem key={r} value={r}>{r}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <SelectWithCustom
+                          field="partyRole"
+                          value={party.role || ''}
+                          onChange={v => {
+                            const updated = [...parties];
+                            updated[idx] = { ...updated[idx], role: v };
+                            setParties(updated);
+                          }}
+                          staticOptions={PARTY_ROLES.map(r => ({ value: r, label: r }))}
+                          placeholder="اختر المركز القانوني..."
+                        />
+                        <div className="flex gap-1 mt-1">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const updated = [...parties];
+                              updated[idx] = { ...updated[idx], side: 'for' };
+                              setParties(updated);
+                            }}
+                            className={`flex-1 h-8 rounded-md border text-xs font-medium transition-colors ${
+                              (party.side || 'for') === 'for'
+                                ? 'bg-green-500 text-white border-green-500'
+                                : 'border-border text-muted-foreground hover:border-green-400'
+                            }`}
+                          >
+                            في حقه
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const updated = [...parties];
+                              updated[idx] = { ...updated[idx], side: 'against' };
+                              setParties(updated);
+                            }}
+                            className={`flex-1 h-8 rounded-md border text-xs font-medium transition-colors ${
+                              party.side === 'against'
+                                ? 'bg-red-500 text-white border-red-500'
+                                : 'border-border text-muted-foreground hover:border-red-400'
+                            }`}
+                          >
+                            ضده
+                          </button>
+                        </div>
                       </div>
                       <div>
                         <Label className="text-xs">الاسم</Label>

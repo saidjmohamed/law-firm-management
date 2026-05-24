@@ -98,25 +98,21 @@ export function PaymentsManager() {
   }
 
   async function savePayment() {
-    const now = new Date();
-
-    if (editingPayment?.id) {
-      await updatePayment(editingPayment.id, {
-        ...formData,
-        updatedAt: now,
-      });
-      toast.success('تم تحديث الدفعة بنجاح');
-    } else {
-      await createPayment({
-        ...formData,
-        createdAt: now,
-        updatedAt: now,
-      });
-      toast.success('تم إضافة الدفعة بنجاح');
+    try {
+      const now = new Date();
+      if (editingPayment?.id) {
+        await updatePayment(editingPayment.id, { ...formData, updatedAt: now });
+        toast.success('تم تحديث الدفعة بنجاح');
+      } else {
+        await createPayment({ ...formData, createdAt: now, updatedAt: now });
+        toast.success('تم إضافة الدفعة بنجاح');
+      }
+      setShowForm(false);
+      resetForm();
+    } catch (error) {
+      console.error('Save payment error:', error);
+      toast.error('فشل في حفظ الدفعة');
     }
-
-    setShowForm(false);
-    resetForm();
   }
 
   async function handleDeletePayment(id: number) {

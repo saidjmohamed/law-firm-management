@@ -56,9 +56,30 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params;
+
+    // جلب بيانات الدفعة قبل الحذف لإعادة حساب paidAmount
+    const payment = await prisma.payment.findUnique({
+      where: { id: parseInt(id) },
+    });
+
     await prisma.payment.delete({
       where: { id: parseInt(id) },
     });
+
+    // إعادة حساب paidAmount للقضية
+    if (payment?.caseId && payment.type === 'income') {
+      const totalPaid = await prisma.payment.aggregate({
+        where: {
+          caseId: payment.caseId,
+          type: 'income',
+        },
+        _sum: { amount: true },
+      });
+      await prisma.case.update({
+        where: { id: payment.caseId },
+        data: { paidAmount: totalPaid._sum.amount || 0 },
+      });
+    }
 
     return NextResponse.json({ message: 'Payment deleted' });
   } catch (error) {

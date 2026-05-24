@@ -420,7 +420,7 @@ export async function updateSetting(key: string, value: string) {
   return result;
 }
 
-export async function getSettingValue(settings: Record<string, string>, key: string): Promise<string> {
+export function getSettingValue(settings: Record<string, string>, key: string): string {
   try {
     return JSON.parse(settings[key] || '""');
   } catch {
@@ -442,6 +442,28 @@ export async function refreshAll() {
   await mutate('/api/lawyers');
   await mutate('/api/judicial-bodies');
   await mutate('/api/settings');
+}
+
+// ============================================================================
+// الخيارات المخصصة
+// ============================================================================
+export function useCustomOptions(field: string) {
+  const { data, mutate } = useSWR<{ id: number; value: string; label: string }[]>(
+    `/api/custom-options?field=${field}`,
+    fetcher,
+    { revalidateOnFocus: false }
+  );
+
+  const addOption = async (value: string, label?: string) => {
+    await fetch('/api/custom-options', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ field, value, label: label || value }),
+    });
+    mutate();
+  };
+
+  return { customOptions: data || [], addOption };
 }
 
 // ============================================================================

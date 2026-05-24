@@ -80,30 +80,30 @@ export function DelaysManager() {
   }
 
   async function saveDelay() {
-    const nowDate = new Date();
-
-    if (editingDelay?.id) {
-      await updateDelay(editingDelay.id, {
-        ...formData,
-        updatedAt: nowDate,
-      });
-      toast.success('تم تحديث التأجيل بنجاح');
-    } else {
-      if (!formData.caseId) {
-        toast.error('يرجى اختيار القضية');
-        return;
+    try {
+      const nowDate = new Date();
+      if (editingDelay?.id) {
+        await updateDelay(editingDelay.id, { ...formData, updatedAt: nowDate });
+        toast.success('تم تحديث التأجيل بنجاح');
+      } else {
+        if (!formData.caseId) {
+          toast.error('يرجى اختيار القضية');
+          return;
+        }
+        await createDelay({
+          ...formData,
+          caseId: formData.caseId,
+          createdAt: nowDate,
+          updatedAt: nowDate,
+        });
+        toast.success('تم إضافة التأجيل بنجاح');
       }
-      await createDelay({
-        ...formData,
-        caseId: formData.caseId,
-        createdAt: nowDate,
-        updatedAt: nowDate,
-      });
-      toast.success('تم إضافة التأجيل بنجاح');
+      setShowForm(false);
+      resetForm();
+    } catch (error) {
+      console.error('Save delay error:', error);
+      toast.error('فشل في حفظ التأجيل');
     }
-
-    setShowForm(false);
-    resetForm();
   }
 
   async function handleDeleteDelay(id: number) {

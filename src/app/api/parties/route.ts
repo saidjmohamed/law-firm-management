@@ -31,12 +31,13 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { caseId, role, name, phone, lawyerName, lawyerPhone } = body;
+    const { caseId, role, side, name, phone, lawyerName, lawyerPhone } = body;
 
     const party = await prisma.party.create({
       data: {
         caseId,
         role: role ?? '',
+        side: side ?? 'for',
         name: name ?? '',
         phone: phone ?? '',
         lawyerName: lawyerName ?? '',

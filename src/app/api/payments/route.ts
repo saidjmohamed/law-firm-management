@@ -38,6 +38,21 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    // تحديث paidAmount في القضية عند إضافة دفعة من نوع income
+    if (caseId && type === 'income') {
+      const totalPaid = await prisma.payment.aggregate({
+        where: {
+          caseId: parseInt(String(caseId)),
+          type: 'income',
+        },
+        _sum: { amount: true },
+      });
+      await prisma.case.update({
+        where: { id: parseInt(String(caseId)) },
+        data: { paidAmount: totalPaid._sum.amount || 0 },
+      });
+    }
+
     return NextResponse.json(payment, { status: 201 });
   } catch (error) {
     console.error('Error creating payment:', error);

@@ -123,25 +123,21 @@ export function Sessions() {
   }
 
   async function saveSession() {
-    const now = new Date();
-
-    if (editingSession?.id) {
-      await updateSession(editingSession.id, {
-        ...formData,
-        updatedAt: now,
-      });
-      toast.success('تم تحديث الجلسة بنجاح');
-    } else {
-      await createSession({
-        ...formData,
-        createdAt: now,
-        updatedAt: now,
-      });
-      toast.success('تم إضافة الجلسة بنجاح');
+    try {
+      const now = new Date();
+      if (editingSession?.id) {
+        await updateSession(editingSession.id, { ...formData, updatedAt: now });
+        toast.success('تم تحديث الجلسة بنجاح');
+      } else {
+        await createSession({ ...formData, createdAt: now, updatedAt: now });
+        toast.success('تم إضافة الجلسة بنجاح');
+      }
+      setShowForm(false);
+      resetForm();
+    } catch (error) {
+      console.error('Save session error:', error);
+      toast.error('فشل في حفظ الجلسة');
     }
-
-    setShowForm(false);
-    resetForm();
   }
 
   async function handleDeleteSession(id: number) {
