@@ -5,8 +5,7 @@ import { ThemeProvider } from "next-themes";
 
 export const metadata: Metadata = {
   title: "مكتب الاستاذ سايج محمد محام لدى المجلس",
-  description: "نظام إدارة مكتب محاماة جزائري - يعمل أوفلاين",
-  manifest: "/manifest.json",
+  description: "نظام إدارة مكتب محاماة جزائري",
   icons: {
     icon: "/icon-192.svg",
     apple: "/icon-192.svg",
@@ -29,9 +28,6 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ar" dir="rtl" suppressHydrationWarning>
-      <head>
-        <link rel="manifest" href="/manifest.json" />
-      </head>
       <body className="antialiased bg-background text-foreground font-sans">
         <ThemeProvider
           attribute="class"

@@ -18,8 +18,7 @@ import {
   Menu,
   Moon,
   Sun,
-  Wifi,
-  WifiOff,
+  LogOut,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -27,6 +26,7 @@ import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/s
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { GlobalSearch } from '@/components/global-search';
+import { useRouter } from 'next/navigation';
 
 const APP_NAME = 'مكتب الاستاذ سايج محمد محام لدى المجلس';
 
@@ -45,19 +45,17 @@ const navItems: { id: Section; label: string; icon: React.ElementType }[] = [
 ];
 
 function SidebarContent({ activeSection, onNavigate }: { activeSection: Section; onNavigate: (s: Section) => void }) {
-  const [isOnline, setIsOnline] = React.useState(true);
+  const router = useRouter();
 
-  React.useEffect(() => {
-    setIsOnline(navigator.onLine);
-    const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, []);
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+      router.push('/login');
+      router.refresh();
+    } catch {
+      // تجاهل الأخطاء
+    }
+  };
 
   return (
     <div className="flex flex-col h-full text-right" dir="rtl">
@@ -108,27 +106,23 @@ function SidebarContent({ activeSection, onNavigate }: { activeSection: Section;
 
       <Separator />
 
-      {/* Footer with offline indicator */}
+      {/* Footer */}
       <div className="p-3 flex items-center justify-between">
-        <Badge
-          variant="outline"
-          className="text-[10px]"
+        <Badge variant="outline" className="text-[10px]">الإصدار 3.0</Badge>
+        <button
+          onClick={handleLogout}
+          className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-red-500 transition-colors"
         >
-          الإصدار 2.1
-        </Badge>
-        <div className="flex items-center gap-1">
-          {isOnline ? (
-            <Wifi className="w-3 h-3 text-teal-500" />
-          ) : (
-            <WifiOff className="w-3 h-3 text-amber-500" />
-          )}
-          <span className="text-[10px] text-muted-foreground">
-            {isOnline ? 'متصل' : 'بدون إنترنت'}
-          </span>
-        </div>
+          <LogOut className="w-3 h-3" />
+          خروج
+        </button>
       </div>
     </div>
   );
+}
+
+function cn(...inputs: (string | undefined | false)[]) {
+  return inputs.filter(Boolean).join(' ');
 }
 
 export function AppShell({ children }: { children: React.ReactNode }) {
