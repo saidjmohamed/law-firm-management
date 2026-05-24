@@ -563,11 +563,22 @@ export function Lawyers() {
                               <Badge variant="outline" className="text-[10px] px-1.5 py-0">{lawyer.specialty}</Badge>
                             )}
                           </div>
-                          <div className="flex items-center gap-3 mt-0.5 text-xs text-muted-foreground">
-                            {lawyer.phone && <span className="tabular-nums">{lawyer.phone}</span>}
+                          <div className="flex items-center gap-3 mt-0.5 text-xs text-muted-foreground flex-wrap">
+                            {lawyer.phone && (
+                              <span
+                                className="tabular-nums cursor-pointer hover:text-teal-600 transition-colors"
+                                onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(lawyer.phone!); toast.success('تم نسخ رقم الهاتف'); }}
+                              >
+                                {lawyer.phone}
+                                <span className="text-[9px] text-muted-foreground/60 mr-0.5">نسخ</span>
+                              </span>
+                            )}
                             {wilayaName && <span>{wilayaName}</span>}
                             {lawyer.barNumber && <span>قيد: {lawyer.barNumber}</span>}
                             {lawyer.barAssociation && <span className="flex items-center gap-0.5"><Building2 className="w-3 h-3" />{lawyer.barAssociation}</span>}
+                            {lawyer.address && (
+                              <span className="text-muted-foreground/60 truncate max-w-[120px]">{lawyer.address}</span>
+                            )}
                             {partiesCount > 0 && (
                               <span className="text-indigo-600 dark:text-indigo-400 font-semibold">
                                 {partiesCount.toLocaleString('en-US')} قضية

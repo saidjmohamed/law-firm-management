@@ -55,7 +55,11 @@ export function GlobalSearch() {
       setSelectedClientId(id);
       setActiveSection('clients');
     } else if (type === 'session') {
-      setActiveSection('sessions');
+      // الجلسات مدمجة في القضايا — التنقل للقضية المرتبطة
+      if (id) {
+        setSelectedCaseId(id);
+      }
+      setActiveSection('cases');
     } else if (type === 'court') {
       setActiveSection('courts');
     } else if (type === 'lawyer' && id) {
@@ -126,10 +130,9 @@ export function GlobalSearch() {
   const quickItems: { label: string; section: Section; icon: React.ElementType; keywords: string }[] = [
     { label: 'القضايا', section: 'cases', icon: Briefcase, keywords: 'قضية قضايا' },
     { label: 'الموكلون', section: 'clients', icon: Users, keywords: 'موكل موكلون عملاء' },
-    { label: 'الجلسات', section: 'sessions', icon: Calendar, keywords: 'جلسة جلسات محكمة' },
+    { label: 'الجلسات', section: 'cases', icon: Calendar, keywords: 'جلسة جلسات محكمة' },
     { label: 'الهيئات القضائية', section: 'courts', icon: Scale, keywords: 'محكمة مجلس هيئة' },
     { label: 'المدفوعات', section: 'payments', icon: Banknote, keywords: 'دفع مدفوعات أتعاب' },
-    { label: 'التأجيلات', section: 'delays', icon: Clock, keywords: 'تأجيل تأجيلات' },
     { label: 'المحامون', section: 'lawyers', icon: BookOpen, keywords: 'محامي محامون نقابة دفتر' },
   ];
 

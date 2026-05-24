@@ -18,13 +18,6 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { toast } from 'sonner';
 import {
   Plus,
@@ -326,18 +319,46 @@ export function Sessions() {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label className="text-xs">المحكمة</Label>
-                <Input
+                <SelectWithCustom
+                  field="sessionCourt"
                   value={formData.court || ''}
-                  onChange={(e) => setFormData({ ...formData, court: e.target.value })}
-                  placeholder="اسم المحكمة"
+                  onChange={v => setFormData({ ...formData, court: v })}
+                  staticOptions={[
+                    { value: 'المحكمة العليا', label: 'المحكمة العليا' },
+                  ]}
+                  placeholder="اسم المحكمة..."
                 />
               </div>
               <div>
                 <Label className="text-xs">الغرفة</Label>
-                <Input
+                <SelectWithCustom
+                  field="sessionChamber"
                   value={formData.chamber || ''}
-                  onChange={(e) => setFormData({ ...formData, chamber: e.target.value })}
-                  placeholder="الغرفة/القسم"
+                  onChange={v => setFormData({ ...formData, chamber: v })}
+                  staticOptions={[
+                    { value: 'الغرفة المدنية', label: 'الغرفة المدنية' },
+                    { value: 'الغرفة العقارية', label: 'الغرفة العقارية' },
+                    { value: 'الغرفة الجنائية', label: 'الغرفة الجنائية' },
+                    { value: 'غرفة الجنح والمخالفات', label: 'غرفة الجنح والمخالفات' },
+                    { value: 'الغرفة الجزائية', label: 'الغرفة الجزائية' },
+                    { value: 'غرفة الاتهام', label: 'غرفة الاتهام' },
+                    { value: 'الغرفة الاستعجالية', label: 'الغرفة الاستعجالية' },
+                    { value: 'غرفة شؤون الأسرة', label: 'غرفة شؤون الأسرة' },
+                    { value: 'غرفة الأحداث', label: 'غرفة الأحداث' },
+                    { value: 'الغرفة الاجتماعية', label: 'الغرفة الاجتماعية' },
+                    { value: 'الغرفة التجارية', label: 'الغرفة التجارية' },
+                    { value: 'الغرفة البحرية', label: 'الغرفة البحرية' },
+                    { value: 'القسم المدني', label: 'القسم المدني' },
+                    { value: 'قسم الجنح', label: 'قسم الجنح' },
+                    { value: 'القسم الاستعجالي', label: 'القسم الاستعجالي' },
+                    { value: 'قسم شؤون الأسرة', label: 'قسم شؤون الأسرة' },
+                    { value: 'القسم الاجتماعي', label: 'القسم الاجتماعي' },
+                    { value: 'القسم العقاري', label: 'القسم العقاري' },
+                    { value: 'القسم التجاري', label: 'القسم التجاري' },
+                    { value: 'الإداري العادي', label: 'الإداري العادي' },
+                    { value: 'الإداري الاستئنافي', label: 'الإداري الاستئنافي' },
+                  ]}
+                  placeholder="الغرفة/القسم..."
                 />
               </div>
             </div>

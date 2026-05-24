@@ -273,7 +273,7 @@ export function Dashboard() {
         </Button>
         <Button
           variant="outline"
-          onClick={() => setActiveSection('sessions')}
+          onClick={() => setActiveSection('cases')}
           className="touch-target"
         >
           <Calendar className="w-4 h-4 ml-2" />
