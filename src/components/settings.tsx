@@ -95,8 +95,8 @@ export function SettingsManager() {
         <CardContent>
           <div className="space-y-2 text-sm text-muted-foreground">
             <p>مكتب الاستاذ سايج محمد محام لدى المجلس</p>
-            <p>نظام إدارة مكتب المحاماة - الإصدار 2.0</p>
-            <p>يعمل بدون اتصال بالإنترنت - البيانات محفوظة محلياً</p>
+            <p>نظام إدارة مكتب المحاماة - الإصدار 3.0</p>
+            <p>قاعدة بيانات سحابية - البيانات محفوظة بأمان</p>
           </div>
         </CardContent>
       </Card>
