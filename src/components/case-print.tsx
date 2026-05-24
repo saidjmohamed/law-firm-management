@@ -100,9 +100,10 @@ export function CasePrintButton({ caseData, parties, delays, sessions }: CasePri
       const wilayaName = WILAYAS.find(w => w.code === caseData.wilayaId)?.name || '';
 
       // تقسيم الأطراف حسب حقل side (for = في حقه، against = ضده)
-      const inFavorParties = parties.filter(p => p.side === 'for');
+      // إذا كان side فارغ/null، نعتبره 'for' (في حقه) كقيمة افتراضية
+      const inFavorParties = parties.filter(p => !p.side || p.side === 'for');
       const againstParties = parties.filter(p => p.side === 'against');
-      const otherParties = parties.filter(p => !p.side || (p.side !== 'for' && p.side !== 'against'));
+      const otherParties = parties.filter(p => p.side && p.side !== 'for' && p.side !== 'against');
 
       // بناء صفوف الأطراف — Monochrome
       function buildPartyRows(partyList: Party[]) {

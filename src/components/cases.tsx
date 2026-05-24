@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Calendar as CalendarIcon } from 'lucide-react';
-import { useCases, useClients, useParties, useDelays, useSessions, useJudicialBodies, useLawyers, createCase, updateCase, deleteCase as apiDeleteCase, createParty, updateParty as apiUpdateParty, deleteParty as apiDeleteParty, createDelay, updateDelay as apiUpdateDelay, deleteDelay as apiDeleteDelay, createClient, createJudicialBody, createArchive } from '@/lib/api';
+import { useCases, useClients, useParties, useDelays, useSessions, useJudicialBodies, useLawyers, createCase, updateCase, deleteCase as apiDeleteCase, createParty, updateParty as apiUpdateParty, deleteParty as apiDeleteParty, createDelay, updateDelay as apiUpdateDelay, deleteDelay as apiDeleteDelay, createClient, createJudicialBody, createArchive, syncPartiesToClients } from '@/lib/api';
 import { formatCurrency, STATUS_COLORS, CASE_NATURES, CASE_STATUSES, LITIGATION_STAGES, PARTY_ROLES, JUDICIAL_CHAMBERS, WILAYAS, JUDICIARY_TYPES, ORDINARY_COURT_LEVELS, ADMIN_COURT_LEVELS, CHAMBER_NUMBERS, formatDate } from '@/lib/constants';
 import { CasePrintButton } from '@/components/case-print';
 import { CaseAnnouncementButton } from '@/components/case-announcement';
@@ -256,6 +256,18 @@ export function Cases() {
   const { judicialBodies, isLoading: bodiesLoading } = useJudicialBodies();
   const { sessions: allSessions } = useSessions();
   const { lawyers } = useLawyers();
+
+  // مزامنة الأطراف مع الموكلين عند التحميل (مرة واحدة)
+  useEffect(() => {
+    if (allParties?.length && clients?.length !== undefined) {
+      // تحقق هل كل الأطراف لها موكل مقابل
+      const clientNameSet = new Set(clients.map((c: any) => c.name?.trim().toLowerCase()).filter(Boolean));
+      const missingParties = allParties.filter((p: any) => p.name?.trim() && !clientNameSet.has(p.name.trim().toLowerCase()));
+      if (missingParties.length > 0) {
+        syncPartiesToClients().catch(() => {});
+      }
+    }
+  }, [allParties, clients]);
 
   // قائمة أسماء المحامين للاكمال التراكمي
   const lawyerNameSuggestions = useMemo(() => {

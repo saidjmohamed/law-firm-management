@@ -61,6 +61,18 @@ export async function deleteClient(id: number) {
   await mutate('/api/clients');
 }
 
+/**
+ * مزامنة جميع الأطراف مع جدول الموكلين
+ * كل طرف (سواء في حقه أو ضده) يضاف كموكل إذا لم يكن موجوداً
+ */
+export async function syncPartiesToClients() {
+  const res = await fetch('/api/clients/sync-parties', { method: 'POST' });
+  if (!res.ok) throw new Error('فشل في مزامنة الأطراف مع الموكلين');
+  const result = await res.json();
+  await mutate('/api/clients');
+  return result;
+}
+
 // ============================================================================
 // القضايا
 // ============================================================================

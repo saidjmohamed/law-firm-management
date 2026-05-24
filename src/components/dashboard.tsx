@@ -100,11 +100,13 @@ export function Dashboard() {
 
   // التأجيلات القادمة
   const now = new Date();
-  now.setHours(0, 0, 0, 0);
-  const nextWeek = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
+  const nextWeekDate = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+  const nextWeekStr = `${nextWeekDate.getFullYear()}-${String(nextWeekDate.getMonth() + 1).padStart(2, '0')}-${String(nextWeekDate.getDate()).padStart(2, '0')}`;
 
   const upcomingDelays = delays
-    .filter((d: any) => d.delayDate && new Date(d.delayDate) >= now)
+    .filter((d: any) => d.delayDate && d.delayDate >= todayStr)
     .sort((a: any, b: any) => (a.delayDate || '').localeCompare(b.delayDate || ''))
     .slice(0, 10);
 
@@ -112,9 +114,8 @@ export function Dashboard() {
   const upcomingThisWeek = delays
     .filter((d: any) => {
       if (!d.delayDate) return false;
-      const delayDate = new Date(d.delayDate);
-      delayDate.setHours(0, 0, 0, 0);
-      return delayDate >= now && delayDate <= nextWeek;
+      const dateStr = d.delayDate.length > 10 ? d.delayDate.substring(0, 10) : d.delayDate;
+      return dateStr >= todayStr && dateStr <= nextWeekStr;
     })
     .map((d: any) => {
       const caseData = cases.find((c: any) => c.id === d.caseId);
@@ -124,9 +125,8 @@ export function Dashboard() {
   const upcomingSessionsThisWeek = sessions
     .filter((s: any) => {
       if (!s.date) return false;
-      const sessionDate = new Date(s.date);
-      sessionDate.setHours(0, 0, 0, 0);
-      return sessionDate >= now && sessionDate <= nextWeek;
+      const dateStr = s.date.length > 10 ? s.date.substring(0, 10) : s.date;
+      return dateStr >= todayStr && dateStr <= nextWeekStr;
     })
     .map((s: any) => {
       const caseData = cases.find((c: any) => c.id === s.caseId);
@@ -139,10 +139,14 @@ export function Dashboard() {
 
   // حساب الأيام المتبقية
   function daysUntil(dateStr: string) {
-    const target = new Date(dateStr);
+    const normalized = dateStr.length > 10 ? dateStr.substring(0, 10) : dateStr;
+    const parts = normalized.split('-');
+    const target = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
     target.setHours(0, 0, 0, 0);
-    const diff = target.getTime() - now.getTime();
-    return Math.ceil(diff / (1000 * 60 * 60 * 24));
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const diff = target.getTime() - today.getTime();
+    return Math.round(diff / (1000 * 60 * 60 * 24));
   }
 
   const maxNatureCount = Math.max(...casesByNature.map((n) => n.count), 1);
@@ -398,22 +402,23 @@ export function Dashboard() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {allUpcoming.map((item: any) => {
                 const dateStr = item.delayDate || item.date;
                 const days = daysUntil(dateStr);
                 const caseData = item.caseData;
                 const isToday = days === 0;
                 const isTomorrow = days === 1;
+                const isUrgent = days <= 1;
                 return (
                   <div
                     key={`${item.source}-${item.id}`}
-                    className={`p-4 rounded-xl border-2 cursor-pointer transition-all duration-200 hover:shadow-lg ${
+                    className={`p-5 rounded-xl border-2 cursor-pointer transition-all duration-200 hover:shadow-lg hover:scale-[1.02] ${
                       isToday
-                        ? 'bg-red-50 dark:bg-red-900/20 border-red-300 dark:border-red-700 hover:border-red-400'
+                        ? 'bg-red-50 dark:bg-red-900/20 border-red-400 dark:border-red-600 hover:border-red-500 shadow-sm'
                         : isTomorrow
-                          ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-300 dark:border-amber-700 hover:border-amber-400'
-                          : 'bg-teal-50 dark:bg-teal-900/20 border-teal-200 dark:border-teal-800 hover:border-teal-300'
+                          ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-400 dark:border-amber-600 hover:border-amber-500 shadow-sm'
+                          : 'bg-teal-50/80 dark:bg-teal-900/20 border-teal-300 dark:border-teal-700 hover:border-teal-400'
                     }`}
                     onClick={() => {
                       if (item.caseId) {
@@ -423,39 +428,50 @@ export function Dashboard() {
                     }}
                   >
                     {/* شريط الأيام المتبقية */}
-                    <div className="flex items-center justify-between mb-2">
-                      <Badge className={`text-xs font-bold ${
+                    <div className="flex items-center justify-between mb-3">
+                      <Badge className={`text-sm font-bold px-3 py-1 ${
                         isToday
                           ? 'bg-red-500 text-white'
                           : isTomorrow
                             ? 'bg-amber-500 text-white'
                             : 'bg-teal-600 text-white'
                       }`}>  
-                        {isToday ? 'اليوم' : isTomorrow ? 'غداً' : `بعد ${days.toLocaleString('en-US')} أيام`}
+                        {isToday ? '🔔 اليوم' : isTomorrow ? '⏰ غداً' : `بعد ${days.toLocaleString('en-US')} أيام`}
                       </Badge>
-                      <span className="text-xs font-bold tabular-nums text-muted-foreground">
+                      <span className="text-sm font-bold tabular-nums text-muted-foreground">
                         {formatDate(dateStr)}
                       </span>
                     </div>
 
                     {/* رقم القضية */}
-                    <p className="text-sm font-extrabold truncate mb-1">
+                    <p className="text-lg font-extrabold truncate mb-1">
                       {caseData?.caseNumber || '—'}
                     </p>
 
                     {/* الموضوع */}
-                    <p className="text-xs text-muted-foreground truncate mb-2">
+                    <p className="text-sm text-muted-foreground line-clamp-2 mb-3" style={{minHeight: '2.5rem'}}>
                       {caseData?.subject || '—'}
                     </p>
 
+                    {/* طبيعة القضية */}
+                    {caseData?.caseNature && (
+                      <div className="mb-2">
+                        <Badge variant="outline" className={`text-xs ${NATURE_BG_COLORS[caseData.caseNature] || 'bg-gray-100 dark:bg-gray-800/30'}`}>
+                          {caseData.caseNature}
+                        </Badge>
+                      </div>
+                    )}
+
                     {/* السبب + المحكمة */}
-                    <div className="flex items-center gap-1 text-xs">
-                      <Clock className="w-3 h-3 text-muted-foreground shrink-0" />
-                      <span className="truncate font-medium">{item.reason || item.court || '—'}</span>
-                    </div>
+                    {(item.reason || item.court) && (
+                      <div className="flex items-center gap-1.5 text-sm mb-1">
+                        <Clock className="w-4 h-4 text-muted-foreground shrink-0" />
+                        <span className="truncate font-medium">{item.reason || item.court || '—'}</span>
+                      </div>
+                    )}
                     {caseData?.courtName && (
-                      <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
-                        <Scale className="w-3 h-3 shrink-0" />
+                      <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                        <Scale className="w-4 h-4 shrink-0" />
                         <span className="truncate">{caseData.courtName}</span>
                       </div>
                     )}
@@ -463,6 +479,17 @@ export function Dashboard() {
                 );
               })}
             </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* لا توجد قضايا قادمة — إظهار رسالة */}
+      {allUpcoming.length === 0 && (
+        <Card className="border-gray-200 dark:border-gray-800/40">
+          <CardContent className="py-8 text-center">
+            <Calendar className="w-12 h-12 text-muted-foreground/30 mx-auto mb-3" />
+            <p className="text-base font-medium text-muted-foreground">لا توجد قضايا قادمة خلال 7 أيام</p>
+            <p className="text-sm text-muted-foreground/70 mt-1">ستظهر هنا القضايا المؤجلة والجلسات القادمة</p>
           </CardContent>
         </Card>
       )}
