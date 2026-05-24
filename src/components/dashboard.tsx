@@ -100,17 +100,50 @@ export function Dashboard() {
 
   // التأجيلات القادمة
   const now = new Date();
+  now.setHours(0, 0, 0, 0);
+  const nextWeek = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+
   const upcomingDelays = delays
     .filter((d: any) => d.delayDate && new Date(d.delayDate) >= now)
     .sort((a: any, b: any) => (a.delayDate || '').localeCompare(b.delayDate || ''))
-    .slice(0, 5);
+    .slice(0, 10);
 
-  // الجلسات القادمة (7 أيام)
-  const nextWeek = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
-  const upcomingSessions = sessions
-    .filter((s: any) => s.date && new Date(s.date) >= now && new Date(s.date) <= nextWeek)
-    .sort((a: any, b: any) => (a.date || '').localeCompare(b.date || ''))
-    .slice(0, 5);
+  // القضايا القادمة في 7 أيام — من التأجيلات + الجلسات
+  const upcomingThisWeek = delays
+    .filter((d: any) => {
+      if (!d.delayDate) return false;
+      const delayDate = new Date(d.delayDate);
+      delayDate.setHours(0, 0, 0, 0);
+      return delayDate >= now && delayDate <= nextWeek;
+    })
+    .map((d: any) => {
+      const caseData = cases.find((c: any) => c.id === d.caseId);
+      return { ...d, caseData, source: 'delay' as const };
+    });
+
+  const upcomingSessionsThisWeek = sessions
+    .filter((s: any) => {
+      if (!s.date) return false;
+      const sessionDate = new Date(s.date);
+      sessionDate.setHours(0, 0, 0, 0);
+      return sessionDate >= now && sessionDate <= nextWeek;
+    })
+    .map((s: any) => {
+      const caseData = cases.find((c: any) => c.id === s.caseId);
+      return { ...s, caseData, source: 'session' as const };
+    });
+
+  // دمج وترتيب حسب التاريخ
+  const allUpcoming = [...upcomingThisWeek, ...upcomingSessionsThisWeek]
+    .sort((a, b) => ((a.delayDate || a.date || '')).localeCompare((b.delayDate || b.date || '')));
+
+  // حساب الأيام المتبقية
+  function daysUntil(dateStr: string) {
+    const target = new Date(dateStr);
+    target.setHours(0, 0, 0, 0);
+    const diff = target.getTime() - now.getTime();
+    return Math.ceil(diff / (1000 * 60 * 60 * 24));
+  }
 
   const maxNatureCount = Math.max(...casesByNature.map((n) => n.count), 1);
 
@@ -352,91 +385,128 @@ export function Dashboard() {
         </Card>
       </div>
 
-      <div className="grid md:grid-cols-2 gap-6">
-        {/* التأجيلات القادمة */}
-        <Card>
+      {/* القضايا القادمة في 7 أيام — بطاقات كبيرة */}
+      {allUpcoming.length > 0 && (
+        <Card className="border-amber-200 dark:border-amber-800/40">
           <CardHeader className="pb-3">
             <CardTitle className="text-base font-bold flex items-center gap-2">
-              <Clock className="w-4 h-4 text-amber-500" />
-              التأجيلات القادمة
+              <Calendar className="w-4 h-4 text-amber-500" />
+              القضايا القادمة (7 أيام)
+              <Badge variant="secondary" className="text-xs bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+                {allUpcoming.length.toLocaleString('en-US')}
+              </Badge>
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {upcomingDelays.length > 0 ? (
-              <div className="space-y-2 max-h-64 overflow-y-auto smooth-scroll">
-                {upcomingDelays.map((delay: any) => {
-                  const caseData = cases.find((c: any) => c.id === delay.caseId);
-                  return (
-                    <div
-                      key={delay.id}
-                      className="flex items-center justify-between p-2.5 rounded-lg bg-amber-50 dark:bg-amber-900/20 cursor-pointer hover:bg-amber-100 dark:hover:bg-amber-900/30 transition-colors"
-                      onClick={() => {
-                        if (delay.caseId) {
-                          setSelectedCaseId(delay.caseId);
-                          setActiveSection('cases');
-                        }
-                      }}
-                    >
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium truncate">{caseData?.subject || '—'}</p>
-                        <p className="text-xs text-muted-foreground truncate">{delay.reason}</p>
-                      </div>
-                      <Badge variant="outline" className="text-xs shrink-0 mr-2">
-                        {formatDate(delay.delayDate)}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {allUpcoming.map((item: any) => {
+                const dateStr = item.delayDate || item.date;
+                const days = daysUntil(dateStr);
+                const caseData = item.caseData;
+                const isToday = days === 0;
+                const isTomorrow = days === 1;
+                return (
+                  <div
+                    key={`${item.source}-${item.id}`}
+                    className={`p-4 rounded-xl border-2 cursor-pointer transition-all duration-200 hover:shadow-lg ${
+                      isToday
+                        ? 'bg-red-50 dark:bg-red-900/20 border-red-300 dark:border-red-700 hover:border-red-400'
+                        : isTomorrow
+                          ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-300 dark:border-amber-700 hover:border-amber-400'
+                          : 'bg-teal-50 dark:bg-teal-900/20 border-teal-200 dark:border-teal-800 hover:border-teal-300'
+                    }`}
+                    onClick={() => {
+                      if (item.caseId) {
+                        setSelectedCaseId(item.caseId);
+                        setActiveSection('cases');
+                      }
+                    }}
+                  >
+                    {/* شريط الأيام المتبقية */}
+                    <div className="flex items-center justify-between mb-2">
+                      <Badge className={`text-xs font-bold ${
+                        isToday
+                          ? 'bg-red-500 text-white'
+                          : isTomorrow
+                            ? 'bg-amber-500 text-white'
+                            : 'bg-teal-600 text-white'
+                      }`}>  
+                        {isToday ? 'اليوم' : isTomorrow ? 'غداً' : `بعد ${days.toLocaleString('en-US')} أيام`}
                       </Badge>
+                      <span className="text-xs font-bold tabular-nums text-muted-foreground">
+                        {formatDate(dateStr)}
+                      </span>
                     </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground text-center py-4">لا توجد تأجيلات قادمة</p>
-            )}
+
+                    {/* رقم القضية */}
+                    <p className="text-sm font-extrabold truncate mb-1">
+                      {caseData?.caseNumber || '—'}
+                    </p>
+
+                    {/* الموضوع */}
+                    <p className="text-xs text-muted-foreground truncate mb-2">
+                      {caseData?.subject || '—'}
+                    </p>
+
+                    {/* السبب + المحكمة */}
+                    <div className="flex items-center gap-1 text-xs">
+                      <Clock className="w-3 h-3 text-muted-foreground shrink-0" />
+                      <span className="truncate font-medium">{item.reason || item.court || '—'}</span>
+                    </div>
+                    {caseData?.courtName && (
+                      <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
+                        <Scale className="w-3 h-3 shrink-0" />
+                        <span className="truncate">{caseData.courtName}</span>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           </CardContent>
         </Card>
+      )}
 
-        {/* الجلسات القادمة */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base font-bold flex items-center gap-2">
-              <Calendar className="w-4 h-4 text-teal-500" />
-              الجلسات القادمة (7 أيام)
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {upcomingSessions.length > 0 ? (
-              <div className="space-y-2 max-h-64 overflow-y-auto smooth-scroll">
-                {upcomingSessions.map((session: any) => (
+      {/* التأجيلات القادمة */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base font-bold flex items-center gap-2">
+            <Clock className="w-4 h-4 text-amber-500" />
+            التأجيلات القادمة
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {upcomingDelays.length > 0 ? (
+            <div className="space-y-2 max-h-64 overflow-y-auto smooth-scroll">
+              {upcomingDelays.map((delay: any) => {
+                const caseData = cases.find((c: any) => c.id === delay.caseId);
+                return (
                   <div
-                    key={session.id}
-                    className="flex items-center justify-between p-2.5 rounded-lg bg-teal-50 dark:bg-teal-900/20 cursor-pointer hover:bg-teal-100 dark:hover:bg-teal-900/30 transition-colors"
+                    key={delay.id}
+                    className="flex items-center justify-between p-2.5 rounded-lg bg-amber-50 dark:bg-amber-900/20 cursor-pointer hover:bg-amber-100 dark:hover:bg-amber-900/30 transition-colors"
                     onClick={() => {
-                      if (session.caseId) {
-                        setSelectedCaseId(session.caseId);
+                      if (delay.caseId) {
+                        setSelectedCaseId(delay.caseId);
                         setActiveSection('cases');
                       }
                     }}
                   >
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium truncate">{session.caseNumber || '—'}</p>
-                      <p className="text-xs text-muted-foreground truncate">{session.court || ''}</p>
+                      <p className="text-sm font-medium truncate">{caseData?.subject || '—'}</p>
+                      <p className="text-xs text-muted-foreground truncate">{delay.reason}</p>
                     </div>
-                    <div className="text-left shrink-0 mr-2">
-                      <Badge variant="outline" className="text-xs">
-                        {formatDate(session.date)}
-                      </Badge>
-                      {session.time && (
-                        <p className="text-xs text-muted-foreground mt-1 tabular-nums">{session.time}</p>
-                      )}
-                    </div>
+                    <Badge variant="outline" className="text-xs shrink-0 mr-2">
+                      {formatDate(delay.delayDate)}
+                    </Badge>
                   </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground text-center py-4">لا توجد جلسات في الأيام السبعة القادمة</p>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground text-center py-4">لا توجد تأجيلات قادمة</p>
+          )}
+        </CardContent>
+      </Card>
 
       {/* آخر القضايا */}
       <Card>

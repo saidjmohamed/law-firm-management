@@ -42,6 +42,7 @@ interface Party {
   id?: number;
   caseId: number;
   role?: string;
+  side?: string;
   name?: string;
   phone?: string;
   lawyerName?: string;
@@ -98,16 +99,10 @@ export function CasePrintButton({ caseData, parties, delays, sessions }: CasePri
 
       const wilayaName = WILAYAS.find(w => w.code === caseData.wilayaId)?.name || '';
 
-      // تقسيم الأطراف
-      const inFavorParties = parties.filter(p =>
-        p.role === 'مدعي' || p.role === 'مستأنف' || p.role === 'طالب' || p.role === 'مقدم الشكوى' || p.role === 'ضحية' || p.role === 'مشتكي'
-      );
-      const againstParties = parties.filter(p =>
-        p.role === 'مدعى عليه' || p.role === 'مستأنف ضده' || p.role === 'مستأنف عليه' || p.role === 'مطلوب' || p.role === 'متهم' || p.role === 'مشكو في حقه' || p.role === 'مشتكى منه' || p.role === 'معارض ضده'
-      );
-      const otherParties = parties.filter(p =>
-        !inFavorParties.includes(p) && !againstParties.includes(p)
-      );
+      // تقسيم الأطراف حسب حقل side (for = في حقه، against = ضده)
+      const inFavorParties = parties.filter(p => p.side === 'for');
+      const againstParties = parties.filter(p => p.side === 'against');
+      const otherParties = parties.filter(p => !p.side || (p.side !== 'for' && p.side !== 'against'));
 
       // بناء صفوف الأطراف — Monochrome
       function buildPartyRows(partyList: Party[]) {
@@ -378,7 +373,7 @@ export function CasePrintButton({ caseData, parties, delays, sessions }: CasePri
   <div class="section-title">أطراف النزاع</div>
 
   ${inFavorParties.length > 0 ? `
-  <div class="party-label party-favor">في حق</div>
+  <div class="party-label party-favor">في حقه</div>
   <table>
     <thead>
       <tr>
@@ -393,7 +388,7 @@ export function CasePrintButton({ caseData, parties, delays, sessions }: CasePri
   </table>` : ''}
 
   ${againstParties.length > 0 ? `
-  <div class="party-label party-against">ضد</div>
+  <div class="party-label party-against">ضده</div>
   <table>
     <thead>
       <tr>
