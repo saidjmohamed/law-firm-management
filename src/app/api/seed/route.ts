@@ -768,13 +768,22 @@ const REAL_CASES: SeedCase[] = [
 
 export async function POST() {
   try {
-    // التحقق من وجود بيانات مسبقاً
+    // التحقق من وجود بيانات مسبقاً — استخدام seedVersion لمنع التكرار
+    const seedSetting = await prisma.setting.findUnique({ where: { key: 'seedVersion' } });
+    if (seedSetting?.value) {
+      return NextResponse.json(
+        { message: 'البيانات موجودة مسبقاً — لا يمكن إعادة البذرة', seedVersion: seedSetting.value },
+        { status: 200 }
+      );
+    }
+
+    // فحص إضافي: حتى لو لم يكن seedVersion، تحقق من وجود بيانات
     const existingCases = await prisma.case.count();
     const existingClients = await prisma.client.count();
 
     if (existingCases > 0 || existingClients > 0) {
       return NextResponse.json(
-        { message: 'البيانات موجودة مسبقاً' },
+        { message: 'البيانات موجودة مسبقاً — لا يمكن إعادة البذرة' },
         { status: 200 }
       );
     }
