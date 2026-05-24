@@ -48,3 +48,28 @@ Stage Summary:
 - Deployment: lawfirm-dz.vercel.app - live and working
 - All API endpoints tested and functional
 - Auth system (cookie-based JWT) working on production
+
+---
+Task ID: 3
+Agent: Main Agent
+Task: Add lawyers directory (دفتر المحامين) table and UI
+
+Work Log:
+- Added Lawyer model to Prisma schema with fields: name, phone, phone2, email, address, wilaya, barNumber, specialty, notes
+- Added lawyerId foreign key to Party model for linking lawyers to case parties
+- Created Prisma migration (20260524092014_add_lawyers) and applied to Neon
+- Created API routes: /api/lawyers (GET, POST) and /api/lawyers/[id] (GET, PUT, DELETE)
+- Added SWR hooks: useLawyers, useLawyer, createLawyer, updateLawyer, deleteLawyer
+- Created lawyers.tsx component with full CRUD, search, detail view, and delete confirmation
+- Added 'lawyers' Section type to store.ts
+- Added "دفتر المحامين" navigation item with BookOpen icon to app-shell.tsx
+- Added Lawyers component to page.tsx section mapping
+- Updated build script to include prisma generate && prisma migrate deploy
+- Tested all APIs on production - lawyers CRUD works correctly
+- Pushed to GitHub and deployed on Vercel
+
+Stage Summary:
+- Lawyer table with 10 fields created in Neon Postgres
+- Party table updated with lawyerId foreign key
+- Full lawyers directory feature: add, edit, delete, search, detail view
+- Production verified: lawfirm-dz.vercel.app/api/lawyers works
