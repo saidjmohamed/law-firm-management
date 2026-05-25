@@ -45,6 +45,8 @@ import {
   ChevronUp,
   ChevronLeft,
   AlertCircle,
+  Phone,
+  X,
 } from 'lucide-react';
 
 interface JudicialBody {
@@ -54,6 +56,7 @@ interface JudicialBody {
   wilayaId?: number;
   parentCouncilId?: number;
   chambers?: string;
+  phones?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -105,6 +108,8 @@ export function CourtsManager() {
   const [judiciaryGroup, setJudiciaryGroup] = useState<string>(''); // supreme / ordinary / admin
   const [formData, setFormData] = useState<Partial<JudicialBody>>({});
   const [chambers, setChambers] = useState<ChamberItem[]>([]);
+  const [phones, setPhones] = useState<string[]>([]);
+  const [newPhone, setNewPhone] = useState('');
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
   const { judicialBodies: courts, isLoading } = useJudicialBodies();
@@ -141,6 +146,8 @@ export function CourtsManager() {
   function resetForm() {
     setFormData({});
     setChambers([]);
+    setPhones([]);
+    setNewPhone('');
     setEditingCourt(null);
     setFormStep(1);
     setJudiciaryGroup('');
@@ -181,6 +188,14 @@ export function CourtsManager() {
       }
     } catch {
       setChambers([]);
+    }
+
+    // تحميل أرقام الهاتف
+    try {
+      const parsedPhones = court.phones ? JSON.parse(court.phones) : [];
+      setPhones(Array.isArray(parsedPhones) ? parsedPhones.filter((p: string) => p.trim()) : []);
+    } catch {
+      setPhones([]);
     }
 
     setFormStep(3); // Skip to final step for editing
@@ -253,12 +268,14 @@ export function CourtsManager() {
 
   async function saveCourt() {
     const now = new Date();
-    const chambersJson = chambers.length > 0 ? JSON.stringify(chambers) : undefined;
+    const chambersJson = chambers.length > 0 ? JSON.stringify(chambers) : '';
+    const phonesJson = phones.length > 0 ? JSON.stringify(phones) : '';
 
     if (editingCourt?.id) {
       await updateJudicialBody(editingCourt.id, {
         ...formData,
         chambers: chambersJson,
+        phones: phonesJson,
         updatedAt: now,
       });
       toast.success('تم تحديث الهيئة القضائية بنجاح');
@@ -269,6 +286,7 @@ export function CourtsManager() {
         wilayaId: formData.wilayaId,
         parentCouncilId: formData.parentCouncilId,
         chambers: chambersJson,
+        phones: phonesJson,
         createdAt: now,
         updatedAt: now,
       });
@@ -277,6 +295,27 @@ export function CourtsManager() {
 
     setShowForm(false);
     resetForm();
+  }
+
+  function addPhone() {
+    const trimmed = newPhone.trim();
+    if (!trimmed) return;
+    if (phones.includes(trimmed)) {
+      toast.error('هذا الرقم موجود بالفعل');
+      return;
+    }
+    setPhones([...phones, trimmed]);
+    setNewPhone('');
+  }
+
+  function removePhone(index: number) {
+    setPhones(phones.filter((_, i) => i !== index));
+  }
+
+  function updatePhone(index: number, value: string) {
+    const updated = [...phones];
+    updated[index] = value;
+    setPhones(updated);
   }
 
   async function handleDeleteCourt(id: number) {
@@ -296,6 +335,16 @@ export function CourtsManager() {
     const updated = [...chambers];
     updated[index] = { ...updated[index], number };
     setChambers(updated);
+  }
+
+  // تحليل أرقام الهاتف من JSON
+  function parsePhones(phonesJson?: string): string[] {
+    try {
+      const parsed = phonesJson ? JSON.parse(phonesJson) : [];
+      return Array.isArray(parsed) ? parsed.filter((p: string) => p.trim()) : [];
+    } catch {
+      return [];
+    }
   }
 
   if (isLoading) {
@@ -360,6 +409,7 @@ export function CourtsManager() {
               const Icon = TYPE_ICONS[court.type] || Building2;
               const isExpanded = expandedId === court.id;
               const parsedChambers = court.chambers ? JSON.parse(court.chambers) as ChamberItem[] : [];
+              const courtPhones = parsePhones(court.phones);
               const linkedCasesCount = cases.filter((c) => c.courtId === court.id).length;
               return (
                 <Card key={court.id} className="overflow-hidden">
@@ -383,6 +433,12 @@ export function CourtsManager() {
                                 {linkedCasesCount.toLocaleString('en-US')} قضية
                               </Badge>
                             )}
+                            {courtPhones.length > 0 && (
+                              <Badge variant="outline" className="text-xs text-teal-600 dark:text-teal-400">
+                                <Phone className="w-3 h-3 ml-0.5 inline" />
+                                {courtPhones.length.toLocaleString('en-US')}
+                              </Badge>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -395,17 +451,35 @@ export function CourtsManager() {
                         </Button>
                       </div>
                     </div>
-                    {isExpanded && parsedChambers.length > 0 && (
-                      <div className="mt-3 pt-3 border-t">
-                        <p className="text-xs font-semibold text-muted-foreground mb-2">الغرف</p>
-                        <div className="flex flex-wrap gap-2">
-                          {parsedChambers.map((ch, i) => (
-                            <Badge key={i} variant="secondary" className="text-xs">
-                              {ch.name}
-                              {ch.number && ch.number > 0 && ` رقم ${String(ch.number).padStart(2, '0')}`}
-                            </Badge>
-                          ))}
-                        </div>
+                    {isExpanded && (
+                      <div className="mt-3 pt-3 border-t space-y-3">
+                        {parsedChambers.length > 0 && (
+                          <div>
+                            <p className="text-xs font-semibold text-muted-foreground mb-2">الغرف</p>
+                            <div className="flex flex-wrap gap-2">
+                              {parsedChambers.map((ch, i) => (
+                                <Badge key={i} variant="secondary" className="text-xs">
+                                  {ch.name}
+                                  {ch.number && ch.number > 0 && ` رقم ${String(ch.number).padStart(2, '0')}`}
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {courtPhones.length > 0 && (
+                          <div>
+                            <p className="text-xs font-semibold text-muted-foreground mb-2 flex items-center gap-1">
+                              <Phone className="w-3 h-3" /> أرقام الهاتف
+                            </p>
+                            <div className="flex flex-wrap gap-2">
+                              {courtPhones.map((phone, i) => (
+                                <Badge key={i} variant="outline" className="text-xs font-mono dir-ltr">
+                                  {phone}
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     )}
                   </CardContent>
@@ -427,6 +501,7 @@ export function CourtsManager() {
             {groupedCourts.council.map((court) => {
               const isExpanded = expandedId === court.id;
               const parsedChambers = court.chambers ? JSON.parse(court.chambers) as ChamberItem[] : [];
+              const courtPhones = parsePhones(court.phones);
               const wilayaName = WILAYAS.find((w) => w.code === court.wilayaId)?.name;
               const linkedCasesCount = cases.filter((c) => c.courtId === court.id).length;
               return (
@@ -447,6 +522,12 @@ export function CourtsManager() {
                               {linkedCasesCount.toLocaleString('en-US')} قضية
                             </Badge>
                           )}
+                          {courtPhones.length > 0 && (
+                            <Badge variant="outline" className="text-xs text-teal-600 dark:text-teal-400">
+                              <Phone className="w-3 h-3 ml-0.5 inline" />
+                              {courtPhones.length.toLocaleString('en-US')}
+                            </Badge>
+                          )}
                         </div>
                       </div>
                       <div className="flex items-center gap-1 shrink-0">
@@ -458,17 +539,35 @@ export function CourtsManager() {
                         </Button>
                       </div>
                     </div>
-                    {isExpanded && parsedChambers.length > 0 && (
-                      <div className="mt-3 pt-3 border-t">
-                        <p className="text-xs font-semibold text-muted-foreground mb-2">الغرف</p>
-                        <div className="flex flex-wrap gap-2">
-                          {parsedChambers.map((ch, i) => (
-                            <Badge key={i} variant="secondary" className="text-xs">
-                              {ch.name}
-                              {ch.number && ch.number > 0 && ` رقم ${String(ch.number).padStart(2, '0')}`}
-                            </Badge>
-                          ))}
-                        </div>
+                    {isExpanded && (
+                      <div className="mt-3 pt-3 border-t space-y-3">
+                        {parsedChambers.length > 0 && (
+                          <div>
+                            <p className="text-xs font-semibold text-muted-foreground mb-2">الغرف</p>
+                            <div className="flex flex-wrap gap-2">
+                              {parsedChambers.map((ch, i) => (
+                                <Badge key={i} variant="secondary" className="text-xs">
+                                  {ch.name}
+                                  {ch.number && ch.number > 0 && ` رقم ${String(ch.number).padStart(2, '0')}`}
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {courtPhones.length > 0 && (
+                          <div>
+                            <p className="text-xs font-semibold text-muted-foreground mb-2 flex items-center gap-1">
+                              <Phone className="w-3 h-3" /> أرقام الهاتف
+                            </p>
+                            <div className="flex flex-wrap gap-2">
+                              {courtPhones.map((phone, i) => (
+                                <Badge key={i} variant="outline" className="text-xs font-mono dir-ltr">
+                                  {phone}
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     )}
                   </CardContent>
@@ -490,6 +589,7 @@ export function CourtsManager() {
             {groupedCourts.court.map((court) => {
               const isExpanded = expandedId === court.id;
               const parsedChambers = court.chambers ? JSON.parse(court.chambers) as ChamberItem[] : [];
+              const courtPhones = parsePhones(court.phones);
               const wilayaName = WILAYAS.find((w) => w.code === court.wilayaId)?.name;
               const parentCouncil = courts.find((c) => c.id === court.parentCouncilId);
               const linkedCasesCount = cases.filter((c) => c.courtId === court.id).length;
@@ -513,18 +613,38 @@ export function CourtsManager() {
                             {linkedCasesCount.toLocaleString('en-US')} قضية
                           </Badge>
                         )}
+                        {courtPhones.length > 0 && (
+                          <Badge variant="outline" className="text-[10px] text-teal-600 dark:text-teal-400">
+                            <Phone className="w-2.5 h-2.5 ml-0.5 inline" />
+                            {courtPhones.length.toLocaleString('en-US')}
+                          </Badge>
+                        )}
                       </div>
                     </div>
                     {isExpanded && (
-                      <div className="mt-2 pt-2 border-t">
+                      <div className="mt-2 pt-2 border-t space-y-2">
                         {parsedChambers.length > 0 && (
-                          <div className="flex flex-wrap gap-1 mb-2">
+                          <div className="flex flex-wrap gap-1">
                             {parsedChambers.map((ch, i) => (
                               <Badge key={i} variant="secondary" className="text-[10px]">
                                 {ch.name}
                                 {ch.number && ch.number > 0 && ` ${String(ch.number).padStart(2, '0')}`}
                               </Badge>
                             ))}
+                          </div>
+                        )}
+                        {courtPhones.length > 0 && (
+                          <div>
+                            <p className="text-[10px] font-semibold text-muted-foreground mb-1 flex items-center gap-1">
+                              <Phone className="w-2.5 h-2.5" /> أرقام الهاتف
+                            </p>
+                            <div className="flex flex-wrap gap-1">
+                              {courtPhones.map((phone, i) => (
+                                <Badge key={i} variant="outline" className="text-[10px] font-mono dir-ltr">
+                                  {phone}
+                                </Badge>
+                              ))}
+                            </div>
                           </div>
                         )}
                         <div className="flex items-center gap-1">
@@ -555,20 +675,36 @@ export function CourtsManager() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
             {[...groupedCourts.admin_appeal, ...groupedCourts.admin_first, ...groupedCourts.commercial].map((court) => {
               const wilayaName = WILAYAS.find((w) => w.code === court.wilayaId)?.name;
+              const courtPhones = parsePhones(court.phones);
               return (
                 <Card key={court.id} className="overflow-hidden">
                   <CardContent className="p-3">
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="font-bold text-sm truncate">{court.name}</p>
-                        <div className="flex items-center gap-1 mt-1">
+                        <div className="flex items-center gap-1 mt-1 flex-wrap">
                           <Badge className={`${TYPE_COLORS[court.type]} text-[10px]`}>
                             {TYPE_LABELS[court.type]}
                           </Badge>
                           {wilayaName && (
                             <Badge variant="outline" className="text-[10px]">{wilayaName}</Badge>
                           )}
+                          {courtPhones.length > 0 && (
+                            <Badge variant="outline" className="text-[10px] text-teal-600 dark:text-teal-400">
+                              <Phone className="w-2.5 h-2.5 ml-0.5 inline" />
+                              {courtPhones.length.toLocaleString('en-US')}
+                            </Badge>
+                          )}
                         </div>
+                        {courtPhones.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-2">
+                            {courtPhones.map((phone, i) => (
+                              <Badge key={i} variant="outline" className="text-[10px] font-mono dir-ltr">
+                                {phone}
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
                       </div>
                       <div className="flex items-center gap-1">
                         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEditForm(court)}>
@@ -834,6 +970,68 @@ export function CourtsManager() {
                 </div>
               )}
 
+              {/* أرقام الهاتف */}
+              <div>
+                <Label className="text-xs font-semibold mb-2 block flex items-center gap-1.5">
+                  <Phone className="w-3.5 h-3.5" />
+                  أرقام الهاتف
+                </Label>
+                <p className="text-xs text-muted-foreground mb-2">
+                  أضف أرقام الهاتف الخاصة بالهيئة القضائية
+                </p>
+                {/* إضافة رقم جديد */}
+                <div className="flex gap-2 mb-3">
+                  <Input
+                    value={newPhone}
+                    onChange={(e) => setNewPhone(e.target.value)}
+                    placeholder="أدخل رقم الهاتف..."
+                    className="h-9 text-sm"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        addPhone();
+                      }
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-9 px-3 shrink-0"
+                    onClick={addPhone}
+                    disabled={!newPhone.trim()}
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                  </Button>
+                </div>
+                {/* قائمة الأرقام */}
+                {phones.length > 0 ? (
+                  <div className="space-y-1.5">
+                    {phones.map((phone, idx) => (
+                      <div key={idx} className="flex items-center gap-2 p-2 rounded-lg border bg-muted/30">
+                        <Phone className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400 shrink-0" />
+                        <Input
+                          value={phone}
+                          onChange={(e) => updatePhone(idx, e.target.value)}
+                          className="h-7 text-sm border-0 bg-transparent p-0 focus-visible:ring-0 flex-1"
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 shrink-0 text-muted-foreground hover:text-destructive"
+                          onClick={() => removePhone(idx)}
+                        >
+                          <X className="w-3 h-3" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground text-center py-2">لا توجد أرقام هاتف مسجلة</p>
+                )}
+              </div>
+
               {/* ملخص */}
               <div className="p-3 bg-muted/50 rounded-lg space-y-1">
                 <p className="text-xs font-semibold text-muted-foreground mb-2">ملخص الهيئة:</p>
@@ -856,6 +1054,8 @@ export function CourtsManager() {
                   )}
                   <span className="text-muted-foreground">عدد الغرف:</span>
                   <span className="font-medium">{chambers.length.toLocaleString('en-US')}</span>
+                  <span className="text-muted-foreground">أرقام الهاتف:</span>
+                  <span className="font-medium">{phones.length > 0 ? phones.length.toLocaleString('en-US') : 'لا يوجد'}</span>
                 </div>
               </div>
             </div>

@@ -199,6 +199,7 @@ model JudicialBody {
   wilayaId        Int?     @default(16)
   parentCouncilId Int?
   chambers        String?  @default("") // JSON string - array of {name, number}
+  phones          String?  @default("") // JSON string - array of phone numbers
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 }

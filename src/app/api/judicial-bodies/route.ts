@@ -16,7 +16,7 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { name, type, wilayaId, parentCouncilId, chambers } = body;
+    const { name, type, wilayaId, parentCouncilId, chambers, phones } = body;
 
     const judicialBody = await prisma.judicialBody.create({
       data: {
@@ -25,6 +25,7 @@ export async function POST(request: NextRequest) {
         wilayaId: wilayaId ?? 16,
         parentCouncilId: parentCouncilId ?? null,
         chambers: chambers ?? '',
+        phones: phones ?? '',
       },
     });
 
