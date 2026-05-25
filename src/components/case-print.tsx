@@ -82,9 +82,10 @@ interface CasePrintProps {
   parties: Party[];
   delays: Delay[];
   sessions: Session[];
+  courtPhones?: string;
 }
 
-export function CasePrintButton({ caseData, parties, delays, sessions }: CasePrintProps) {
+export function CasePrintButton({ caseData, parties, delays, sessions, courtPhones }: CasePrintProps) {
   const [loading, setLoading] = React.useState(false);
   const { settings } = useSettings();
 
@@ -355,6 +356,7 @@ export function CasePrintButton({ caseData, parties, delays, sessions }: CasePri
       <td>الولاية</td>
       <td>${wilayaName || '—'}</td>
     </tr>
+    ${(() => { try { const ph = courtPhones ? JSON.parse(courtPhones) : []; return Array.isArray(ph) && ph.length > 0 ? `<tr><td>هاتف المحكمة</td><td>${ph.join(' / ')}</td><td></td><td></td></tr>` : ''; } catch { return ''; } })()}
     <tr>
       <td>تاريخ التسجيل</td>
       <td>${formatDate(caseData.registrationDate)}</td>

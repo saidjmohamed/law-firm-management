@@ -55,6 +55,7 @@ import {
   Building2,
   Clock,
   Wallet,
+  Phone,
 } from 'lucide-react';
 
 // ============================================================================
@@ -147,6 +148,7 @@ interface JudicialBodyType {
   wilayaId?: number;
   parentCouncilId?: number;
   chambers?: string;
+  phones?: string;
 }
 
 // Status border colors for case cards
@@ -837,6 +839,7 @@ export function Cases() {
                   parties={caseParties || []}
                   delays={caseDelays || []}
                   sessions={caseSessions || []}
+                  courtPhones={judicialBodies?.find(b => b.id === selectedCase.courtId)?.phones}
                 />
                 <CaseAnnouncementButton
                   caseData={selectedCase}
@@ -860,6 +863,11 @@ export function Cases() {
               <DetailField label="رقم القضية الأصلية" value={selectedCase.origCaseNumber} />
               <DetailField label="المجلس" value={selectedCase.councilName} />
               <DetailField label="المحكمة" value={selectedCase.courtName} />
+              {(() => {
+                const courtBody = judicialBodies?.find(b => b.id === selectedCase.courtId);
+                const courtPhones = courtBody?.phones ? (() => { try { const p = JSON.parse(courtBody.phones); return Array.isArray(p) ? p.filter((x: string) => x.trim()) : []; } catch { return []; } })() : [];
+                return courtPhones.length > 0 ? <DetailField label="هاتف المحكمة" value={courtPhones.join(' / ')} /> : null;
+              })()}
               <DetailField label="الغرفة/القسم" value={selectedCase.chamber} />
               <DetailField label="هاتف قاعة المحامين" value={selectedCase.barPhone} />
               <DetailField label="تاريخ التسجيل" value={formatDate(selectedCase.registrationDate)} />
@@ -1154,6 +1162,11 @@ export function Cases() {
                         <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground flex-wrap">
                           {c.clientId && clientMap[c.clientId] && <span className="text-teal-600 dark:text-teal-400 font-semibold">{clientMap[c.clientId].name}</span>}
                           {c.courtName && <span>{c.courtName}</span>}
+                          {(() => {
+                            const courtBody = judicialBodies?.find(b => b.id === c.courtId);
+                            const courtPhones = courtBody?.phones ? (() => { try { const p = JSON.parse(courtBody.phones); return Array.isArray(p) ? p.filter((x: string) => x.trim()) : []; } catch { return []; } })() : [];
+                            return courtPhones.length > 0 ? <span className="text-teal-600 dark:text-teal-400 font-mono dir-ltr"><Phone className="w-3 h-3 inline ml-0.5" />{courtPhones[0]}{courtPhones.length > 1 ? ` +${courtPhones.length - 1}` : ''}</span> : null;
+                          })()}
                           {c.chamber && <span>• {c.chamber}</span>}
                           {c.registrationDate && <span>• {formatDate(c.registrationDate)}</span>}
                         </div>
@@ -1394,6 +1407,18 @@ export function Cases() {
                         ))}
                       </SelectContent>
                     </Select>
+                    {formData.courtId && (() => {
+                      const selectedBody = judicialBodies?.find(b => b.id === formData.courtId);
+                      const bodyPhones = selectedBody?.phones ? (() => { try { const p = JSON.parse(selectedBody.phones); return Array.isArray(p) ? p.filter((x: string) => x.trim()) : []; } catch { return []; } })() : [];
+                      return bodyPhones.length > 0 ? (
+                        <div className="mt-1.5 flex items-center gap-1.5 flex-wrap">
+                          <Phone className="w-3 h-3 text-teal-600 dark:text-teal-400" />
+                          {bodyPhones.map((ph: string, i: number) => (
+                            <span key={i} className="text-xs font-mono text-teal-700 dark:text-teal-400 dir-ltr">{ph}{i < bodyPhones.length - 1 ? ' /' : ''}</span>
+                          ))}
+                        </div>
+                      ) : null;
+                    })()}
                   </div>
                 )}
 
