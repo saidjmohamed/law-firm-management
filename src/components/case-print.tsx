@@ -34,6 +34,7 @@ interface Case {
   lawyer?: string;
   notes?: string;
   judgment?: string;
+  caseResult?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -370,6 +371,8 @@ export function CasePrintButton({ caseData, parties, delays, sessions, courtPhon
       <td>${formatDate(caseData.delibDate)}</td>
     </tr>
     ${caseData.barPhone ? `<tr><td>هاتف قاعة المحامين</td><td>${caseData.barPhone}</td><td></td><td></td></tr>` : ''}
+    ${caseData.caseResult === 'won' ? `<tr><td>نتيجة القضية</td><td style="color:#059669;font-weight:bold">✓ ربحت القضية</td><td></td><td></td></tr>` : ''}
+    ${caseData.caseResult === 'lost' ? `<tr><td>نتيجة القضية</td><td style="color:#dc2626;font-weight:bold">✗ خسرت القضية</td><td></td><td></td></tr>` : ''}
   </table>
 
   <!-- أطراف النزاع -->

@@ -69,6 +69,9 @@ export async function PUT(
     if (updateData.chamberNumber !== undefined && updateData.chamberNumber !== null) updateData.chamberNumber = parseInt(String(updateData.chamberNumber));
     if (updateData.courtId !== undefined && updateData.courtId !== null) updateData.courtId = parseInt(String(updateData.courtId));
 
+    // معالجة caseResult — السماح بـ null
+    if (updateData.caseResult === '' || updateData.caseResult === '_none') updateData.caseResult = null;
+
     const updatedCase = await prisma.case.update({
       where: { id: parseInt(id) },
       data: updateData,
@@ -113,6 +116,9 @@ export async function PATCH(
     if (updateData.paidAmount !== undefined && updateData.paidAmount !== null) updateData.paidAmount = parseInt(String(updateData.paidAmount));
     if (updateData.chamberNumber !== undefined && updateData.chamberNumber !== null) updateData.chamberNumber = parseInt(String(updateData.chamberNumber));
     if (updateData.courtId !== undefined && updateData.courtId !== null) updateData.courtId = parseInt(String(updateData.courtId));
+
+    // معالجة caseResult — السماح بـ null
+    if (updateData.caseResult === '' || updateData.caseResult === '_none') updateData.caseResult = null;
 
     const updatedCase = await prisma.case.update({
       where: { id: parseInt(id) },

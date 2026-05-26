@@ -72,6 +72,7 @@ model Case {
   lawyer           String?  @default("")
   notes            String?  @default("")
   judgment         String?  @default("")
+  caseResult       String?  // 'won' = ربحت القضية | 'lost' = خسرت القضية | null
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

@@ -53,6 +53,7 @@ export async function POST(request: NextRequest) {
         lawyer: body.lawyer || '',
         notes: body.notes || '',
         judgment: body.judgment || '',
+        caseResult: body.caseResult || null,
       },
     });
 

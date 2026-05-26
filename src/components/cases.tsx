@@ -56,6 +56,8 @@ import {
   Clock,
   Wallet,
   Phone,
+  Trophy,
+  XCircle,
 } from 'lucide-react';
 
 // ============================================================================
@@ -127,6 +129,7 @@ interface CaseType {
   lawyer?: string;
   notes?: string;
   judgment?: string;
+  caseResult?: string; // 'won' | 'lost' | null
   createdAt: string;
   updatedAt: string;
   client?: { id: number; name?: string };
@@ -870,6 +873,21 @@ export function Cases() {
               })()}
               <DetailField label="الغرفة/القسم" value={selectedCase.chamber} />
               <DetailField label="هاتف قاعة المحامين" value={selectedCase.barPhone} />
+              {selectedCase.caseResult && (
+                <div className="col-span-2 md:col-span-3">
+                  {selectedCase.caseResult === 'won' ? (
+                    <div className="flex items-center gap-2 p-2 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg">
+                      <Trophy className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                      <span className="text-sm font-bold text-emerald-700 dark:text-emerald-400">ربحت القضية</span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2 p-2 bg-red-50 dark:bg-red-900/20 rounded-lg">
+                      <XCircle className="w-4 h-4 text-red-600 dark:text-red-400" />
+                      <span className="text-sm font-bold text-red-700 dark:text-red-400">خسرت القضية</span>
+                    </div>
+                  )}
+                </div>
+              )}
               <DetailField label="تاريخ التسجيل" value={formatDate(selectedCase.registrationDate)} />
               <DetailField label="أول جلسة" value={formatDate(selectedCase.firstSessionDate)} />
               <DetailField label="تاريخ المداولة" value={formatDate(selectedCase.delibDate)} />
@@ -1075,6 +1093,30 @@ export function Cases() {
       ) : (
         <div className="space-y-4">
       {/* شريط البحث والفلاتر */}
+      {/* إحصائيات نتائج القضايا */}
+      {(() => {
+        const wonCases = filteredCases.filter(c => c.caseResult === 'won').length;
+        const lostCases = filteredCases.filter(c => c.caseResult === 'lost').length;
+        if (wonCases === 0 && lostCases === 0) return null;
+        return (
+          <div className="grid grid-cols-2 gap-3">
+            <div className="text-center p-3 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg border border-emerald-200 dark:border-emerald-800">
+              <div className="flex items-center justify-center gap-1.5">
+                <Trophy className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                <p className="text-xs text-muted-foreground">القضايا الرابحة</p>
+              </div>
+              <p className="text-lg font-extrabold text-emerald-700 dark:text-emerald-400 tabular-nums">{wonCases}</p>
+            </div>
+            <div className="text-center p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
+              <div className="flex items-center justify-center gap-1.5">
+                <XCircle className="w-4 h-4 text-red-600 dark:text-red-400" />
+                <p className="text-xs text-muted-foreground">القضايا الخاسرة</p>
+              </div>
+              <p className="text-lg font-extrabold text-red-700 dark:text-red-400 tabular-nums">{lostCases}</p>
+            </div>
+          </div>
+        );
+      })()}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
           <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -1154,6 +1196,16 @@ export function Cases() {
                           <Badge className={`${STATUS_COLORS[c.status || ''] || ''} text-xs`}>
                             {c.status}
                           </Badge>
+                          {c.caseResult === 'won' && (
+                            <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400 text-xs">
+                              <Trophy className="w-3 h-3 ml-0.5" /> ربحت
+                            </Badge>
+                          )}
+                          {c.caseResult === 'lost' && (
+                            <Badge className="bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400 text-xs">
+                              <XCircle className="w-3 h-3 ml-0.5" /> خسرت
+                            </Badge>
+                          )}
                           {c.caseNature && (
                             <Badge variant="outline" className="text-xs">{c.caseNature}</Badge>
                           )}
@@ -1748,6 +1800,33 @@ export function Cases() {
                     placeholder="منطوق الحكم"
                     rows={3}
                   />
+                </div>
+                {/* نتيجة القضية */}
+                <div>
+                  <Label className="text-xs">نتيجة القضية</Label>
+                  <Select
+                    value={formData.caseResult || '_none'}
+                    onValueChange={(v) => setFormData({ ...formData, caseResult: v === '_none' ? null : v })}
+                  >
+                    <SelectTrigger className="h-11">
+                      <SelectValue placeholder="اختر نتيجة القضية" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="_none">— بدون تحديد —</SelectItem>
+                      <SelectItem value="won">
+                        <span className="flex items-center gap-2">
+                          <Trophy className="w-3.5 h-3.5 text-emerald-600" />
+                          ربحت القضية
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="lost">
+                        <span className="flex items-center gap-2">
+                          <XCircle className="w-3.5 h-3.5 text-red-600" />
+                          خسرت القضية
+                        </span>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div>
                   <Label className="text-xs">ملاحظات</Label>
