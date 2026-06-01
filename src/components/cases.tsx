@@ -3,6 +3,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Calendar as CalendarIcon } from 'lucide-react';
 import { useCases, useClients, useParties, useDelays, useSessions, useJudicialBodies, useLawyers, createCase, updateCase, deleteCase as apiDeleteCase, createParty, updateParty as apiUpdateParty, deleteParty as apiDeleteParty, createDelay, updateDelay as apiUpdateDelay, deleteDelay as apiDeleteDelay, createClient, createJudicialBody, createArchive, syncPartiesToClients } from '@/lib/api';
+import { mutate } from 'swr';
 import { formatCurrency, STATUS_COLORS, CASE_NATURES, CASE_STATUSES, LITIGATION_STAGES, PARTY_ROLES, JUDICIAL_CHAMBERS, WILAYAS, JUDICIARY_TYPES, ORDINARY_COURT_LEVELS, ADMIN_COURT_LEVELS, CHAMBER_NUMBERS, formatDate } from '@/lib/constants';
 import { CasePrintButton } from '@/components/case-print';
 import { CaseAnnouncementButton } from '@/components/case-announcement';
@@ -588,6 +589,9 @@ export function Cases() {
         await apiDeleteDelay(d.id);
       }
 
+      // تحديث cache التأجيلات صراحة لضمان ظهورها في لوحة التحكم
+      await mutate('/api/delays');
+
       toast.success('تم تحديث القضية بنجاح');
       setShowForm(false);
       resetForm();
@@ -628,6 +632,9 @@ export function Cases() {
           });
         }
       }
+
+      // تحديث cache التأجيلات صراحة لضمان ظهورها في لوحة التحكم
+      await mutate('/api/delays');
 
       toast.success('تم إضافة القضية بنجاح');
 

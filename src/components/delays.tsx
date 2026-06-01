@@ -25,6 +25,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { toast } from 'sonner';
+import { mutate } from 'swr';
 import {
   Plus,
   Clock,
@@ -83,7 +84,14 @@ export function DelaysManager() {
     try {
       const nowDate = new Date();
       if (editingDelay?.id) {
-        await updateDelay(editingDelay.id, { ...formData, updatedAt: nowDate });
+        // إرسال فقط الحقول المسموح بها (بدون علاقة case)
+        await updateDelay(editingDelay.id, {
+          caseId: formData.caseId,
+          delayDate: formData.delayDate,
+          reason: formData.reason,
+          notes: formData.notes,
+          updatedAt: nowDate,
+        });
         toast.success('تم تحديث التأجيل بنجاح');
       } else {
         if (!formData.caseId) {
@@ -91,13 +99,17 @@ export function DelaysManager() {
           return;
         }
         await createDelay({
-          ...formData,
           caseId: formData.caseId,
+          delayDate: formData.delayDate,
+          reason: formData.reason,
+          notes: formData.notes,
           createdAt: nowDate,
           updatedAt: nowDate,
         });
         toast.success('تم إضافة التأجيل بنجاح');
       }
+      // تحديث cache القضايا أيضاً لكي تظهر في لوحة التحكم
+      await mutate('/api/cases');
       setShowForm(false);
       resetForm();
     } catch (error) {

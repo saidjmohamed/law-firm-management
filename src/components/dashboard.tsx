@@ -111,27 +111,49 @@ export function Dashboard() {
     .slice(0, 10);
 
   // القضايا القادمة في 7 أيام — من التأجيلات + الجلسات
-  const upcomingThisWeek = delays
-    .filter((d: any) => {
-      if (!d.delayDate) return false;
-      const dateStr = d.delayDate.length > 10 ? d.delayDate.substring(0, 10) : d.delayDate;
-      return dateStr >= todayStr && dateStr <= nextWeekStr;
-    })
-    .map((d: any) => {
+  // إزالة التكرار: عرض أقرب تأجيل فقط لكل قضية
+  const upcomingThisWeek = (() => {
+    const caseDelayMap = new Map<number, any>();
+    delays
+      .filter((d: any) => {
+        if (!d.delayDate) return false;
+        const dateStr = d.delayDate.length > 10 ? d.delayDate.substring(0, 10) : d.delayDate;
+        return dateStr >= todayStr && dateStr <= nextWeekStr;
+      })
+      .forEach((d: any) => {
+        const existing = caseDelayMap.get(d.caseId);
+        // الاحتفاظ بأقرب تأجيل لكل قضية
+        if (!existing || (d.delayDate || '') < (existing.delayDate || '')) {
+          caseDelayMap.set(d.caseId, d);
+        }
+      });
+    return Array.from(caseDelayMap.values()).map((d: any) => {
       const caseData = cases.find((c: any) => c.id === d.caseId);
       return { ...d, caseData, source: 'delay' as const };
     });
+  })();
 
-  const upcomingSessionsThisWeek = sessions
-    .filter((s: any) => {
-      if (!s.date) return false;
-      const dateStr = s.date.length > 10 ? s.date.substring(0, 10) : s.date;
-      return dateStr >= todayStr && dateStr <= nextWeekStr;
-    })
-    .map((s: any) => {
+  const upcomingSessionsThisWeek = (() => {
+    const caseSessionMap = new Map<number, any>();
+    sessions
+      .filter((s: any) => {
+        if (!s.date) return false;
+        const dateStr = s.date.length > 10 ? s.date.substring(0, 10) : s.date;
+        return dateStr >= todayStr && dateStr <= nextWeekStr;
+      })
+      .forEach((s: any) => {
+        const key = s.caseId || `no-case-${s.id}`;
+        const existing = caseSessionMap.get(key);
+        // الاحتفاظ بأقرب جلسة لكل قضية
+        if (!existing || (s.date || '') < (existing.date || '')) {
+          caseSessionMap.set(key, s);
+        }
+      });
+    return Array.from(caseSessionMap.values()).map((s: any) => {
       const caseData = cases.find((c: any) => c.id === s.caseId);
       return { ...s, caseData, source: 'session' as const };
     });
+  })();
 
   // دمج وترتيب حسب التاريخ
   const allUpcoming = [...upcomingThisWeek, ...upcomingSessionsThisWeek]

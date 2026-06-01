@@ -39,9 +39,18 @@ export async function PUT(
     const { id } = await params;
     const body = await request.json();
 
+    // تصفية الحقول - فقط الحقول المسموح بتحديثها
+    const allowedFields = ['caseId', 'delayDate', 'reason', 'notes', 'updatedAt'];
+    const cleanData: Record<string, unknown> = {};
+    for (const key of allowedFields) {
+      if (body[key] !== undefined) {
+        cleanData[key] = body[key];
+      }
+    }
+
     const delay = await prisma.delay.update({
       where: { id: parseInt(id) },
-      data: body,
+      data: cleanData,
     });
 
     return NextResponse.json(delay);
