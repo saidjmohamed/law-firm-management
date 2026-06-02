@@ -46,7 +46,10 @@ import {
   ChevronLeft,
   AlertCircle,
   Phone,
+  PhoneCall,
   X,
+  Search,
+  BookOpen,
 } from 'lucide-react';
 
 interface JudicialBody {
@@ -98,6 +101,8 @@ export function CourtsManager() {
   const [editingCourt, setEditingCourt] = useState<JudicialBody | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
   const [expandedId, setExpandedId] = useState<number | null>(null);
+  const [showPhoneDirectory, setShowPhoneDirectory] = useState(false);
+  const [phoneSearch, setPhoneSearch] = useState('');
 
   // فلاتر
   const [filterType, setFilterType] = useState<string>('all');
@@ -347,6 +352,54 @@ export function CourtsManager() {
     }
   }
 
+  // عرض رقم الهاتف الرئيسي بجانب الاسم
+  function renderPhoneInline(phoneList: string[], size: 'sm' | 'xs' = 'sm') {
+    if (phoneList.length === 0) return null;
+    const sizeClasses = size === 'xs'
+      ? 'text-[10px] gap-0.5'
+      : 'text-xs gap-1';
+    const iconSize = size === 'xs' ? 'w-2.5 h-2.5' : 'w-3 h-3';
+    return (
+      <div className="flex items-center gap-1 flex-wrap">
+        {phoneList.map((phone, i) => (
+          <a
+            key={i}
+            href={`tel:${phone.replace(/\s/g, '')}`}
+            className={`inline-flex items-center rounded-md bg-teal-50 dark:bg-teal-900/20 text-teal-700 dark:text-teal-400 font-mono dir-ltr hover:bg-teal-100 dark:hover:bg-teal-900/30 transition-colors px-1.5 py-0.5 ${sizeClasses}`}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <PhoneCall className={iconSize} />
+            {phone}
+          </a>
+        ))}
+      </div>
+    );
+  }
+
+  // عرض أرقام الهاتف في القسم الموسّع (مع عنوان)
+  function renderPhoneSection(phoneList: string[]) {
+    if (phoneList.length === 0) return null;
+    return (
+      <div>
+        <p className="text-xs font-semibold text-muted-foreground mb-2 flex items-center gap-1">
+          <Phone className="w-3 h-3" /> أرقام الهاتف
+        </p>
+        <div className="flex flex-wrap gap-2">
+          {phoneList.map((phone, i) => (
+            <a
+              key={i}
+              href={`tel:${phone.replace(/\s/g, '')}`}
+              className="inline-flex items-center gap-1 px-2 py-1 rounded-md border text-xs font-mono dir-ltr hover:bg-teal-50 dark:hover:bg-teal-900/20 hover:border-teal-300 dark:hover:border-teal-700 transition-colors"
+            >
+              <PhoneCall className="w-3 h-3 text-teal-600 dark:text-teal-400" />
+              {phone}
+            </a>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   if (isLoading) {
     return (
       <div className="space-y-4">
@@ -391,6 +444,14 @@ export function CourtsManager() {
           </SelectContent>
         </Select>
         <div className="flex-1" />
+        <Button
+          variant="outline"
+          onClick={() => setShowPhoneDirectory(true)}
+          className="shrink-0 h-11 touch-target border-teal-300 dark:border-teal-700 text-teal-700 dark:text-teal-400 hover:bg-teal-50 dark:hover:bg-teal-900/20"
+        >
+          <BookOpen className="w-4 h-4 ml-1" />
+          دليل الهاتف
+        </Button>
         <Button onClick={openAddForm} className="bg-teal-600 hover:bg-teal-700 shrink-0 h-11 touch-target">
           <Plus className="w-4 h-4 ml-1" />
           إضافة هيئة قضائية
@@ -422,21 +483,18 @@ export function CourtsManager() {
                         <div className="w-10 h-10 rounded-xl bg-rose-100 dark:bg-rose-900/30 flex items-center justify-center shrink-0">
                           <Icon className="w-5 h-5 text-rose-600 dark:text-rose-400" />
                         </div>
-                        <div>
-                          <p className="font-bold text-sm">{court.name}</p>
-                          <div className="flex items-center gap-2 mt-0.5">
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className="font-bold text-sm">{court.name}</p>
+                            {renderPhoneInline(courtPhones)}
+                          </div>
+                          <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                             <Badge className={`${TYPE_COLORS[court.type]} text-xs`}>
                               {TYPE_LABELS[court.type]}
                             </Badge>
                             {linkedCasesCount > 0 && (
                               <Badge variant="outline" className="text-xs">
                                 {linkedCasesCount.toLocaleString('en-US')} قضية
-                              </Badge>
-                            )}
-                            {courtPhones.length > 0 && (
-                              <Badge variant="outline" className="text-xs text-teal-600 dark:text-teal-400">
-                                <Phone className="w-3 h-3 ml-0.5 inline" />
-                                {courtPhones.length.toLocaleString('en-US')}
                               </Badge>
                             )}
                           </div>
@@ -466,20 +524,7 @@ export function CourtsManager() {
                             </div>
                           </div>
                         )}
-                        {courtPhones.length > 0 && (
-                          <div>
-                            <p className="text-xs font-semibold text-muted-foreground mb-2 flex items-center gap-1">
-                              <Phone className="w-3 h-3" /> أرقام الهاتف
-                            </p>
-                            <div className="flex flex-wrap gap-2">
-                              {courtPhones.map((phone, i) => (
-                                <Badge key={i} variant="outline" className="text-xs font-mono dir-ltr">
-                                  {phone}
-                                </Badge>
-                              ))}
-                            </div>
-                          </div>
-                        )}
+                        {renderPhoneSection(courtPhones)}
                       </div>
                     )}
                   </CardContent>
@@ -512,7 +557,10 @@ export function CourtsManager() {
                       onClick={() => setExpandedId(isExpanded ? null : court.id!)}
                     >
                       <div className="min-w-0">
-                        <p className="font-bold text-sm truncate">{court.name}</p>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="font-bold text-sm truncate">{court.name}</p>
+                          {renderPhoneInline(courtPhones)}
+                        </div>
                         <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                           {wilayaName && (
                             <Badge variant="outline" className="text-xs">{wilayaName}</Badge>
@@ -520,12 +568,6 @@ export function CourtsManager() {
                           {linkedCasesCount > 0 && (
                             <Badge variant="outline" className="text-xs">
                               {linkedCasesCount.toLocaleString('en-US')} قضية
-                            </Badge>
-                          )}
-                          {courtPhones.length > 0 && (
-                            <Badge variant="outline" className="text-xs text-teal-600 dark:text-teal-400">
-                              <Phone className="w-3 h-3 ml-0.5 inline" />
-                              {courtPhones.length.toLocaleString('en-US')}
                             </Badge>
                           )}
                         </div>
@@ -554,20 +596,7 @@ export function CourtsManager() {
                             </div>
                           </div>
                         )}
-                        {courtPhones.length > 0 && (
-                          <div>
-                            <p className="text-xs font-semibold text-muted-foreground mb-2 flex items-center gap-1">
-                              <Phone className="w-3 h-3" /> أرقام الهاتف
-                            </p>
-                            <div className="flex flex-wrap gap-2">
-                              {courtPhones.map((phone, i) => (
-                                <Badge key={i} variant="outline" className="text-xs font-mono dir-ltr">
-                                  {phone}
-                                </Badge>
-                              ))}
-                            </div>
-                          </div>
-                        )}
+                        {renderPhoneSection(courtPhones)}
                       </div>
                     )}
                   </CardContent>
@@ -600,7 +629,10 @@ export function CourtsManager() {
                       className="cursor-pointer"
                       onClick={() => setExpandedId(isExpanded ? null : court.id!)}
                     >
-                      <p className="font-bold text-sm truncate">{court.name}</p>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="font-bold text-sm truncate">{court.name}</p>
+                        {renderPhoneInline(courtPhones, 'xs')}
+                      </div>
                       <div className="flex items-center gap-1 mt-1 flex-wrap">
                         {wilayaName && (
                           <Badge variant="outline" className="text-[10px]">{wilayaName}</Badge>
@@ -611,12 +643,6 @@ export function CourtsManager() {
                         {linkedCasesCount > 0 && (
                           <Badge variant="outline" className="text-[10px]">
                             {linkedCasesCount.toLocaleString('en-US')} قضية
-                          </Badge>
-                        )}
-                        {courtPhones.length > 0 && (
-                          <Badge variant="outline" className="text-[10px] text-teal-600 dark:text-teal-400">
-                            <Phone className="w-2.5 h-2.5 ml-0.5 inline" />
-                            {courtPhones.length.toLocaleString('en-US')}
                           </Badge>
                         )}
                       </div>
@@ -633,20 +659,7 @@ export function CourtsManager() {
                             ))}
                           </div>
                         )}
-                        {courtPhones.length > 0 && (
-                          <div>
-                            <p className="text-[10px] font-semibold text-muted-foreground mb-1 flex items-center gap-1">
-                              <Phone className="w-2.5 h-2.5" /> أرقام الهاتف
-                            </p>
-                            <div className="flex flex-wrap gap-1">
-                              {courtPhones.map((phone, i) => (
-                                <Badge key={i} variant="outline" className="text-[10px] font-mono dir-ltr">
-                                  {phone}
-                                </Badge>
-                              ))}
-                            </div>
-                          </div>
-                        )}
+                        {renderPhoneSection(courtPhones)}
                         <div className="flex items-center gap-1">
                           <Button variant="ghost" size="sm" className="h-7 text-xs touch-target" onClick={() => openEditForm(court)}>
                             <Pencil className="w-3 h-3 ml-1" /> تعديل
@@ -681,7 +694,10 @@ export function CourtsManager() {
                   <CardContent className="p-3">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="font-bold text-sm truncate">{court.name}</p>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="font-bold text-sm truncate">{court.name}</p>
+                          {renderPhoneInline(courtPhones, 'xs')}
+                        </div>
                         <div className="flex items-center gap-1 mt-1 flex-wrap">
                           <Badge className={`${TYPE_COLORS[court.type]} text-[10px]`}>
                             {TYPE_LABELS[court.type]}
@@ -689,22 +705,7 @@ export function CourtsManager() {
                           {wilayaName && (
                             <Badge variant="outline" className="text-[10px]">{wilayaName}</Badge>
                           )}
-                          {courtPhones.length > 0 && (
-                            <Badge variant="outline" className="text-[10px] text-teal-600 dark:text-teal-400">
-                              <Phone className="w-2.5 h-2.5 ml-0.5 inline" />
-                              {courtPhones.length.toLocaleString('en-US')}
-                            </Badge>
-                          )}
                         </div>
-                        {courtPhones.length > 0 && (
-                          <div className="flex flex-wrap gap-1 mt-2">
-                            {courtPhones.map((phone, i) => (
-                              <Badge key={i} variant="outline" className="text-[10px] font-mono dir-ltr">
-                                {phone}
-                              </Badge>
-                            ))}
-                          </div>
-                        )}
                       </div>
                       <div className="flex items-center gap-1">
                         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEditForm(court)}>
@@ -1082,6 +1083,110 @@ export function CourtsManager() {
             )}
             <Button variant="outline" onClick={() => { setShowForm(false); resetForm(); }}>إلغاء</Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* دليل الهاتف */}
+      <Dialog open={showPhoneDirectory} onOpenChange={setShowPhoneDirectory}>
+        <DialogContent className="max-w-3xl max-h-[85vh] overflow-hidden flex flex-col" dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-extrabold flex items-center gap-2">
+              <BookOpen className="w-5 h-5 text-teal-600 dark:text-teal-400" />
+              دليل هاتف المحاكم والمجالس
+            </DialogTitle>
+          </DialogHeader>
+
+          {/* بحث */}
+          <div className="relative">
+            <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              value={phoneSearch}
+              onChange={(e) => setPhoneSearch(e.target.value)}
+              placeholder="بحث بالاسم أو الولاية أو رقم الهاتف..."
+              className="pr-9 h-10"
+            />
+          </div>
+
+          {/* القائمة */}
+          <div className="flex-1 overflow-y-auto smooth-scroll space-y-1 mt-2">
+            {(() => {
+              const bodiesWithPhones = (courts || [])
+                .map((c) => ({
+                  ...c,
+                  parsedPhones: parsePhones(c.phones),
+                  wilayaName: WILAYAS.find((w) => w.code === c.wilayaId)?.name || '',
+                }))
+                .filter((c) => c.parsedPhones.length > 0)
+                .filter((c) => {
+                  if (!phoneSearch.trim()) return true;
+                  const q = phoneSearch.trim().toLowerCase();
+                  return (
+                    c.name.toLowerCase().includes(q) ||
+                    c.wilayaName.toLowerCase().includes(q) ||
+                    c.parsedPhones.some((p: string) => p.includes(q)) ||
+                    TYPE_LABELS[c.type]?.toLowerCase().includes(q)
+                  );
+                })
+                .sort((a, b) => {
+                  const typeOrder = ['supreme', 'council', 'court', 'admin_appeal', 'admin_first', 'commercial'];
+                  const typeDiff = typeOrder.indexOf(a.type) - typeOrder.indexOf(b.type);
+                  if (typeDiff !== 0) return typeDiff;
+                  return a.name.localeCompare(b.name, 'ar');
+                });
+
+              if (bodiesWithPhones.length === 0) {
+                return (
+                  <div className="text-center py-8">
+                    <Phone className="w-10 h-10 mx-auto text-muted-foreground/30 mb-3" />
+                    <p className="text-muted-foreground">
+                      {phoneSearch ? 'لا توجد نتائج للبحث' : 'لا توجد أرقام هواتف مسجلة'}
+                    </p>
+                    <p className="text-xs text-muted-foreground/70 mt-1">
+                      {!phoneSearch && 'يمكنك إضافة أرقام الهاتف عند تعديل أي هيئة قضائية'}
+                    </p>
+                  </div>
+                );
+              }
+
+              let currentType = '';
+              return bodiesWithPhones.map((c) => {
+                const showTypeHeader = c.type !== currentType;
+                currentType = c.type;
+                return (
+                  <React.Fragment key={c.id}>
+                    {showTypeHeader && (
+                      <div className="flex items-center gap-2 pt-3 pb-1">
+                        <Badge className={`${TYPE_COLORS[c.type]} text-xs font-bold`}>
+                          {TYPE_LABELS[c.type]}
+                        </Badge>
+                        <div className="flex-1 h-px bg-border" />
+                      </div>
+                    )}
+                    <div className="flex items-center justify-between p-2.5 rounded-lg border hover:bg-muted/50 transition-colors">
+                      <div className="min-w-0 flex-1">
+                        <p className="font-bold text-sm truncate">{c.name}</p>
+                        {c.wilayaName && (
+                          <p className="text-xs text-muted-foreground">{c.wilayaName}</p>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 flex-wrap justify-end shrink-0 mr-2">
+                        {c.parsedPhones.map((phone: string, i: number) => (
+                          <a
+                            key={i}
+                            href={`tel:${phone.replace(/\s/g, '')}`}
+                            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-teal-50 dark:bg-teal-900/20 text-teal-700 dark:text-teal-400 text-sm font-mono dir-ltr hover:bg-teal-100 dark:hover:bg-teal-900/30 transition-colors border border-teal-200 dark:border-teal-800"
+                          >
+                            <PhoneCall className="w-3.5 h-3.5" />
+                            {phone}
+                          </a>
+                        ))}
+                      </div>
+                    </div>
+                  </React.Fragment>
+                );
+              });
+            })()}
+          </div>
         </DialogContent>
       </Dialog>
 

@@ -105,32 +105,39 @@ export function Dashboard() {
   const nextWeekDate = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
   const nextWeekStr = `${nextWeekDate.getFullYear()}-${String(nextWeekDate.getMonth() + 1).padStart(2, '0')}-${String(nextWeekDate.getDate()).padStart(2, '0')}`;
 
+  const archivedCaseIds = new Set(
+    cases.filter((c: any) => c.status === 'مؤرشفة').map((c: any) => c.id)
+  );
   const upcomingDelays = delays
-    .filter((d: any) => d.delayDate && d.delayDate >= todayStr)
+    .filter((d: any) => d.delayDate && d.delayDate >= todayStr && !archivedCaseIds.has(d.caseId))
     .sort((a: any, b: any) => (a.delayDate || '').localeCompare(b.delayDate || ''))
     .slice(0, 10);
 
   // القضايا القادمة في 7 أيام — من التأجيلات + الجلسات
-  // إزالة التكرار: عرض أقرب تأجيل فقط لكل قضية
+  // إزالة التكرار: عرض أقرب تأجيل فقط لكل قضية (غير المؤرشفة)
   const upcomingThisWeek = (() => {
     const caseDelayMap = new Map<number, any>();
     delays
       .filter((d: any) => {
         if (!d.delayDate) return false;
+        // استبعاد تأجيلات القضايا المؤرشفة
+        if (archivedCaseIds.has(d.caseId)) return false;
         const dateStr = d.delayDate.length > 10 ? d.delayDate.substring(0, 10) : d.delayDate;
         return dateStr >= todayStr && dateStr <= nextWeekStr;
       })
       .forEach((d: any) => {
         const existing = caseDelayMap.get(d.caseId);
-        // الاحتفاظ بأقرب تأجيل لكل قضية
-        if (!existing || (d.delayDate || '') < (existing.delayDate || '')) {
+        const dDate = d.delayDate.length > 10 ? d.delayDate.substring(0, 10) : d.delayDate;
+        const eDate = existing ? (existing.delayDate.length > 10 ? existing.delayDate.substring(0, 10) : existing.delayDate) : '';
+        // الاحتفاظ بأقرب تأجيل لكل قضية (أقرب تاريخ مستقبلي)
+        if (!existing || dDate < eDate) {
           caseDelayMap.set(d.caseId, d);
         }
       });
     return Array.from(caseDelayMap.values()).map((d: any) => {
-      const caseData = cases.find((c: any) => c.id === d.caseId);
+      const caseData = cases.find((c: any) => c.id === d.caseId && c.status !== 'مؤرشفة');
       return { ...d, caseData, source: 'delay' as const };
-    });
+    }).filter((item: any) => item.caseData);
   })();
 
   const upcomingSessionsThisWeek = (() => {
@@ -138,19 +145,23 @@ export function Dashboard() {
     sessions
       .filter((s: any) => {
         if (!s.date) return false;
+        // استبعاد جلسات القضايا المؤرشفة
+        if (s.caseId && archivedCaseIds.has(s.caseId)) return false;
         const dateStr = s.date.length > 10 ? s.date.substring(0, 10) : s.date;
         return dateStr >= todayStr && dateStr <= nextWeekStr;
       })
       .forEach((s: any) => {
         const key = s.caseId || `no-case-${s.id}`;
         const existing = caseSessionMap.get(key);
+        const sDate = s.date.length > 10 ? s.date.substring(0, 10) : s.date;
+        const eDate = existing ? (existing.date.length > 10 ? existing.date.substring(0, 10) : existing.date) : '';
         // الاحتفاظ بأقرب جلسة لكل قضية
-        if (!existing || (s.date || '') < (existing.date || '')) {
+        if (!existing || sDate < eDate) {
           caseSessionMap.set(key, s);
         }
       });
     return Array.from(caseSessionMap.values()).map((s: any) => {
-      const caseData = cases.find((c: any) => c.id === s.caseId);
+      const caseData = s.caseId ? cases.find((c: any) => c.id === s.caseId && c.status !== 'مؤرشفة') : null;
       return { ...s, caseData, source: 'session' as const };
     });
   })();
