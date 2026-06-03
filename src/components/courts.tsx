@@ -353,12 +353,27 @@ export function CourtsManager() {
   }
 
   // عرض رقم الهاتف الرئيسي بجانب الاسم
-  function renderPhoneInline(phoneList: string[], size: 'sm' | 'xs' = 'sm') {
-    if (phoneList.length === 0) return null;
+  function renderPhoneInline(phoneList: string[], size: 'sm' | 'xs' = 'sm', courtId?: number) {
     const sizeClasses = size === 'xs'
       ? 'text-[10px] gap-0.5'
       : 'text-xs gap-1';
     const iconSize = size === 'xs' ? 'w-2.5 h-2.5' : 'w-3 h-3';
+
+    if (phoneList.length === 0) {
+      // عرض مؤشر "بدون رقم" مع زر إضافة
+      const court = courts?.find(c => c.id === courtId);
+      return (
+        <button
+          className={`inline-flex items-center rounded-md bg-muted/50 text-muted-foreground hover:bg-teal-50 dark:hover:bg-teal-900/20 hover:text-teal-700 dark:hover:text-teal-400 transition-colors px-1.5 py-0.5 ${sizeClasses} cursor-pointer`}
+          onClick={(e) => { e.stopPropagation(); if (court) openEditForm(court); }}
+          title="اضغط لإضافة رقم هاتف"
+        >
+          <Phone className={iconSize} />
+          <span>أضف رقم</span>
+        </button>
+      );
+    }
+
     return (
       <div className="flex items-center gap-1 flex-wrap">
         {phoneList.map((phone, i) => (
@@ -486,7 +501,7 @@ export function CourtsManager() {
                         <div className="min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
                             <p className="font-bold text-sm">{court.name}</p>
-                            {renderPhoneInline(courtPhones)}
+                            {renderPhoneInline(courtPhones, 'sm', court.id)}
                           </div>
                           <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                             <Badge className={`${TYPE_COLORS[court.type]} text-xs`}>
@@ -559,7 +574,7 @@ export function CourtsManager() {
                       <div className="min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           <p className="font-bold text-sm truncate">{court.name}</p>
-                          {renderPhoneInline(courtPhones)}
+                          {renderPhoneInline(courtPhones, 'sm', court.id)}
                         </div>
                         <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                           {wilayaName && (
@@ -631,7 +646,7 @@ export function CourtsManager() {
                     >
                       <div className="flex items-center gap-2 flex-wrap">
                         <p className="font-bold text-sm truncate">{court.name}</p>
-                        {renderPhoneInline(courtPhones, 'xs')}
+                        {renderPhoneInline(courtPhones, 'xs', court.id)}
                       </div>
                       <div className="flex items-center gap-1 mt-1 flex-wrap">
                         {wilayaName && (
@@ -696,7 +711,7 @@ export function CourtsManager() {
                       <div>
                         <div className="flex items-center gap-2 flex-wrap">
                           <p className="font-bold text-sm truncate">{court.name}</p>
-                          {renderPhoneInline(courtPhones, 'xs')}
+                          {renderPhoneInline(courtPhones, 'xs', court.id)}
                         </div>
                         <div className="flex items-center gap-1 mt-1 flex-wrap">
                           <Badge className={`${TYPE_COLORS[court.type]} text-[10px]`}>
