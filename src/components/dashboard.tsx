@@ -113,62 +113,56 @@ export function Dashboard() {
     .sort((a: any, b: any) => (a.delayDate || '').localeCompare(b.delayDate || ''))
     .slice(0, 10);
 
-  // القضايا القادمة في 7 أيام — من التأجيلات + الجلسات
-  // إزالة التكرار: عرض أقرب تأجيل فقط لكل قضية (غير المؤرشفة)
-  const upcomingThisWeek = (() => {
-    const caseDelayMap = new Map<number, any>();
-    delays
-      .filter((d: any) => {
-        if (!d.delayDate) return false;
-        // استبعاد تأجيلات القضايا المؤرشفة
-        if (archivedCaseIds.has(d.caseId)) return false;
+  // القضايا القادمة في 7 أيام — على أساس آخر تاريخ لكل قضية
+  // لكل قضية نجد آخر تاريخ (من التأجيلات + الجلسات + تاريخ المداولة)
+  // ثم نعرض القضية فقط إذا كان آخر تاريخ ضمن 7 أيام
+  const allUpcoming = (() => {
+    const result: any[] = [];
+
+    cases.filter((c: any) => c.status !== 'مؤرشفة').forEach((c: any) => {
+      const allDates: { date: string; source: string; label: string; sourceData: any }[] = [];
+
+      // جمع كل تواريخ التأجيلات
+      const caseDelays = delays.filter((d: any) => d.caseId === c.id && d.delayDate);
+      caseDelays.forEach((d: any) => {
         const dateStr = d.delayDate.length > 10 ? d.delayDate.substring(0, 10) : d.delayDate;
-        return dateStr >= todayStr && dateStr <= nextWeekStr;
-      })
-      .forEach((d: any) => {
-        const existing = caseDelayMap.get(d.caseId);
-        const dDate = d.delayDate.length > 10 ? d.delayDate.substring(0, 10) : d.delayDate;
-        const eDate = existing ? (existing.delayDate.length > 10 ? existing.delayDate.substring(0, 10) : existing.delayDate) : '';
-        // الاحتفاظ بأقرب تأجيل لكل قضية (أقرب تاريخ مستقبلي)
-        if (!existing || dDate < eDate) {
-          caseDelayMap.set(d.caseId, d);
-        }
+        allDates.push({ date: dateStr, source: 'delay', label: d.reason || 'تأجيل', sourceData: d });
       });
-    return Array.from(caseDelayMap.values()).map((d: any) => {
-      const caseData = cases.find((c: any) => c.id === d.caseId && c.status !== 'مؤرشفة');
-      return { ...d, caseData, source: 'delay' as const };
-    }).filter((item: any) => item.caseData);
-  })();
 
-  const upcomingSessionsThisWeek = (() => {
-    const caseSessionMap = new Map<number, any>();
-    sessions
-      .filter((s: any) => {
-        if (!s.date) return false;
-        // استبعاد جلسات القضايا المؤرشفة
-        if (s.caseId && archivedCaseIds.has(s.caseId)) return false;
+      // جمع كل تواريخ الجلسات
+      const caseSessions = sessions.filter((s: any) => s.caseId === c.id && s.date);
+      caseSessions.forEach((s: any) => {
         const dateStr = s.date.length > 10 ? s.date.substring(0, 10) : s.date;
-        return dateStr >= todayStr && dateStr <= nextWeekStr;
-      })
-      .forEach((s: any) => {
-        const key = s.caseId || `no-case-${s.id}`;
-        const existing = caseSessionMap.get(key);
-        const sDate = s.date.length > 10 ? s.date.substring(0, 10) : s.date;
-        const eDate = existing ? (existing.date.length > 10 ? existing.date.substring(0, 10) : existing.date) : '';
-        // الاحتفاظ بأقرب جلسة لكل قضية
-        if (!existing || sDate < eDate) {
-          caseSessionMap.set(key, s);
-        }
+        allDates.push({ date: dateStr, source: 'session', label: 'جلسة', sourceData: s });
       });
-    return Array.from(caseSessionMap.values()).map((s: any) => {
-      const caseData = s.caseId ? cases.find((c: any) => c.id === s.caseId && c.status !== 'مؤرشفة') : null;
-      return { ...s, caseData, source: 'session' as const };
-    });
-  })();
 
-  // دمج وترتيب حسب التاريخ
-  const allUpcoming = [...upcomingThisWeek, ...upcomingSessionsThisWeek]
-    .sort((a, b) => ((a.delayDate || a.date || '')).localeCompare((b.delayDate || b.date || '')));
+      // إضافة تاريخ المداولة
+      if (c.delibDate) {
+        const dateStr = c.delibDate.length > 10 ? c.delibDate.substring(0, 10) : c.delibDate;
+        allDates.push({ date: dateStr, source: 'delib', label: 'مداولة', sourceData: c });
+      }
+
+      if (allDates.length === 0) return;
+
+      // إيجاد آخر تاريخ (الأبعد في المستقبل)
+      const latest = allDates.sort((a, b) => b.date.localeCompare(a.date))[0];
+
+      // عرض القضية فقط إذا كان آخر تاريخ ضمن نافذة 7 أيام
+      if (latest.date >= todayStr && latest.date <= nextWeekStr) {
+        result.push({
+          id: latest.sourceData.id,
+          caseId: c.id,
+          caseData: c,
+          delayDate: latest.date,
+          date: latest.date,
+          reason: latest.label,
+          source: latest.source,
+        });
+      }
+    });
+
+    return result.sort((a, b) => a.delayDate.localeCompare(b.delayDate));
+  })();
 
   // حساب الأيام المتبقية
   function daysUntil(dateStr: string) {
