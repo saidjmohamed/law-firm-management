@@ -1535,12 +1535,23 @@ export function Cases() {
                     </div>
                     <Select value={formData.courtId?.toString() || ''} onValueChange={(v) => {
                       const body = judicialBodies?.find(b => b.id === Number(v));
+                      // استخراج أول رقم هاتف من الهيئة القضائية لملء هاتف قاعة المحامين تلقائياً
+                      let autoBarPhone = '';
+                      if (body?.phones) {
+                        try {
+                          const p = JSON.parse(body.phones);
+                          if (Array.isArray(p) && p.length > 0) {
+                            autoBarPhone = p.filter((x: string) => x.trim())[0] || '';
+                          }
+                        } catch {}
+                      }
                       setFormData({
                         ...formData,
                         courtId: Number(v),
                         courtName: body?.name || '',
                         councilName: body?.type === 'council' ? body.name : formData.councilName,
                         chamber: '',
+                        barPhone: autoBarPhone || formData.barPhone,
                       });
                     }}>
                       <SelectTrigger className="h-11"><SelectValue placeholder="اختر الهيئة" /></SelectTrigger>
