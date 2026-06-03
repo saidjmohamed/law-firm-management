@@ -203,16 +203,37 @@ export function CourtsManager() {
       setPhones([]);
     }
 
-    setFormStep(3); // Skip to final step for editing
+    setFormStep(1); // Start from step 1 for full editing
     setShowForm(true);
   }
 
   // عند اختيار مجموعة القضاء
   function handleJudiciaryGroupChange(group: string) {
     setJudiciaryGroup(group);
+    setFormErrors({});
+
+    // إذا كان في وضع التعديل ولم يتغير النوع، نحافظ على البيانات
+    if (editingCourt) {
+      const currentGroup = editingCourt.type === 'supreme' ? 'supreme'
+        : (['council', 'court'].includes(editingCourt.type) ? 'ordinary' : 'admin');
+      
+      if (group === currentGroup) {
+        // نفس المجموعة - لا نعيد تعيين البيانات
+        return;
+      }
+      // مجموعة مختلفة - نعيد تعيين البيانات
+      setFormData({ type: undefined, wilayaId: undefined, parentCouncilId: undefined, name: '' });
+      setChambers([]);
+      if (group === 'supreme') {
+        setFormData({ type: 'supreme' });
+        setChambers(SUPREME_CHAMBERS.map(name => ({ name, number: null })));
+      }
+      return;
+    }
+
+    // وضع الإضافة الجديدة
     setFormData({ type: undefined, wilayaId: undefined, parentCouncilId: undefined, name: '' });
     setChambers([]);
-    setFormErrors({});
 
     if (group === 'supreme') {
       setFormData({ type: 'supreme' });
@@ -224,6 +245,11 @@ export function CourtsManager() {
   function handleCourtTypeChange(type: string) {
     setFormData(prev => ({ ...prev, type, parentCouncilId: undefined }));
     setFormErrors({});
+
+    // إذا كان النوع لم يتغير، لا نعيد تعيين الغرف
+    if (editingCourt && editingCourt.type === type) {
+      return;
+    }
 
     if (type === 'council') {
       setChambers(COUNCIL_CHAMBERS.map(name => ({ name, number: null })));
@@ -849,7 +875,6 @@ export function CourtsManager() {
                   <Select
                     value={formData.type || ''}
                     onValueChange={handleCourtTypeChange}
-                    disabled={!!editingCourt}
                   >
                     <SelectTrigger className="h-11">
                       <SelectValue placeholder="اختر نوع الهيئة" />
