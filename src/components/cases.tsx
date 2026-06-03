@@ -304,6 +304,39 @@ export function Cases() {
     return map;
   }, [clients]);
 
+  // خريطة المحامين حسب الاسم للبحث السريع
+  const lawyerByNameMap = useMemo(() => {
+    const map: Record<string, any> = {};
+    lawyers?.forEach((l: any) => {
+      if (l.name?.trim()) {
+        map[l.name.trim().toLowerCase()] = l;
+      }
+    });
+    return map;
+  }, [lawyers]);
+
+  // خريطة أرقام هواتف محامي الأطراف من القضايا السابقة
+  const partyLawyerPhoneMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    allParties?.forEach((p: any) => {
+      if (p.lawyerName?.trim() && p.lawyerPhone?.trim()) {
+        map[p.lawyerName.trim().toLowerCase()] = p.lawyerPhone.trim();
+      }
+    });
+    return map;
+  }, [allParties]);
+
+  // خريطة هواتف الأطراف من القضايا السابقة
+  const partyPhoneMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    allParties?.forEach((p: any) => {
+      if (p.name?.trim() && p.phone?.trim()) {
+        map[p.name.trim().toLowerCase()] = p.phone.trim();
+      }
+    });
+    return map;
+  }, [allParties]);
+
   // الهيئات القضائية المفلترة حسب النوع والولاية
   const filteredBodies = useMemo(() => {
     if (!judicialBodies) return [];
@@ -1672,11 +1705,22 @@ export function Cases() {
                             onChange={(v) => {
                               const updated = [...parties];
                               updated[idx] = { ...updated[idx], name: v };
-                              // ملء الهاتف تلقائياً عند اختيار موكل موجود
-                              if (v && clientByNameMap[v.trim().toLowerCase()]) {
-                                const existingClient = clientByNameMap[v.trim().toLowerCase()];
-                                if (existingClient.phone && !updated[idx].phone) {
-                                  updated[idx] = { ...updated[idx], phone: existingClient.phone };
+                              // ملء الهاتف تلقائياً عند اختيار اسم من القائمة
+                              if (v) {
+                                const nameKey = v.trim().toLowerCase();
+                                // أولاً: البحث في جدول الموكلين
+                                if (clientByNameMap[nameKey]) {
+                                  const existingClient = clientByNameMap[nameKey];
+                                  if (existingClient.phone && !updated[idx].phone) {
+                                    updated[idx] = { ...updated[idx], phone: existingClient.phone };
+                                  }
+                                  if (existingClient.phone2 && !updated[idx].phone) {
+                                    updated[idx] = { ...updated[idx], phone: existingClient.phone2 };
+                                  }
+                                }
+                                // ثانياً: البحث في أطراف القضايا السابقة
+                                if (partyPhoneMap[nameKey] && !updated[idx].phone) {
+                                  updated[idx] = { ...updated[idx], phone: partyPhoneMap[nameKey] };
                                 }
                               }
                               setParties(updated);
@@ -1718,6 +1762,23 @@ export function Cases() {
                           onChange={(v) => {
                             const updated = [...parties];
                             updated[idx] = { ...updated[idx], lawyerName: v };
+                            // ملء هاتف المحامي تلقائياً عند اختيار اسم من القائمة
+                            if (v) {
+                              const nameKey = v.trim().toLowerCase();
+                              // أولاً: البحث في جدول المحامين
+                              if (lawyerByNameMap[nameKey]) {
+                                const existingLawyer = lawyerByNameMap[nameKey];
+                                if (existingLawyer.phone && !updated[idx].lawyerPhone) {
+                                  updated[idx] = { ...updated[idx], lawyerPhone: existingLawyer.phone };
+                                } else if (existingLawyer.phone2 && !updated[idx].lawyerPhone) {
+                                  updated[idx] = { ...updated[idx], lawyerPhone: existingLawyer.phone2 };
+                                }
+                              }
+                              // ثانياً: البحث في أطراف القضايا السابقة
+                              if (partyLawyerPhoneMap[nameKey] && !updated[idx].lawyerPhone) {
+                                updated[idx] = { ...updated[idx], lawyerPhone: partyLawyerPhoneMap[nameKey] };
+                              }
+                            }
                             setParties(updated);
                           }}
                           suggestions={lawyerNameSuggestions}
