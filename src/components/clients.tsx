@@ -3,6 +3,7 @@
 import React, { useState, useMemo } from 'react';
 import { useClients, useCases, createClient, updateClient, deleteClient } from '@/lib/api';
 import { WILAYAS, formatDate, STATUS_COLORS } from '@/lib/constants';
+import { DuplicateAlert, findDuplicateClients } from '@/components/ui/duplicate-alert';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -102,6 +103,8 @@ export function Clients() {
   const { setActiveSection, setSelectedCaseId, selectedClientId, setSelectedClientId } = useAppStore();
 
   const [formData, setFormData] = useState<Partial<Client>>({});
+  const [duplicateWarning, setDuplicateWarning] = useState<any[] | null>(null);
+  const [forceSave, setForceSave] = useState(false);
 
   const { clients, isLoading: clientsLoading } = useClients();
   const { cases, isLoading: casesLoading } = useCases();
@@ -134,6 +137,8 @@ export function Clients() {
   function resetForm() {
     setFormData({});
     setEditingClient(null);
+    setDuplicateWarning(null);
+    setForceSave(false);
   }
 
   function openAddForm() {
@@ -147,9 +152,25 @@ export function Clients() {
     setShowForm(true);
   }
 
+  // كشف التكرارات أثناء الكتابة
+  const liveDuplicates = useMemo(() => {
+    if (!formData.name?.trim() || editingClient?.id) return [];
+    return findDuplicateClients(formData.name || '', formData.phone || '', clients, editingClient?.id);
+  }, [formData.name, formData.phone, clients, editingClient]);
+
   async function saveClient() {
     try {
       const now = new Date();
+
+      // كشف التكرارات قبل الحفظ (فقط عند الإضافة)
+      if (!editingClient?.id && !forceSave) {
+        const dupes = findDuplicateClients(formData.name || '', formData.phone || '', clients);
+        if (dupes.length > 0) {
+          setDuplicateWarning(dupes);
+          return;
+        }
+      }
+
       if (editingClient?.id) {
         await updateClient(editingClient.id, { ...formData, updatedAt: now });
         toast.success('تم تحديث الموكل بنجاح');
@@ -157,9 +178,16 @@ export function Clients() {
         await createClient({ ...formData, createdAt: now, updatedAt: now });
         toast.success('تم إضافة الموكل بنجاح');
       }
+      setForceSave(false);
+      setDuplicateWarning(null);
       setShowForm(false);
       resetForm();
-    } catch (error) {
+    } catch (error: any) {
+      // التعامل مع خطأ 409 من الخادم (تكرار)
+      if (error?.message?.includes('موكل بنفس')) {
+        toast.error('موكل بنفس الاسم أو الهاتف موجود بالفعل!');
+        return;
+      }
       console.error('Save client error:', error);
       toast.error('فشل في حفظ الموكل');
     }
@@ -193,13 +221,30 @@ export function Clients() {
           </DialogHeader>
 
           <div className="space-y-3">
+            {/* تنبيه التكرارات */}
+            {(duplicateWarning && duplicateWarning.length > 0) ? (
+              <DuplicateAlert
+                duplicates={duplicateWarning}
+                entityType="موكل"
+                onForceProceed={() => { setForceSave(true); saveClient(); }}
+                onDismiss={() => setDuplicateWarning(null)}
+              />
+            ) : liveDuplicates.length > 0 && !editingClient?.id ? (
+              <DuplicateAlert
+                duplicates={liveDuplicates}
+                entityType="موكل"
+                onForceProceed={() => { setForceSave(true); saveClient(); }}
+                onDismiss={() => setDuplicateWarning(null)}
+                extraInfo="يوجد موكل بنفس البيانات، قد يكون تكراراً:"
+              />
+            ) : null}
             <div>
               <Label className="text-xs">الاسم واللقب</Label>
               <Input
                 value={formData.name || ''}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                onChange={(e) => { setFormData({ ...formData, name: e.target.value }); setDuplicateWarning(null); setForceSave(false); }}
                 placeholder="الاسم واللقب"
-                className="h-11"
+                className={`h-11 ${liveDuplicates.length > 0 && !editingClient?.id ? 'border-amber-400 focus-visible:ring-amber-400' : ''}`}
               />
             </div>
             <div className="grid grid-cols-2 gap-3">
@@ -207,7 +252,7 @@ export function Clients() {
                 <Label className="text-xs">الهاتف</Label>
                 <Input
                   value={formData.phone || ''}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  onChange={(e) => { setFormData({ ...formData, phone: e.target.value }); setDuplicateWarning(null); setForceSave(false); }}
                   placeholder="رقم الهاتف"
                   className="h-11"
                 />
@@ -484,13 +529,30 @@ export function Clients() {
           </DialogHeader>
 
           <div className="space-y-3">
+            {/* تنبيه التكرارات */}
+            {(duplicateWarning && duplicateWarning.length > 0) ? (
+              <DuplicateAlert
+                duplicates={duplicateWarning}
+                entityType="موكل"
+                onForceProceed={() => { setForceSave(true); saveClient(); }}
+                onDismiss={() => setDuplicateWarning(null)}
+              />
+            ) : liveDuplicates.length > 0 && !editingClient?.id ? (
+              <DuplicateAlert
+                duplicates={liveDuplicates}
+                entityType="موكل"
+                onForceProceed={() => { setForceSave(true); saveClient(); }}
+                onDismiss={() => setDuplicateWarning(null)}
+                extraInfo="يوجد موكل بنفس البيانات، قد يكون تكراراً:"
+              />
+            ) : null}
             <div>
               <Label className="text-xs">الاسم واللقب</Label>
               <Input
                 value={formData.name || ''}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                onChange={(e) => { setFormData({ ...formData, name: e.target.value }); setDuplicateWarning(null); setForceSave(false); }}
                 placeholder="الاسم واللقب"
-                className="h-11"
+                className={`h-11 ${liveDuplicates.length > 0 && !editingClient?.id ? 'border-amber-400 focus-visible:ring-amber-400' : ''}`}
               />
             </div>
             <div className="grid grid-cols-2 gap-3">
@@ -498,7 +560,7 @@ export function Clients() {
                 <Label className="text-xs">الهاتف</Label>
                 <Input
                   value={formData.phone || ''}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  onChange={(e) => { setFormData({ ...formData, phone: e.target.value }); setDuplicateWarning(null); setForceSave(false); }}
                   placeholder="رقم الهاتف"
                   className="h-11"
                 />

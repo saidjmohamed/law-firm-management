@@ -20,6 +20,36 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { name, phone, phone2, address, wilaya, nationalId, notes } = body;
 
+    // كشف التكرارات - البحث عن موكل بنفس الاسم (غير حساس لحالة الأحرف)
+    if (name?.trim()) {
+      const existingByName = await prisma.client.findFirst({
+        where: {
+          name: { equals: name.trim(), mode: 'insensitive' },
+        },
+      });
+      if (existingByName) {
+        return NextResponse.json(
+          { error: 'موكل بنفس الاسم موجود بالفعل', duplicate: true, existingRecord: { id: existingByName.id, name: existingByName.name, phone: existingByName.phone } },
+          { status: 409 }
+        );
+      }
+
+      // البحث عن موكل بنفس رقم الهاتف
+      if (phone?.trim()) {
+        const existingByPhone = await prisma.client.findFirst({
+          where: {
+            phone: phone.trim(),
+          },
+        });
+        if (existingByPhone) {
+          return NextResponse.json(
+            { error: 'موكل بنفس رقم الهاتف موجود بالفعل', duplicate: true, existingRecord: { id: existingByPhone.id, name: existingByPhone.name, phone: existingByPhone.phone } },
+            { status: 409 }
+          );
+        }
+      }
+    }
+
     const client = await prisma.client.create({
       data: {
         name: name || '',

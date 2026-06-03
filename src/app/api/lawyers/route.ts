@@ -29,6 +29,36 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'اسم المحامي مطلوب' }, { status: 400 });
     }
 
+    // كشف التكرارات - البحث عن محامي بنفس الاسم (غير حساس لحالة الأحرف)
+    if (name?.trim()) {
+      const existingByName = await prisma.lawyer.findFirst({
+        where: {
+          name: { equals: name.trim(), mode: 'insensitive' },
+        },
+      });
+      if (existingByName) {
+        return NextResponse.json(
+          { error: 'محامي بنفس الاسم موجود بالفعل', duplicate: true, existingRecord: { id: existingByName.id, name: existingByName.name, phone: existingByName.phone, barNumber: existingByName.barNumber } },
+          { status: 409 }
+        );
+      }
+
+      // البحث عن محامي بنفس رقم القيد
+      if (barNumber?.trim()) {
+        const existingByBarNumber = await prisma.lawyer.findFirst({
+          where: {
+            barNumber: barNumber.trim(),
+          },
+        });
+        if (existingByBarNumber) {
+          return NextResponse.json(
+            { error: 'محامي بنفس رقم القيد موجود بالفعل', duplicate: true, existingRecord: { id: existingByBarNumber.id, name: existingByBarNumber.name, phone: existingByBarNumber.phone, barNumber: existingByBarNumber.barNumber } },
+            { status: 409 }
+          );
+        }
+      }
+    }
+
     const lawyer = await prisma.lawyer.create({
       data: {
         name: name || '',

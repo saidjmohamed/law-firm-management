@@ -36,7 +36,13 @@ export async function createClient(data: Record<string, unknown>) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   });
-  if (!res.ok) throw new Error('فشل في إنشاء الموكل');
+  if (!res.ok) {
+    if (res.status === 409) {
+      const errorData = await res.json().catch(() => ({}));
+      throw new Error(errorData.error || 'موكل بنفس الاسم موجود بالفعل');
+    }
+    throw new Error('فشل في إنشاء الموكل');
+  }
   const result = await res.json();
   await mutate('/api/clients');
   return result;
@@ -95,7 +101,13 @@ export async function createCase(data: Record<string, unknown>) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   });
-  if (!res.ok) throw new Error('فشل في إنشاء القضية');
+  if (!res.ok) {
+    if (res.status === 409) {
+      const errorData = await res.json().catch(() => ({}));
+      throw new Error(errorData.error || 'قضية بنفس الرقم موجودة بالفعل');
+    }
+    throw new Error('فشل في إنشاء القضية');
+  }
   const result = await res.json();
   await mutate('/api/cases');
   return result;
@@ -329,7 +341,13 @@ export async function createLawyer(data: Record<string, unknown>) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   });
-  if (!res.ok) throw new Error('فشل في إنشاء المحامي');
+  if (!res.ok) {
+    if (res.status === 409) {
+      const errorData = await res.json().catch(() => ({}));
+      throw new Error(errorData.error || 'محامي بنفس الاسم موجود بالفعل');
+    }
+    throw new Error('فشل في إنشاء المحامي');
+  }
   const result = await res.json();
   await mutate('/api/lawyers');
   await mutate('/api/lawyers/bar-associations');
@@ -388,7 +406,13 @@ export async function createJudicialBody(data: Record<string, unknown>) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   });
-  if (!res.ok) throw new Error('فشل في إنشاء الهيئة القضائية');
+  if (!res.ok) {
+    if (res.status === 409) {
+      const errorData = await res.json().catch(() => ({}));
+      throw new Error(errorData.error || 'هيئة قضائية بنفس الاسم موجودة بالفعل');
+    }
+    throw new Error('فشل في إنشاء الهيئة القضائية');
+  }
   const result = await res.json();
   await mutate('/api/judicial-bodies');
   return result;

@@ -3,6 +3,7 @@
 import React, { useState, useMemo } from 'react';
 import { useJudicialBodies, useCases, createJudicialBody, updateJudicialBody, deleteJudicialBody } from '@/lib/api';
 import { WILAYAS, SUPREME_CHAMBERS, COUNCIL_CHAMBERS, COURT_SECTIONS, CHAMBER_NUMBERS, JUDICIARY_TYPES, ORDINARY_COURT_LEVELS, ADMIN_COURT_LEVELS } from '@/lib/constants';
+import { DuplicateAlert, findDuplicateJudicialBodies } from '@/components/ui/duplicate-alert';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -116,6 +117,8 @@ export function CourtsManager() {
   const [phones, setPhones] = useState<string[]>([]);
   const [newPhone, setNewPhone] = useState('');
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  const [duplicateWarning, setDuplicateWarning] = useState<any[] | null>(null);
+  const [forceSave, setForceSave] = useState(false);
 
   const { judicialBodies: courts, isLoading } = useJudicialBodies();
   const { cases } = useCases();
@@ -157,6 +160,8 @@ export function CourtsManager() {
     setFormStep(1);
     setJudiciaryGroup('');
     setFormErrors({});
+    setDuplicateWarning(null);
+    setForceSave(false);
   }
 
   function openAddForm() {
@@ -297,35 +302,61 @@ export function CourtsManager() {
     setFormStep(3);
   }
 
+  // كشف التكرارات أثناء الكتابة
+  const liveDuplicates = useMemo(() => {
+    if (!formData.name?.trim() || !formData.type || editingCourt?.id) return [];
+    return findDuplicateJudicialBodies(formData.name || '', formData.type || '', formData.wilayaId, courts || [], editingCourt?.id);
+  }, [formData.name, formData.type, formData.wilayaId, courts, editingCourt]);
+
   async function saveCourt() {
     const now = new Date();
     const chambersJson = chambers.length > 0 ? JSON.stringify(chambers) : '';
     const phonesJson = phones.length > 0 ? JSON.stringify(phones) : '';
 
-    if (editingCourt?.id) {
-      await updateJudicialBody(editingCourt.id, {
-        ...formData,
-        chambers: chambersJson,
-        phones: phonesJson,
-        updatedAt: now,
-      });
-      toast.success('تم تحديث الهيئة القضائية بنجاح');
-    } else {
-      await createJudicialBody({
-        name: formData.name || '',
-        type: formData.type || 'council',
-        wilayaId: formData.wilayaId,
-        parentCouncilId: formData.parentCouncilId,
-        chambers: chambersJson,
-        phones: phonesJson,
-        createdAt: now,
-        updatedAt: now,
-      });
-      toast.success('تم إضافة الهيئة القضائية بنجاح');
+    // كشف التكرارات قبل الحفظ (فقط عند الإضافة)
+    if (!editingCourt?.id && !forceSave) {
+      const dupes = findDuplicateJudicialBodies(formData.name || '', formData.type || '', formData.wilayaId, courts || []);
+      if (dupes.length > 0) {
+        setDuplicateWarning(dupes);
+        return;
+      }
     }
 
-    setShowForm(false);
-    resetForm();
+    try {
+      if (editingCourt?.id) {
+        await updateJudicialBody(editingCourt.id, {
+          ...formData,
+          chambers: chambersJson,
+          phones: phonesJson,
+          updatedAt: now,
+        });
+        toast.success('تم تحديث الهيئة القضائية بنجاح');
+      } else {
+        await createJudicialBody({
+          name: formData.name || '',
+          type: formData.type || 'council',
+          wilayaId: formData.wilayaId,
+          parentCouncilId: formData.parentCouncilId,
+          chambers: chambersJson,
+          phones: phonesJson,
+          createdAt: now,
+          updatedAt: now,
+        });
+        toast.success('تم إضافة الهيئة القضائية بنجاح');
+      }
+      setForceSave(false);
+      setDuplicateWarning(null);
+      setShowForm(false);
+      resetForm();
+    } catch (error: any) {
+      // التعامل مع خطأ 409 من الخادم (تكرار)
+      if (error?.message?.includes('هيئة قضائية بنفس') || error?.message?.includes('بنفس الاسم')) {
+        toast.error('هيئة قضائية بنفس الاسم والنوع والولاية موجودة بالفعل!');
+        return;
+      }
+      console.error('Save court error:', error);
+      toast.error('فشل في حفظ الهيئة القضائية');
+    }
   }
 
   function addPhone() {
@@ -901,9 +932,9 @@ export function CourtsManager() {
                 <Label className="text-xs font-semibold">اسم الهيئة القضائية</Label>
                 <Input
                   value={formData.name || ''}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  onChange={(e) => { setFormData({ ...formData, name: e.target.value }); setDuplicateWarning(null); setForceSave(false); }}
                   placeholder="اسم الهيئة"
-                  className="h-11"
+                  className={`h-11 ${liveDuplicates.length > 0 && !editingCourt?.id ? 'border-amber-400 focus-visible:ring-amber-400' : ''}`}
                 />
                 {formErrors.name && (
                   <p className="text-xs text-destructive mt-1 flex items-center gap-1">
@@ -911,6 +942,23 @@ export function CourtsManager() {
                   </p>
                 )}
               </div>
+              {/* تنبيه التكرارات */}
+              {(duplicateWarning && duplicateWarning.length > 0) ? (
+                <DuplicateAlert
+                  duplicates={duplicateWarning}
+                  entityType="هيئة قضائية"
+                  onForceProceed={() => { setForceSave(true); saveCourt(); }}
+                  onDismiss={() => setDuplicateWarning(null)}
+                />
+              ) : liveDuplicates.length > 0 && !editingCourt?.id ? (
+                <DuplicateAlert
+                  duplicates={liveDuplicates}
+                  entityType="هيئة قضائية"
+                  onForceProceed={() => { setForceSave(true); saveCourt(); }}
+                  onDismiss={() => setDuplicateWarning(null)}
+                  extraInfo="يوجد هيئة قضائية بنفس الاسم والنوع والولاية:"
+                />
+              ) : null}
 
               {/* الولاية */}
               {formData.type !== 'supreme' && (

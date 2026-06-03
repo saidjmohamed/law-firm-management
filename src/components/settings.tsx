@@ -8,7 +8,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
-import { Save, User, Phone, MapPin } from 'lucide-react';
+import { Save, User, Phone, MapPin, Shield, AlertTriangle } from 'lucide-react';
+import { DuplicateScanner } from '@/components/duplicate-scanner';
 
 export function SettingsManager() {
   const { settings, isLoading } = useSettings();
@@ -84,6 +85,22 @@ export function SettingsManager() {
             <Save className="w-4 h-4 ml-2" />
             حفظ الإعدادات
           </Button>
+        </CardContent>
+      </Card>
+
+      {/* فحص التكرارات */}
+      <Card className="border-amber-200 dark:border-amber-800">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Shield className="w-4 h-4 text-amber-500" />
+            فحص التكرارات
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-xs text-muted-foreground mb-3">
+            يقوم هذا الفحص بالبحث في جميع البيانات عن العناصر المكررة (موكلون، محامون، هيئات قضائية، قضايا) ويعرضها لك لتتمكن من حذف التكرارات غير الضرورية.
+          </p>
+          <DuplicateScanner />
         </CardContent>
       </Card>
 

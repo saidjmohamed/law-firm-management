@@ -9,6 +9,7 @@ import { CasePrintButton } from '@/components/case-print';
 import { CaseAnnouncementButton } from '@/components/case-announcement';
 import { SelectWithCustom } from '@/components/ui/select-with-custom';
 import { ComboboxInput } from '@/components/ui/combobox-input';
+import { DuplicateAlert, findDuplicateCaseNumbers, findDuplicatePartyNames } from '@/components/ui/duplicate-alert';
 import { useAppStore } from '@/lib/store';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -59,6 +60,7 @@ import {
   Phone,
   Trophy,
   XCircle,
+  AlertTriangle,
 } from 'lucide-react';
 
 // ============================================================================
@@ -254,6 +256,8 @@ export function Cases() {
   const [formData, setFormData] = useState<Partial<CaseType>>({});
   const [parties, setParties] = useState<PartyRow[]>([emptyParty()]);
   const [delays, setDelays] = useState<DelayRow[]>([]);
+  const [caseDuplicateWarning, setCaseDuplicateWarning] = useState<any[] | null>(null);
+  const [forceSaveCase, setForceSaveCase] = useState(false);
 
   const { cases, isLoading: casesLoading } = useCases();
   const { clients, isLoading: clientsLoading } = useClients();
@@ -336,6 +340,17 @@ export function Cases() {
     });
     return map;
   }, [allParties]);
+
+  // كشف تكرار رقم القضية أثناء الكتابة
+  const caseNumberDuplicates = useMemo(() => {
+    if (!formData.caseNumber?.trim() || editingCase?.id) return [];
+    return findDuplicateCaseNumbers(formData.caseNumber || '', cases || [], editingCase?.id);
+  }, [formData.caseNumber, cases, editingCase]);
+
+  // كشف تكرار أسماء الأطراف داخل نفس القضية
+  const partyNameDuplicates = useMemo(() => {
+    return findDuplicatePartyNames(parties);
+  }, [parties]);
 
   // الهيئات القضائية المفلترة حسب النوع والولاية
   const filteredBodies = useMemo(() => {
@@ -445,6 +460,8 @@ export function Cases() {
     setParties([emptyParty()]);
     setDelays([]);
     setEditingCase(null);
+    setCaseDuplicateWarning(null);
+    setForceSaveCase(false);
   }
 
   function openAddForm() {
@@ -498,6 +515,15 @@ export function Cases() {
     try {
     // تنظيف البيانات من الحقول العلاقية قبل الإرسال
     const { client, parties: _p, delays: _d, sessions: _s, payments: _pay, archives: _a, createdAt: _ca, updatedAt: _ua, ...cleanFormData } = formData as any;
+
+    // كشف تكرار رقم القضية (فقط عند الإضافة)
+    if (!editingCase?.id && !forceSaveCase) {
+      const dupes = findDuplicateCaseNumbers(formData.caseNumber || '', cases || [], editingCase?.id);
+      if (dupes.length > 0) {
+        setCaseDuplicateWarning(dupes);
+        return;
+      }
+    }
 
     if (editingCase?.id) {
       // تحديث قضية
@@ -1318,14 +1344,40 @@ export function Cases() {
             {/* المعلومات الأساسية */}
             <div>
               <h3 className="text-sm font-bold mb-3 text-teal-700 dark:text-teal-400">المعلومات الأساسية</h3>
+              {/* تنبيه تكرار رقم القضية */}
+              {(caseDuplicateWarning && caseDuplicateWarning.length > 0) ? (
+                <DuplicateAlert
+                  duplicates={caseDuplicateWarning}
+                  entityType="قضية"
+                  onForceProceed={() => { setForceSaveCase(true); saveCase(); }}
+                  onDismiss={() => setCaseDuplicateWarning(null)}
+                />
+              ) : caseNumberDuplicates.length > 0 && !editingCase?.id ? (
+                <DuplicateAlert
+                  duplicates={caseNumberDuplicates}
+                  entityType="قضية"
+                  onForceProceed={() => { setForceSaveCase(true); saveCase(); }}
+                  onDismiss={() => setCaseDuplicateWarning(null)}
+                  extraInfo="يوجد قضية بنفس الرقم:"
+                />
+              ) : null}
+              {/* تنبيه تكرار أسماء الأطراف */}
+              {partyNameDuplicates.length > 0 && (
+                <div className="rounded-lg border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 p-2.5 flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
+                  <p className="text-xs text-amber-700 dark:text-amber-400">
+                    أسماء مكررة في الأطراف: {partyNameDuplicates.map(d => d.name).join('، ')}
+                  </p>
+                </div>
+              )}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
                   <Label className="text-xs">رقم القضية</Label>
                   <Input
                     value={formData.caseNumber || ''}
-                    onChange={(e) => setFormData({ ...formData, caseNumber: e.target.value })}
+                    onChange={(e) => { setFormData({ ...formData, caseNumber: e.target.value }); setCaseDuplicateWarning(null); setForceSaveCase(false); }}
                     placeholder="رقم القضية"
-                    className="h-11"
+                    className={`h-11 ${caseNumberDuplicates.length > 0 && !editingCase?.id ? 'border-amber-400 focus-visible:ring-amber-400' : ''}`}
                   />
                 </div>
                 <div>

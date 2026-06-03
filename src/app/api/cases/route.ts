@@ -26,6 +26,21 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
 
+    // كشف التكرارات - البحث عن قضية بنفس رقم القضية
+    if (body.caseNumber?.trim()) {
+      const existingCase = await prisma.case.findFirst({
+        where: {
+          caseNumber: body.caseNumber.trim(),
+        },
+      });
+      if (existingCase) {
+        return NextResponse.json(
+          { error: 'قضية بنفس الرقم موجودة بالفعل', duplicate: true, existingRecord: { id: existingCase.id, caseNumber: existingCase.caseNumber, subject: existingCase.subject } },
+          { status: 409 }
+        );
+      }
+    }
+
     const newCase = await prisma.case.create({
       data: {
         caseNumber: body.caseNumber || '',

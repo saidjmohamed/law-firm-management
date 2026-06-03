@@ -4,6 +4,7 @@ import React, { useState, useMemo } from 'react';
 import { useLawyers, useCases, useParties, useBarAssociations, createLawyer, updateLawyer, deleteLawyer } from '@/lib/api';
 import { WILAYAS, STATUS_COLORS } from '@/lib/constants';
 import { useAppStore } from '@/lib/store';
+import { DuplicateAlert, findDuplicateLawyers } from '@/components/ui/duplicate-alert';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -110,6 +111,8 @@ export function Lawyers() {
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [formData, setFormData] = useState<Partial<Lawyer>>({});
+  const [duplicateWarning, setDuplicateWarning] = useState<any[] | null>(null);
+  const [forceSave, setForceSave] = useState(false);
 
   const { selectedLawyerId, setSelectedLawyerId, setSelectedCaseId, setActiveSection } = useAppStore();
 
@@ -158,6 +161,8 @@ export function Lawyers() {
   function resetForm() {
     setFormData({});
     setEditingLawyer(null);
+    setDuplicateWarning(null);
+    setForceSave(false);
   }
 
   function openAddForm() {
@@ -171,9 +176,25 @@ export function Lawyers() {
     setShowForm(true);
   }
 
+  // كشف التكرارات أثناء الكتابة
+  const liveDuplicates = useMemo(() => {
+    if (!formData.name?.trim() || editingLawyer?.id) return [];
+    return findDuplicateLawyers(formData.name || '', formData.barNumber || '', lawyers, editingLawyer?.id);
+  }, [formData.name, formData.barNumber, lawyers, editingLawyer]);
+
   async function saveLawyer() {
     try {
       const now = new Date();
+
+      // كشف التكرارات قبل الحفظ (فقط عند الإضافة)
+      if (!editingLawyer?.id && !forceSave) {
+        const dupes = findDuplicateLawyers(formData.name || '', formData.barNumber || '', lawyers);
+        if (dupes.length > 0) {
+          setDuplicateWarning(dupes);
+          return;
+        }
+      }
+
       if (editingLawyer?.id) {
         await updateLawyer(editingLawyer.id, { ...formData, updatedAt: now });
         toast.success('تم تحديث المحامي بنجاح');
@@ -187,9 +208,16 @@ export function Lawyers() {
         });
         toast.success('تم إضافة المحامي بنجاح');
       }
+      setForceSave(false);
+      setDuplicateWarning(null);
       setShowForm(false);
       resetForm();
-    } catch (error) {
+    } catch (error: any) {
+      // التعامل مع خطأ 409 من الخادم (تكرار)
+      if (error?.message?.includes('محامي بنفس')) {
+        toast.error('محامي بنفس الاسم أو رقم القيد موجود بالفعل!');
+        return;
+      }
       console.error('Save lawyer error:', error);
       toast.error('فشل في حفظ المحامي');
     }
@@ -230,11 +258,28 @@ export function Lawyers() {
               <Label className="text-xs">الاسم واللقب *</Label>
               <Input
                 value={formData.name || ''}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                onChange={(e) => { setFormData({ ...formData, name: e.target.value }); setDuplicateWarning(null); setForceSave(false); }}
                 placeholder="الاسم واللقب"
-                className="h-11"
+                className={`h-11 ${liveDuplicates.length > 0 && !editingLawyer?.id ? 'border-amber-400 focus-visible:ring-amber-400' : ''}`}
               />
             </div>
+            {/* تنبيه التكرارات */}
+            {(duplicateWarning && duplicateWarning.length > 0) ? (
+              <DuplicateAlert
+                duplicates={duplicateWarning}
+                entityType="محامي"
+                onForceProceed={() => { setForceSave(true); saveLawyer(); }}
+                onDismiss={() => setDuplicateWarning(null)}
+              />
+            ) : liveDuplicates.length > 0 && !editingLawyer?.id ? (
+              <DuplicateAlert
+                duplicates={liveDuplicates}
+                entityType="محامي"
+                onForceProceed={() => { setForceSave(true); saveLawyer(); }}
+                onDismiss={() => setDuplicateWarning(null)}
+                extraInfo="يوجد محامي بنفس البيانات، قد يكون تكراراً:"
+              />
+            ) : null}
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label className="text-xs">الهاتف</Label>
@@ -673,11 +718,28 @@ export function Lawyers() {
               <Label className="text-xs">الاسم واللقب *</Label>
               <Input
                 value={formData.name || ''}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                onChange={(e) => { setFormData({ ...formData, name: e.target.value }); setDuplicateWarning(null); setForceSave(false); }}
                 placeholder="الاسم واللقب"
-                className="h-11"
+                className={`h-11 ${liveDuplicates.length > 0 && !editingLawyer?.id ? 'border-amber-400 focus-visible:ring-amber-400' : ''}`}
               />
             </div>
+            {/* تنبيه التكرارات */}
+            {(duplicateWarning && duplicateWarning.length > 0) ? (
+              <DuplicateAlert
+                duplicates={duplicateWarning}
+                entityType="محامي"
+                onForceProceed={() => { setForceSave(true); saveLawyer(); }}
+                onDismiss={() => setDuplicateWarning(null)}
+              />
+            ) : liveDuplicates.length > 0 && !editingLawyer?.id ? (
+              <DuplicateAlert
+                duplicates={liveDuplicates}
+                entityType="محامي"
+                onForceProceed={() => { setForceSave(true); saveLawyer(); }}
+                onDismiss={() => setDuplicateWarning(null)}
+                extraInfo="يوجد محامي بنفس البيانات، قد يكون تكراراً:"
+              />
+            ) : null}
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label className="text-xs">الهاتف</Label>
