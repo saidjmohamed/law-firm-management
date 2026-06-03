@@ -751,14 +751,60 @@ export function CourtsManager() {
       )}
 
       {/* المحاكم الإدارية */}
-      {(groupedCourts.admin_appeal.length > 0 || groupedCourts.admin_first.length > 0 || groupedCourts.commercial.length > 0) && (
+      {(groupedCourts.admin_appeal.length > 0 || groupedCourts.admin_first.length > 0) && (
         <div>
           <h3 className="text-sm font-bold mb-3 flex items-center gap-2 text-amber-700 dark:text-amber-400">
             <Building2 className="w-4 h-4" />
             القضاء الإداري
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
-            {[...groupedCourts.admin_appeal, ...groupedCourts.admin_first, ...groupedCourts.commercial].map((court) => {
+            {[...groupedCourts.admin_appeal, ...groupedCourts.admin_first].map((court) => {
+              const wilayaName = WILAYAS.find((w) => w.code === court.wilayaId)?.name;
+              const courtPhones = parsePhones(court.phones);
+              return (
+                <Card key={court.id} className="overflow-hidden">
+                  <CardContent className="p-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="font-bold text-sm truncate">{court.name}</p>
+                          {renderPhoneInline(courtPhones, 'xs', court.id)}
+                        </div>
+                        <div className="flex items-center gap-1 mt-1 flex-wrap">
+                          <Badge className={`${TYPE_COLORS[court.type]} text-[10px]`}>
+                            {TYPE_LABELS[court.type]}
+                          </Badge>
+                          {wilayaName && (
+                            <Badge variant="outline" className="text-[10px]">{wilayaName}</Badge>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEditForm(court)}>
+                          <Pencil className="w-3.5 h-3.5" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => court.id && setDeleteConfirm(court.id)}>
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* المحكمة التجارية المتخصصة */}
+      {groupedCourts.commercial.length > 0 && (
+        <div>
+          <h3 className="text-sm font-bold mb-3 flex items-center gap-2 text-cyan-700 dark:text-cyan-400">
+            <Building2 className="w-4 h-4" />
+            المحكمة التجارية المتخصصة
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+            {groupedCourts.commercial.map((court) => {
               const wilayaName = WILAYAS.find((w) => w.code === court.wilayaId)?.name;
               const courtPhones = parsePhones(court.phones);
               return (

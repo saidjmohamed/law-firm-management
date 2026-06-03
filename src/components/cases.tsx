@@ -371,11 +371,11 @@ export function Cases() {
         bodies = bodies.filter(b => b.type === 'admin_appeal');
       } else if (formData.courtLevel === 'admin_first') {
         bodies = bodies.filter(b => b.type === 'admin_first');
-      } else if (formData.courtLevel === 'commercial') {
-        bodies = bodies.filter(b => b.type === 'commercial');
       } else {
-        bodies = bodies.filter(b => ['admin_appeal', 'admin_first', 'commercial'].includes(b.type));
+        bodies = bodies.filter(b => ['admin_appeal', 'admin_first'].includes(b.type));
       }
+    } else if (formData.judiciaryType === 'commercial') {
+      bodies = bodies.filter(b => b.type === 'commercial');
     }
     if (formData.wilayaId) {
       bodies = bodies.filter(b => b.wilayaId === formData.wilayaId);
@@ -1447,6 +1447,9 @@ export function Cases() {
                       newData.courtName = 'المحكمة العليا';
                       const supreme = judicialBodies?.find(b => b.type === 'supreme');
                       if (supreme?.id) newData.courtId = supreme.id;
+                    } else if (v === 'commercial') {
+                      newData.courtLevel = 'commercial';
+                      newData.courtName = 'المحكمة التجارية المتخصصة';
                     }
                     setFormData(newData);
                   }}>

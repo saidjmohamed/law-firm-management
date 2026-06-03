@@ -124,6 +124,7 @@ export const JUDICIARY_TYPES = [
   { value: 'supreme', label: 'المحكمة العليا' },
   { value: 'ordinary', label: 'القضاء العادي' },
   { value: 'admin', label: 'القضاء الإداري' },
+  { value: 'commercial', label: 'المحكمة التجارية المتخصصة' },
 ] as const;
 
 /** مستويات القضاء العادي */
@@ -136,7 +137,6 @@ export const ORDINARY_COURT_LEVELS = [
 export const ADMIN_COURT_LEVELS = [
   { value: 'admin_appeal', label: 'المحكمة الإدارية الاستئنافية' },
   { value: 'admin_first', label: 'المحكمة الإدارية الابتدائية' },
-  { value: 'commercial', label: 'المحكمة التجارية المتخصصة' },
 ] as const;
 
 /** غرف المحكمة العليا */
