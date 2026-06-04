@@ -329,9 +329,9 @@ export async function POST(request: NextRequest) {
   // التحقق من API Key
   const authHeader = request.headers.get('x-api-key');
   if (authHeader !== API_KEY) {
-    return NextResponse.json(
-      { jsonrpc: '2.0', error: { code: -32001, message: 'Unauthorized: invalid API key' }, id: null },
-      { status: 401 }
+    return new Response(
+      JSON.stringify({ jsonrpc: '2.0', error: { code: -32001, message: 'Unauthorized: invalid API key' }, id: null }),
+      { status: 401, headers: { 'Content-Type': 'application/json' } }
     );
   }
 
@@ -339,20 +339,36 @@ export async function POST(request: NextRequest) {
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json(
-      { jsonrpc: '2.0', error: { code: -32700, message: 'Parse error' }, id: null },
-      { status: 400 }
+    return new Response(
+      JSON.stringify({ jsonrpc: '2.0', error: { code: -32700, message: 'Parse error' }, id: null }),
+      { status: 400, headers: { 'Content-Type': 'application/json' } }
     );
   }
 
   // التعامل مع طلبات متعددة (batch)
   if (Array.isArray(body)) {
     const results = await Promise.all(body.map((req: any) => handleRequest(req)));
-    return NextResponse.json(results);
+    const filtered = results.filter((r: any) => r !== null);
+    return new Response(JSON.stringify(filtered), {
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
 
   const response = await handleRequest(body);
-  return NextResponse.json(response);
+
+  // الإشعارات لا ترجع رد
+  if (response === null) {
+    return new Response(null, { status: 202 });
+  }
+
+  // استخراج sessionId من initialize ووضعه في header
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (response._mcp_session_id) {
+    headers['Mcp-Session-Id'] = response._mcp_session_id;
+    delete response._mcp_session_id;
+  }
+
+  return new Response(JSON.stringify(response), { headers });
 }
 
 async function handleRequest(body: any): Promise<any> {
@@ -383,10 +399,8 @@ async function handleRequest(body: any): Promise<any> {
             name: 'law-firm-mcp',
             version: '1.0.0',
           },
-          _meta: {
-            sessionId,
-          },
         },
+        _mcp_session_id: sessionId,
       };
     }
 
@@ -464,12 +478,14 @@ async function handleRequest(body: any): Promise<any> {
 
 // GET - معلومات المخدم (لاستكشاف الأخطاء)
 export async function GET() {
-  return NextResponse.json({
+  return new Response(JSON.stringify({
     name: 'law-firm-mcp',
     version: '1.0.0',
     protocolVersion: '2024-11-05',
     description: 'MCP Server for Law Firm Management - Read Only',
     tools: TOOLS.map(t => t.name),
     auth: 'Required: X-API-Key header',
+  }), {
+    headers: { 'Content-Type': 'application/json' },
   });
 }
