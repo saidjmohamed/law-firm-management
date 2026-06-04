@@ -6,8 +6,8 @@ const COOKIE_NAME = 'lawfirm-auth';
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // السماح بالوصول لصفحة تسجيل الدخول و API المصادقة
-  if (pathname === '/login' || pathname.startsWith('/api/auth')) {
+  // السماح بالوصول لصفحة تسجيل الدخول و API المصادقة و MCP Server
+  if (pathname === '/login' || pathname.startsWith('/api/auth') || pathname.startsWith('/api/mcp')) {
     return NextResponse.next();
   }
 
