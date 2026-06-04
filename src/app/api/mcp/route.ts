@@ -375,7 +375,7 @@ async function handleRequest(body: any): Promise<any> {
         jsonrpc: '2.0',
         id,
         result: {
-          protocolVersion: '2025-03-26',
+          protocolVersion: '2024-11-05',
           capabilities: {
             tools: {},
           },
@@ -467,7 +467,7 @@ export async function GET() {
   return NextResponse.json({
     name: 'law-firm-mcp',
     version: '1.0.0',
-    protocolVersion: '2025-03-26',
+    protocolVersion: '2024-11-05',
     description: 'MCP Server for Law Firm Management - Read Only',
     tools: TOOLS.map(t => t.name),
     auth: 'Required: X-API-Key header',
