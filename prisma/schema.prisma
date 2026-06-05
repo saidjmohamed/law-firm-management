@@ -99,6 +99,11 @@ model Party {
   lawyerPhone String?  @default("")
   lawyerId    Int?     // ربط اختياري بجدول المحامين
   lawyer      Lawyer?  @relation(fields: [lawyerId], references: [id], onDelete: SetNull)
+
+  // الأتعاب الخاصة بهذا الطرف (فقط للأطراف "في حقه")
+  totalFees   Int?     @default(0)     // إجمالي الأتعاب
+  paidAmount  Int?     @default(0)     // المبلغ المدفوع
+
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }

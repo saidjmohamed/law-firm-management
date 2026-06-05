@@ -75,6 +75,8 @@ interface PartyType {
   phone?: string;
   lawyerName?: string;
   lawyerPhone?: string;
+  totalFees?: number;
+  paidAmount?: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -173,6 +175,8 @@ interface PartyRow {
   phone?: string;
   lawyerName?: string;
   lawyerPhone?: string;
+  totalFees?: number;
+  paidAmount?: number;
 }
 
 interface DelayRow {
@@ -487,6 +491,8 @@ export function Cases() {
         phone: p.phone,
         lawyerName: p.lawyerName,
         lawyerPhone: p.lawyerPhone,
+        totalFees: (p as any).totalFees || 0,
+        paidAmount: (p as any).paidAmount || 0,
       })));
     } else {
       setParties([emptyParty()]);
@@ -515,6 +521,13 @@ export function Cases() {
     try {
     // تنظيف البيانات من الحقول العلاقية قبل الإرسال
     const { client, parties: _p, delays: _d, sessions: _s, payments: _pay, archives: _a, createdAt: _ca, updatedAt: _ua, ...cleanFormData } = formData as any;
+
+    // حساب إجمالي الأتعاب من الأطراف "في حقه"
+    const forParties = parties.filter(p => (p.side || 'for') === 'for');
+    const computedTotalFees = forParties.reduce((sum, p) => sum + (p.totalFees || 0), 0);
+    const computedPaidAmount = forParties.reduce((sum, p) => sum + (p.paidAmount || 0), 0);
+    cleanFormData.totalFees = computedTotalFees;
+    cleanFormData.paidAmount = computedPaidAmount;
 
     // كشف تكرار رقم القضية (فقط عند الإضافة)
     if (!editingCase?.id && !forceSaveCase) {
@@ -578,6 +591,8 @@ export function Cases() {
           phone: row.phone,
           lawyerName: row.lawyerName,
           lawyerPhone: row.lawyerPhone,
+          totalFees: (row.side || 'for') === 'for' ? (row.totalFees || 0) : 0,
+          paidAmount: (row.side || 'for') === 'for' ? (row.paidAmount || 0) : 0,
           updatedAt: new Date().toISOString(),
         });
       }
@@ -590,6 +605,8 @@ export function Cases() {
           phone: row.phone,
           lawyerName: row.lawyerName,
           lawyerPhone: row.lawyerPhone,
+          totalFees: (row.side || 'for') === 'for' ? (row.totalFees || 0) : 0,
+          paidAmount: (row.side || 'for') === 'for' ? (row.paidAmount || 0) : 0,
         });
         // إضافة تلقائية كموكل إذا لم يكن موجوداً
         await ensureClientForParty(row);
@@ -674,6 +691,8 @@ export function Cases() {
             phone: party.phone,
             lawyerName: party.lawyerName,
             lawyerPhone: party.lawyerPhone,
+            totalFees: (party.side || 'for') === 'for' ? (party.totalFees || 0) : 0,
+            paidAmount: (party.side || 'for') === 'for' ? (party.paidAmount || 0) : 0,
           });
           // إضافة تلقائية كموكل إذا لم يكن موجوداً
           await ensureClientForParty(party);
@@ -959,20 +978,63 @@ export function Cases() {
               <DetailField label="تاريخ المداولة" value={formatDate(selectedCase.delibDate)} />
             </div>
 
-            {/* المالية */}
+            {/* المالية - تفصيل حسب كل موكل */}
             <Separator />
-            <div className="grid grid-cols-3 gap-3">
-              <div className="text-center p-3 bg-teal-50 dark:bg-teal-900/20 rounded-lg">
-                <p className="text-xs text-muted-foreground">الأتعاب</p>
-                <p className="text-sm font-extrabold text-teal-700 dark:text-teal-400 tabular-nums">{formatCurrency(selectedCase.totalFees)}</p>
-              </div>
-              <div className="text-center p-3 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg">
-                <p className="text-xs text-muted-foreground">المدفوع</p>
-                <p className="text-sm font-extrabold text-emerald-700 dark:text-emerald-400 tabular-nums">{formatCurrency(selectedCase.paidAmount)}</p>
-              </div>
-              <div className={`text-center p-3 rounded-lg ${remaining > 0 ? 'bg-amber-50 dark:bg-amber-900/20' : 'bg-emerald-50 dark:bg-emerald-900/20'}`}>
-                <p className="text-xs text-muted-foreground">المتبقي</p>
-                <p className={`text-sm font-extrabold tabular-nums ${remaining > 0 ? 'text-amber-700 dark:text-amber-400' : 'text-emerald-700 dark:text-emerald-400'}`}>{formatCurrency(remaining)}</p>
+            <div>
+              <h4 className="text-sm font-bold mb-2 flex items-center gap-1.5">
+                <Wallet className="w-4 h-4 text-teal-600 dark:text-teal-400" />
+                الأتعاب
+              </h4>
+              {/* أتعاب كل موكل */}
+              {caseParties && caseParties.filter(p => (p.side || 'for') === 'for').length > 0 ? (
+                <div className="space-y-2 mb-3">
+                  {caseParties.filter(p => (p.side || 'for') === 'for').map((p) => {
+                    const pFees = (p as any).totalFees || 0;
+                    const pPaid = (p as any).paidAmount || 0;
+                    const pRemaining = pFees - pPaid;
+                    return (
+                      <div key={p.id} className="p-2.5 rounded-lg border bg-muted/30">
+                        <div className="flex items-center justify-between mb-1.5">
+                          <span className="text-xs font-bold">{p.name || '—'}</span>
+                          {pFees > 0 && (
+                            <span className={`text-xs font-bold ${pRemaining > 0 ? 'text-amber-600' : 'text-emerald-600'}`}>
+                              {pRemaining > 0 ? `متبقي: ${formatCurrency(pRemaining)}` : 'مسدد بالكامل'}
+                            </span>
+                          )}
+                        </div>
+                        <div className="grid grid-cols-3 gap-2">
+                          <div className="text-center p-1.5 bg-teal-50 dark:bg-teal-900/20 rounded">
+                            <p className="text-[10px] text-muted-foreground">الأتعاب</p>
+                            <p className="text-xs font-extrabold text-teal-700 dark:text-teal-400 tabular-nums">{formatCurrency(pFees)}</p>
+                          </div>
+                          <div className="text-center p-1.5 bg-emerald-50 dark:bg-emerald-900/20 rounded">
+                            <p className="text-[10px] text-muted-foreground">المدفوع</p>
+                            <p className="text-xs font-extrabold text-emerald-700 dark:text-emerald-400 tabular-nums">{formatCurrency(pPaid)}</p>
+                          </div>
+                          <div className={`text-center p-1.5 rounded ${pRemaining > 0 ? 'bg-amber-50 dark:bg-amber-900/20' : 'bg-emerald-50 dark:bg-emerald-900/20'}`}>
+                            <p className="text-[10px] text-muted-foreground">المتبقي</p>
+                            <p className={`text-xs font-extrabold tabular-nums ${pRemaining > 0 ? 'text-amber-700 dark:text-amber-400' : 'text-emerald-700 dark:text-emerald-400'}`}>{formatCurrency(pRemaining)}</p>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : null}
+              {/* الإجمالي */}
+              <div className="grid grid-cols-3 gap-3">
+                <div className="text-center p-3 bg-teal-50 dark:bg-teal-900/20 rounded-lg">
+                  <p className="text-xs text-muted-foreground">إجمالي الأتعاب</p>
+                  <p className="text-sm font-extrabold text-teal-700 dark:text-teal-400 tabular-nums">{formatCurrency(selectedCase.totalFees)}</p>
+                </div>
+                <div className="text-center p-3 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg">
+                  <p className="text-xs text-muted-foreground">إجمالي المدفوع</p>
+                  <p className="text-sm font-extrabold text-emerald-700 dark:text-emerald-400 tabular-nums">{formatCurrency(selectedCase.paidAmount)}</p>
+                </div>
+                <div className={`text-center p-3 rounded-lg ${remaining > 0 ? 'bg-amber-50 dark:bg-amber-900/20' : 'bg-emerald-50 dark:bg-emerald-900/20'}`}>
+                  <p className="text-xs text-muted-foreground">إجمالي المتبقي</p>
+                  <p className={`text-sm font-extrabold tabular-nums ${remaining > 0 ? 'text-amber-700 dark:text-amber-400' : 'text-emerald-700 dark:text-emerald-400'}`}>{formatCurrency(remaining)}</p>
+                </div>
               </div>
             </div>
 
@@ -1626,35 +1688,38 @@ export function Cases() {
               </div>
             </div>
 
-            {/* المالية */}
+            {/* المالية - ملخص محسوب من الأطراف */}
             <div>
-              <h3 className="text-sm font-bold mb-3 text-teal-700 dark:text-teal-400">المالية</h3>
+              <h3 className="text-sm font-bold mb-3 text-teal-700 dark:text-teal-400">المالية (إجمالي)</h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 <div>
-                  <Label className="text-xs">الأتعاب (د.ج)</Label>
+                  <Label className="text-xs">إجمالي الأتعاب (د.ج)</Label>
                   <Input
                     type="number"
-                    value={formData.totalFees ?? ''}
-                    onChange={(e) => setFormData({ ...formData, totalFees: e.target.value ? Number(e.target.value) : undefined })}
-                    placeholder="0"
-                    className="h-11"
+                    value={parties.filter(p => (p.side || 'for') === 'for').reduce((sum, p) => sum + (p.totalFees || 0), 0).toLocaleString('en-US')}
+                    disabled
+                    className="bg-muted h-11"
                   />
                 </div>
                 <div>
-                  <Label className="text-xs">المدفوع (د.ج)</Label>
+                  <Label className="text-xs">إجمالي المدفوع (د.ج)</Label>
                   <Input
                     type="number"
-                    value={formData.paidAmount ?? ''}
-                    onChange={(e) => setFormData({ ...formData, paidAmount: e.target.value ? Number(e.target.value) : undefined })}
-                    placeholder="0"
-                    className="h-11"
+                    value={parties.filter(p => (p.side || 'for') === 'for').reduce((sum, p) => sum + (p.paidAmount || 0), 0).toLocaleString('en-US')}
+                    disabled
+                    className="bg-muted h-11"
                   />
                 </div>
                 <div>
-                  <Label className="text-xs">المتبقي (د.ج)</Label>
+                  <Label className="text-xs">إجمالي المتبقي (د.ج)</Label>
                   <Input
                     type="number"
-                    value={((formData.totalFees || 0) - (formData.paidAmount || 0)).toLocaleString('en-US')}
+                    value={(() => {
+                      const forP = parties.filter(p => (p.side || 'for') === 'for');
+                      const total = forP.reduce((s, p) => s + (p.totalFees || 0), 0);
+                      const paid = forP.reduce((s, p) => s + (p.paidAmount || 0), 0);
+                      return (total - paid).toLocaleString('en-US');
+                    })()}
                     disabled
                     className="bg-muted h-11"
                   />
@@ -1867,6 +1932,54 @@ export function Cases() {
                         />
                       </div>
                     </div>
+                    {/* أتعاب هذا الطرف - تظهر فقط للأطراف "في حقه" */}
+                    {(party.side || 'for') === 'for' && (
+                      <div className="mt-2 p-2.5 bg-teal-50/50 dark:bg-teal-900/10 rounded-lg border border-teal-100 dark:border-teal-800/30">
+                        <div className="flex items-center gap-1.5 mb-2">
+                          <Wallet className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
+                          <span className="text-xs font-bold text-teal-700 dark:text-teal-400">أتعاب {party.name || 'الطرف'}</span>
+                        </div>
+                        <div className="grid grid-cols-3 gap-2">
+                          <div>
+                            <Label className="text-xs">الأتعاب (د.ج)</Label>
+                            <Input
+                              type="number"
+                              value={party.totalFees || ''}
+                              onChange={(e) => {
+                                const updated = [...parties];
+                                updated[idx] = { ...updated[idx], totalFees: e.target.value ? Number(e.target.value) : 0 };
+                                setParties(updated);
+                              }}
+                              placeholder="0"
+                              className="h-9 text-sm"
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-xs">المدفوع (د.ج)</Label>
+                            <Input
+                              type="number"
+                              value={party.paidAmount || ''}
+                              onChange={(e) => {
+                                const updated = [...parties];
+                                updated[idx] = { ...updated[idx], paidAmount: e.target.value ? Number(e.target.value) : 0 };
+                                setParties(updated);
+                              }}
+                              placeholder="0"
+                              className="h-9 text-sm"
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-xs">المتبقي (د.ج)</Label>
+                            <Input
+                              type="number"
+                              value={((party.totalFees || 0) - (party.paidAmount || 0)).toLocaleString('en-US')}
+                              disabled
+                              className="bg-muted h-9 text-sm"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>

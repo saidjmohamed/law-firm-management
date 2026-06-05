@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { caseId, role, side, name, phone, lawyerName, lawyerPhone } = body;
+    const { caseId, role, side, name, phone, lawyerName, lawyerPhone, totalFees, paidAmount } = body;
 
     const party = await prisma.party.create({
       data: {
@@ -42,12 +42,30 @@ export async function POST(request: NextRequest) {
         phone: phone ?? '',
         lawyerName: lawyerName ?? '',
         lawyerPhone: lawyerPhone ?? '',
+        totalFees: totalFees ?? 0,
+        paidAmount: paidAmount ?? 0,
       },
     });
+
+    // إعادة حساب Case.totalFees و Case.paidAmount من أطراف القضية
+    await recalculateCaseFees(caseId);
 
     return NextResponse.json(party, { status: 201 });
   } catch (error) {
     console.error('Error creating party:', error);
     return NextResponse.json({ error: 'Failed to create party' }, { status: 500 });
   }
+}
+
+// دالة مساعدة لإعادة حساب أتعاب القضية من أطرافها
+async function recalculateCaseFees(caseId: number) {
+  const parties = await prisma.party.findMany({
+    where: { caseId, side: 'for' },
+  });
+  const totalFees = parties.reduce((sum, p) => sum + (p.totalFees || 0), 0);
+  const paidAmount = parties.reduce((sum, p) => sum + (p.paidAmount || 0), 0);
+  await prisma.case.update({
+    where: { id: caseId },
+    data: { totalFees, paidAmount },
+  });
 }
