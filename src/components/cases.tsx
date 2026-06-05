@@ -1350,19 +1350,64 @@ export function Cases() {
                           {c.chamber && <span>• {c.chamber}</span>}
                           {c.registrationDate && <span>• {formatDate(c.registrationDate)}</span>}
                         </div>
-                        {/* آخر تأجيل */}
+                        {/* آخر تاريخ مهم */}
                         {(() => {
-                          const cDelays = allDelays?.filter((d: any) => d.caseId === c.id) || [];
-                          const lastDelay = cDelays.sort((a: any, b: any) => (b.delayDate||'').localeCompare(a.delayDate||''))[0];
-                          return lastDelay ? (
+                          // جمع كل التواريخ المهمة للقضية
+                          const dateEvents: { date: string; label: string; icon: string; color: string }[] = [];
+
+                          // التأجيلات
+                          const cDelays = allDelays?.filter((d: any) => d.caseId === c.id && d.delayDate) || [];
+                          cDelays.forEach((d: any) => {
+                            const dateStr = d.delayDate?.length > 10 ? d.delayDate.substring(0, 10) : d.delayDate;
+                            dateEvents.push({ date: dateStr, label: d.reason || 'تأجيل', icon: 'clock', color: 'amber' });
+                          });
+
+                          // الجلسات
+                          const cSessions = allSessions?.filter((s: any) => s.caseId === c.id && s.date) || [];
+                          cSessions.forEach((s: any) => {
+                            const dateStr = s.date?.length > 10 ? s.date.substring(0, 10) : s.date;
+                            dateEvents.push({ date: dateStr, label: s.result || 'جلسة', icon: 'calendar', color: 'blue' });
+                          });
+
+                          // تاريخ المداولة
+                          if (c.delibDate) {
+                            const dateStr = c.delibDate.length > 10 ? c.delibDate.substring(0, 10) : c.delibDate;
+                            dateEvents.push({ date: dateStr, label: 'مداولة', icon: 'gavel', color: 'purple' });
+                          }
+
+                          // منطوق الحكم (إذا كانت القضية مفصول فيها)
+                          if (c.judgment && c.status === 'مفصول فيها') {
+                            // نستخدم تاريخ المداولة كتاريخ للحكم إذا وجد
+                            const judgDate = c.delibDate || c.firstSessionDate || '';
+                            if (judgDate) {
+                              const dateStr = judgDate.length > 10 ? judgDate.substring(0, 10) : judgDate;
+                              dateEvents.push({ date: dateStr, label: `حكم: ${c.judgment.length > 40 ? c.judgment.substring(0, 40) + '...' : c.judgment}`, icon: 'gavel', color: c.caseResult === 'won' ? 'emerald' : c.caseResult === 'lost' ? 'red' : 'purple' });
+                            }
+                          }
+
+                          if (dateEvents.length === 0) return null;
+
+                          // إيجاد آخر تاريخ (الأبعد)
+                          const latest = dateEvents.sort((a, b) => b.date.localeCompare(a.date))[0];
+                          const colorClass = latest.color === 'amber' ? 'text-amber-600 dark:text-amber-400'
+                            : latest.color === 'blue' ? 'text-blue-600 dark:text-blue-400'
+                            : latest.color === 'emerald' ? 'text-emerald-600 dark:text-emerald-400'
+                            : latest.color === 'red' ? 'text-red-600 dark:text-red-400'
+                            : 'text-purple-600 dark:text-purple-400';
+                          const iconClass = latest.color === 'amber' ? 'text-amber-500'
+                            : latest.color === 'blue' ? 'text-blue-500'
+                            : latest.color === 'emerald' ? 'text-emerald-500'
+                            : latest.color === 'red' ? 'text-red-500'
+                            : 'text-purple-500';
+
+                          return (
                             <div className="flex items-center gap-1 mt-1">
-                              <Clock className="w-3 h-3 text-amber-500" />
-                              <span className="text-xs text-amber-600 dark:text-amber-400 font-medium">
-                                آخر تأجيل: {formatDate(lastDelay.delayDate)}
-                                {lastDelay.reason ? ` — ${lastDelay.reason}` : ''}
+                              <Clock className={`w-3 h-3 ${iconClass}`} />
+                              <span className={`text-xs font-medium ${colorClass}`}>
+                                {formatDate(latest.date)} — {latest.label}
                               </span>
                             </div>
-                          ) : null;
+                          );
                         })()}
                       </div>
                       <div className="text-left shrink-0 space-y-1">
