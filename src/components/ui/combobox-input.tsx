@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Input } from '@/components/ui/input';
 import { ChevronDown, X } from 'lucide-react';
 
@@ -23,19 +23,13 @@ export function ComboboxInput({
   addLabel = 'كنقابة جديدة',
 }: ComboboxInputProps) {
   const [open, setOpen] = useState(false);
-  const [filtered, setFiltered] = useState<string[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (value.trim() === '') {
-      setFiltered(suggestions);
-    } else {
-      setFiltered(
-        suggestions.filter((s) =>
-          s.toLowerCase().includes(value.toLowerCase())
-        )
-      );
-    }
+  // تصفية الاقتراحات بحسب القيمة المُدخَلة (مباشرة بدون setState داخل effect)
+  const filtered = useMemo(() => {
+    if (value.trim() === '') return suggestions;
+    const lower = value.toLowerCase();
+    return suggestions.filter((s) => s.toLowerCase().includes(lower));
   }, [value, suggestions]);
 
   // إغلاق عند النقر خارج

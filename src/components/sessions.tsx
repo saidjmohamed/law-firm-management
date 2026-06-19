@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
+import { DateDisplay, toDateInputValue } from '@/components/ui/date-display';
 import {
   Dialog,
   DialogContent,
@@ -75,16 +76,25 @@ export function Sessions() {
     return sessions
       .filter((s) => {
         if (!s.date) return false;
-        const sessionDate = new Date(s.date);
+        const sessionDate = new Date(s.date as any);
+        if (isNaN(sessionDate.getTime())) return false;
         sessionDate.setHours(0, 0, 0, 0);
         return sessionDate >= now && s.status !== 'completed' && s.status !== 'cancelled';
       })
-      .sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+      .sort((a, b) => {
+        const da = a.date ? new Date(a.date as any).getTime() : 0;
+        const db = b.date ? new Date(b.date as any).getTime() : 0;
+        return da - db;
+      });
   }, [sessions]);
 
   // كل الجلسات (عند تفعيل "عرض الكل")
   const allSessionsSorted = useMemo(() => {
-    return [...sessions].sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+    return [...sessions].sort((a, b) => {
+      const da = a.date ? new Date(a.date as any).getTime() : 0;
+      const db = b.date ? new Date(b.date as any).getTime() : 0;
+      return db - da;
+    });
   }, [sessions]);
 
   const displaySessions = showAll ? allSessionsSorted : upcomingSessions;
@@ -93,7 +103,7 @@ export function Sessions() {
   const groupedSessions = useMemo(() => {
     const groups: Record<string, typeof displaySessions> = {};
     for (const session of displaySessions) {
-      const key = session.date || 'بدون تاريخ';
+      const key = session.date ? new Date(session.date as any).toISOString().slice(0, 10) : 'بدون تاريخ';
       if (!groups[key]) groups[key] = [];
       groups[key].push(session);
     }
@@ -146,7 +156,12 @@ export function Sessions() {
 
   // حساب الجلسات القادمة اليوم
   const todayStr = new Date().toISOString().split('T')[0];
-  const todaySessions = upcomingSessions.filter(s => s.date === todayStr);
+  const todaySessions = upcomingSessions.filter(s => {
+    if (!s.date) return false;
+    const sd = new Date(s.date as any);
+    if (isNaN(sd.getTime())) return false;
+    return sd.toISOString().split('T')[0] === todayStr;
+  });
 
   return (
     <div className="space-y-4">
@@ -217,13 +232,13 @@ export function Sessions() {
       {/* الجلسات مج.grouped */}
       <div className="space-y-4">
         {Object.entries(groupedSessions).map(([date, dateSessions]) => {
-          const sessionDate = new Date(date);
+          const sessionDate = date === 'بدون تاريخ' ? null : new Date(date);
           const isToday = date === todayStr;
-          const isPast = sessionDate < new Date(todayStr);
+          const isPast = sessionDate ? sessionDate < new Date(todayStr) : false;
           return (
             <div key={date}>
               <h3 className={`text-sm font-semibold mb-2 flex items-center gap-2 ${isToday ? 'text-teal-700 dark:text-teal-400' : isPast ? 'text-muted-foreground' : 'text-foreground'}`}>
-                <span>{isToday ? 'اليوم' : formatDate(date)}</span>
+                <span>{isToday ? 'اليوم' : sessionDate ? <DateDisplay value={sessionDate} /> : 'بدون تاريخ'}</span>
                 <Badge variant="outline" className="text-[10px]">{dateSessions.length.toLocaleString('en-US')}</Badge>
               </h3>
               <div className="space-y-2">
@@ -295,7 +310,8 @@ export function Sessions() {
                 <Label className="text-xs">تاريخ الجلسة</Label>
                 <Input
                   type="date"
-                  value={formData.date || ''}
+                  dir="ltr"
+                  value={toDateInputValue(formData.date as any)}
                   onChange={(e) => setFormData({ ...formData, date: e.target.value })}
                 />
               </div>

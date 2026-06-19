@@ -1,5 +1,6 @@
 import prisma from '@/lib/prisma';
 import { NextRequest, NextResponse } from 'next/server';
+import { toDateOrNull } from '@/lib/date-utils';
 
 export async function GET(
   request: NextRequest,
@@ -38,9 +39,24 @@ export async function PUT(
     const { id } = await params;
     const body = await request.json();
 
+    // تصفية الحقول المسموح بها + تحويل التواريخ
+    const allowedFields = ['caseId', 'caseNumber', 'date', 'time', 'court', 'chamber', 'roomNumber', 'notes', 'status', 'result'];
+    const cleanData: Record<string, unknown> = {};
+    for (const key of allowedFields) {
+      if (body[key] !== undefined) {
+        if (key === 'date') {
+          cleanData[key] = toDateOrNull(body[key]);
+        } else if (key === 'caseId') {
+          cleanData[key] = body[key] === '' ? null : parseInt(String(body[key]));
+        } else {
+          cleanData[key] = body[key];
+        }
+      }
+    }
+
     const session = await prisma.session.update({
       where: { id: parseInt(id) },
-      data: body,
+      data: cleanData,
     });
 
     return NextResponse.json(session);

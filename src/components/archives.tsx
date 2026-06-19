@@ -6,6 +6,7 @@ import { STATUS_COLORS, formatDate } from '@/lib/constants';
 import { useAppStore } from '@/lib/store';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { DateDisplay } from '@/components/ui/date-display';
 import { Badge } from '@/components/ui/badge';
 import {
   Dialog,
@@ -242,7 +243,7 @@ export function ArchivesManager() {
                       <p className="text-xs text-muted-foreground mt-1 truncate">{data.subject || '—'}</p>
                     </div>
                     <div className="text-left mr-3">
-                      <Badge variant="outline" className="text-xs">{formatDate(archive.archiveDate)}</Badge>
+                      <Badge variant="outline" className="text-xs"><DateDisplay value={archive.archiveDate} /></Badge>
                     </div>
                   </div>
                 </CardContent>

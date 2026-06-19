@@ -1,5 +1,7 @@
 import { NextRequest } from 'next/server';
 import prisma from '@/lib/prisma';
+import { toDateOrNull } from '@/lib/date-utils';
+import { formatDate } from '@/lib/constants';
 
 // ============================================================================
 // MCP Server - Model Context Protocol (StreamableHTTP)
@@ -347,7 +349,7 @@ async function getCase(id: number): Promise<string> {
     `Client: ${c.client?.name||'-'} | Phone: ${c.client?.phone||'-'}`,
     `Court: ${c.courtName||'-'} | Council: ${c.councilName||'-'} | Chamber: ${c.chamber||'-'}`,
     `Bar Phone: ${c.barPhone||'-'}`,
-    `Registration: ${c.registrationDate||'-'} | First Session: ${c.firstSessionDate||'-'} | Deliberation: ${c.delibDate||'-'}`,
+    `Registration: ${formatDate(c.registrationDate as any)} | First Session: ${formatDate(c.firstSessionDate as any)} | Deliberation: ${formatDate(c.delibDate as any)}`,
     `Fees: ${c.totalFees||0} | Paid: ${c.paidAmount||0} | Remaining: ${(c.totalFees||0)-(c.paidAmount||0)}`,
   ];
   if (c.lawyer) l.push(`Lawyer: ${c.lawyer}`);
@@ -355,29 +357,29 @@ async function getCase(id: number): Promise<string> {
   if (c.caseResult) l.push(`Result: ${c.caseResult==='won'?'Won':'Lost'}`);
   if (c.notes) l.push(`Notes: ${c.notes}`);
   if (c.parties.length>0) { l.push('--- Parties ---'); c.parties.forEach((p:any)=>l.push(`  ${p.side==='for'?'For':'Against'} | ${p.role||'-'}: ${p.name||'-'} | Ph: ${p.phone||'-'} | Lawyer: ${p.lawyerName||'-'}`)); }
-  if (c.delays.length>0) { l.push('--- Delays (last 5) ---'); c.delays.slice(0,5).forEach((d:any)=>l.push(`  ${d.delayDate||'-'} | ${d.reason||'-'}`)); }
-  if (c.sessions.length>0) { l.push('--- Sessions (last 5) ---'); c.sessions.slice(0,5).forEach((s:any)=>l.push(`  ${s.date||'-'} | ${s.time||'-'} | ${s.status||'-'}`)); }
+  if (c.delays.length>0) { l.push('--- Delays (last 5) ---'); c.delays.slice(0,5).forEach((d:any)=>l.push(`  ${formatDate(d.delayDate as any)} | ${d.reason||'-'}`)); }
+  if (c.sessions.length>0) { l.push('--- Sessions (last 5) ---'); c.sessions.slice(0,5).forEach((s:any)=>l.push(`  ${formatDate(s.date as any)} | ${s.time||'-'} | ${s.status||'-'}`)); }
   if (c.payments.length>0) { l.push('--- Payments (last 5) ---'); c.payments.slice(0,5).forEach((p:any)=>l.push(`  ${p.amount||0} | ${p.note||'-'} | ${p.createdAt?new Date(p.createdAt).toLocaleDateString():'-'}`)); }
   return l.join('\n');
 }
 
 async function getUpcoming(): Promise<string> {
   const now = new Date();
-  const todayStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
-  const nextWeek = new Date(now.getTime()+7*24*60*60*1000);
-  const nextWeekStr = `${nextWeek.getFullYear()}-${String(nextWeek.getMonth()+1).padStart(2,'0')}-${String(nextWeek.getDate()).padStart(2,'0')}`;
+  const todayStart = new Date(now); todayStart.setHours(0,0,0,0);
+  const nextWeek = new Date(now.getTime()+7*24*60*60*1000); nextWeek.setHours(23,59,59,999);
   const cases = await prisma.case.findMany({ where: { status: { not: 'مؤرشفة' } }, include: { client: true, delays: true, sessions: true } });
   const result: string[] = [];
   for (const c of cases) {
-    const allDates: {date:string;label:string}[] = [];
-    c.delays.forEach((d:any)=>{ if(d.delayDate){ const ds=d.delayDate.length>10?d.delayDate.substring(0,10):d.delayDate; allDates.push({date:ds,label:`Delay: ${d.reason||''}`}); }});
-    c.sessions.forEach((s:any)=>{ if(s.date){ const ds=s.date.length>10?s.date.substring(0,10):s.date; allDates.push({date:ds,label:'Session'}); }});
-    if(c.delibDate){ const ds=c.delibDate.length>10?c.delibDate.substring(0,10):c.delibDate; allDates.push({date:ds,label:'Deliberation'}); }
+    const allDates: {date:Date;label:string}[] = [];
+    c.delays.forEach((d:any)=>{ if(d.delayDate){ allDates.push({date:new Date(d.delayDate),label:`Delay: ${d.reason||''}`}); }});
+    c.sessions.forEach((s:any)=>{ if(s.date){ allDates.push({date:new Date(s.date),label:'Session'}); }});
+    if(c.delibDate){ allDates.push({date:new Date(c.delibDate),label:'Deliberation'}); }
     if(allDates.length===0) continue;
-    const latest = allDates.sort((a,b)=>b.date.localeCompare(a.date))[0];
-    if(latest.date>=todayStr && latest.date<=nextWeekStr){
-      const days=Math.round((new Date(latest.date).getTime()-now.getTime())/(1000*60*60*24));
-      result.push(`${c.caseNumber} | ${c.subject} | ${latest.date} (${latest.label}) | ${days===0?'TODAY':days===1?'TOMORROW':`In ${days} days`} | ${c.courtName||'-'} | Client: ${c.client?.name||'-'}`);
+    const latest = allDates.sort((a,b)=>b.date.getTime()-a.date.getTime())[0];
+    if(latest.date>=todayStart && latest.date<=nextWeek){
+      const days=Math.round((latest.date.getTime()-now.getTime())/(1000*60*60*24));
+      const dateStr = latest.date.toISOString().slice(0,10);
+      result.push(`${c.caseNumber} | ${c.subject} | ${dateStr} (${latest.label}) | ${days===0?'TODAY':days===1?'TOMORROW':`In ${days} days`} | ${c.courtName||'-'} | Client: ${c.client?.name||'-'}`);
     }
   }
   if(result.length===0) return 'No upcoming cases in 7 days.';
@@ -479,14 +481,14 @@ async function getCaseDelays(caseId: number): Promise<string> {
 async function addDelay(caseId: number, delayDate: string, reason?: string): Promise<string> {
   const c = await prisma.case.findUnique({ where: { id: caseId } });
   if(!c) return `Case ID ${caseId} not found.`;
-  const d = await prisma.delay.create({ data: { caseId, delayDate, reason: reason||'' } });
+  const d = await prisma.delay.create({ data: { caseId, delayDate: toDateOrNull(delayDate), reason: reason||'' } });
   return `Delay added: Case ${c.caseNumber} → ${delayDate}${reason?` (${reason})`:''} | Delay ID:${d.id}`;
 }
 
 async function addSession(caseId: number, date: string, time?: string): Promise<string> {
   const c = await prisma.case.findUnique({ where: { id: caseId } });
   if(!c) return `Case ID ${caseId} not found.`;
-  const s = await prisma.session.create({ data: { caseId, date, time: time||'' } });
+  const s = await prisma.session.create({ data: { caseId, date: toDateOrNull(date), time: time||'' } });
   return `Session added: Case ${c.caseNumber} → ${date}${time?` at ${time}`:''} | Session ID:${s.id}`;
 }
 
@@ -494,7 +496,7 @@ async function addPayment(caseId: number, amount: number, note?: string): Promis
   const c = await prisma.case.findUnique({ where: { id: caseId } });
   if(!c) return `Case ID ${caseId} not found.`;
   if(amount<=0) return 'Amount must be positive.';
-  const p = await prisma.payment.create({ data: { caseId, amount, note: note||'' } });
+  const p = await prisma.payment.create({ data: { caseId, amount, notes: note||'' } });
   // تحديث المبلغ المدفوع في القضية
   const newPaid = (c.paidAmount||0) + amount;
   await prisma.case.update({ where: { id: caseId }, data: { paidAmount: newPaid } });
@@ -545,7 +547,7 @@ async function updateCaseStatus(caseId: number, status: string): Promise<string>
 async function updateDelibDate(caseId: number, delibDate: string): Promise<string> {
   const c = await prisma.case.findUnique({ where: { id: caseId } });
   if(!c) return `Case ID ${caseId} not found.`;
-  await prisma.case.update({ where: { id: caseId }, data: { delibDate } });
+  await prisma.case.update({ where: { id: caseId }, data: { delibDate: toDateOrNull(delibDate) } });
   return `Deliberation date updated: Case ${c.caseNumber} → ${delibDate}`;
 }
 

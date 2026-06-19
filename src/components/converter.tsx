@@ -253,7 +253,7 @@ export function Converter() {
       {activeTab === 'media' && (
         <Card>
           <CardContent className="p-8 text-center">
-            <Image alt="" className="w-16 h-16 mx-auto text-muted-foreground/30 mb-4" />
+            <Image className="w-16 h-16 mx-auto text-muted-foreground/30 mb-4" aria-hidden />
             <h3 className="font-bold text-lg mb-2">تحويل الصور والفيديو</h3>
             <p className="text-muted-foreground text-sm">
               هذه الميزة قيد التطوير وستكون متاحة قريباً

@@ -1,5 +1,6 @@
 import prisma from '@/lib/prisma';
 import { NextRequest, NextResponse } from 'next/server';
+import { toDateOrNull } from '@/lib/date-utils';
 
 export async function GET() {
   try {
@@ -30,7 +31,7 @@ export async function POST(request: NextRequest) {
     const delay = await prisma.delay.create({
       data: {
         caseId,
-        delayDate: delayDate ?? '',
+        delayDate: toDateOrNull(delayDate),
         reason: reason ?? '',
         notes: notes ?? '',
       },

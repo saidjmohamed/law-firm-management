@@ -1,5 +1,35 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
+import { toDateOrNull } from '@/lib/date-utils';
+
+// حقول التواريخ التي يجب تحويلها من String إلى DateTime
+const DATE_FIELDS = ['registrationDate', 'firstSessionDate', 'delibDate', 'judgmentDate'];
+
+function normalizeUpdateData(data: Record<string, any>): Record<string, any> {
+  const out: Record<string, any> = { ...data };
+
+  // تحويل الأرقام
+  for (const f of ['clientId', 'wilayaId', 'totalFees', 'paidAmount', 'chamberNumber', 'courtId']) {
+    if (out[f] !== undefined && out[f] !== null && out[f] !== '') {
+      out[f] = parseInt(String(out[f]));
+      if (isNaN(out[f])) delete out[f];
+    } else if (out[f] === '') {
+      out[f] = null;
+    }
+  }
+
+  // تحويل التواريخ
+  for (const f of DATE_FIELDS) {
+    if (out[f] !== undefined) {
+      out[f] = toDateOrNull(out[f]);
+    }
+  }
+
+  // caseResult — السماح بـ null
+  if (out.caseResult === '' || out.caseResult === '_none') out.caseResult = null;
+
+  return out;
+}
 
 export async function GET(
   request: NextRequest,
@@ -61,20 +91,11 @@ export async function PUT(
       ...updateData
     } = body;
 
-    // تحويل الأرقام من String إلى Int إذا لزم
-    if (updateData.clientId !== undefined && updateData.clientId !== null) updateData.clientId = parseInt(String(updateData.clientId));
-    if (updateData.wilayaId !== undefined && updateData.wilayaId !== null) updateData.wilayaId = parseInt(String(updateData.wilayaId));
-    if (updateData.totalFees !== undefined && updateData.totalFees !== null) updateData.totalFees = parseInt(String(updateData.totalFees));
-    if (updateData.paidAmount !== undefined && updateData.paidAmount !== null) updateData.paidAmount = parseInt(String(updateData.paidAmount));
-    if (updateData.chamberNumber !== undefined && updateData.chamberNumber !== null) updateData.chamberNumber = parseInt(String(updateData.chamberNumber));
-    if (updateData.courtId !== undefined && updateData.courtId !== null) updateData.courtId = parseInt(String(updateData.courtId));
-
-    // معالجة caseResult — السماح بـ null
-    if (updateData.caseResult === '' || updateData.caseResult === '_none') updateData.caseResult = null;
+    const normalized = normalizeUpdateData(updateData);
 
     const updatedCase = await prisma.case.update({
       where: { id: parseInt(id) },
-      data: updateData,
+      data: normalized,
     });
 
     return NextResponse.json(updatedCase);
@@ -109,20 +130,11 @@ export async function PATCH(
       ...updateData
     } = body;
 
-    // تحويل الأرقام من String إلى Int إذا لزم
-    if (updateData.clientId !== undefined && updateData.clientId !== null) updateData.clientId = parseInt(String(updateData.clientId));
-    if (updateData.wilayaId !== undefined && updateData.wilayaId !== null) updateData.wilayaId = parseInt(String(updateData.wilayaId));
-    if (updateData.totalFees !== undefined && updateData.totalFees !== null) updateData.totalFees = parseInt(String(updateData.totalFees));
-    if (updateData.paidAmount !== undefined && updateData.paidAmount !== null) updateData.paidAmount = parseInt(String(updateData.paidAmount));
-    if (updateData.chamberNumber !== undefined && updateData.chamberNumber !== null) updateData.chamberNumber = parseInt(String(updateData.chamberNumber));
-    if (updateData.courtId !== undefined && updateData.courtId !== null) updateData.courtId = parseInt(String(updateData.courtId));
-
-    // معالجة caseResult — السماح بـ null
-    if (updateData.caseResult === '' || updateData.caseResult === '_none') updateData.caseResult = null;
+    const normalized = normalizeUpdateData(updateData);
 
     const updatedCase = await prisma.case.update({
       where: { id: parseInt(id) },
-      data: updateData,
+      data: normalized,
     });
 
     return NextResponse.json(updatedCase);

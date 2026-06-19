@@ -27,6 +27,9 @@ const eslintConfig = [...nextCoreWebVitals, ...nextTypescript, {
     // Next.js rules
     "@next/next/no-img-element": "off",
     "@next/next/no-html-link-for-pages": "off",
+
+    // Accessibility (false positives on Lucide icons)
+    "jsx-a11y/alt-text": "off",
     
     // General JavaScript rules
     "prefer-const": "off",

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
+import { toDateOrNull } from '@/lib/date-utils';
 
 export async function GET() {
   try {
@@ -61,9 +62,9 @@ export async function POST(request: NextRequest) {
         courtName: body.courtName || '',
         totalFees: body.totalFees ?? 0,
         paidAmount: body.paidAmount ?? 0,
-        registrationDate: body.registrationDate || '',
-        firstSessionDate: body.firstSessionDate || '',
-        delibDate: body.delibDate || '',
+        registrationDate: toDateOrNull(body.registrationDate),
+        firstSessionDate: toDateOrNull(body.firstSessionDate),
+        delibDate: toDateOrNull(body.delibDate),
         barPhone: body.barPhone || '',
         lawyer: body.lawyer || '',
         notes: body.notes || '',

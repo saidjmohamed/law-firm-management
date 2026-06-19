@@ -66,8 +66,10 @@ export function CalendarView() {
     const map: Record<string, Session[]> = {};
     sessions.forEach((s) => {
       if (s.date) {
-        if (!map[s.date]) map[s.date] = [];
-        map[s.date].push(s);
+        const key = new Date(s.date as any).toISOString().slice(0, 10);
+        if (isNaN(new Date(key).getTime())) return;
+        if (!map[key]) map[key] = [];
+        map[key].push(s);
       }
     });
     return map;
@@ -78,7 +80,9 @@ export function CalendarView() {
     const map: Record<string, number> = {};
     delays.forEach((d) => {
       if (d.delayDate) {
-        map[d.delayDate] = (map[d.delayDate] || 0) + 1;
+        const key = new Date(d.delayDate as any).toISOString().slice(0, 10);
+        if (isNaN(new Date(key).getTime())) return;
+        map[key] = (map[key] || 0) + 1;
       }
     });
     return map;

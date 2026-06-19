@@ -154,6 +154,12 @@ export function Lawyers() {
     }
   }, [selectedLawyerId, lawyers, setSelectedLawyerId]);
 
+  // كشف التكرارات أثناء الكتابة — يجب أن يُستدعى قبل أي return
+  const liveDuplicates = useMemo(() => {
+    if (!formData.name?.trim() || editingLawyer?.id) return [];
+    return findDuplicateLawyers(formData.name || '', formData.barNumber || '', lawyers, editingLawyer?.id);
+  }, [formData.name, formData.barNumber, lawyers, editingLawyer]);
+
   if (isLoading) {
     return <LawyersSkeleton />;
   }
@@ -175,12 +181,6 @@ export function Lawyers() {
     setFormData({ ...lawyer });
     setShowForm(true);
   }
-
-  // كشف التكرارات أثناء الكتابة
-  const liveDuplicates = useMemo(() => {
-    if (!formData.name?.trim() || editingLawyer?.id) return [];
-    return findDuplicateLawyers(formData.name || '', formData.barNumber || '', lawyers, editingLawyer?.id);
-  }, [formData.name, formData.barNumber, lawyers, editingLawyer]);
 
   async function saveLawyer() {
     try {

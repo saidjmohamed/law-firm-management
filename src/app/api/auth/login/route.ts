@@ -16,13 +16,24 @@ export async function POST(request: NextRequest) {
     const isValid = await verifyPassword(password);
 
     if (!isValid) {
+      // تأخير بسيط لمنع brute-force (200ms)
+      await new Promise((r) => setTimeout(r, 200));
       return NextResponse.json(
         { error: 'كلمة المرور غير صحيحة' },
         { status: 401 }
       );
     }
 
-    const token = await createToken();
+    let token: string;
+    try {
+      token = await createToken();
+    } catch {
+      // AUTH_SECRET غير معرّف
+      return NextResponse.json(
+        { error: 'إعداد الخادم غير مكتمل: AUTH_SECRET مفقود' },
+        { status: 500 }
+      );
+    }
 
     const response = NextResponse.json({ success: true });
 

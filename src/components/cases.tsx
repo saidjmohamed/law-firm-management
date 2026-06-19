@@ -13,6 +13,7 @@ import { DuplicateAlert, findDuplicateCaseNumbers, findDuplicatePartyNames } fro
 import { useAppStore } from '@/lib/store';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { DateDisplay, toDateInputValue } from '@/components/ui/date-display';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
@@ -134,7 +135,7 @@ interface CaseType {
   lawyer?: string;
   notes?: string;
   judgment?: string;
-  caseResult?: string; // 'won' | 'lost' | null
+  caseResult?: string | null; // 'won' | 'lost' | null
   createdAt: string;
   updatedAt: string;
   client?: { id: number; name?: string };
@@ -973,9 +974,9 @@ export function Cases() {
                   )}
                 </div>
               )}
-              <DetailField label="تاريخ التسجيل" value={formatDate(selectedCase.registrationDate)} />
-              <DetailField label="أول جلسة" value={formatDate(selectedCase.firstSessionDate)} />
-              <DetailField label="تاريخ المداولة" value={formatDate(selectedCase.delibDate)} />
+              <DetailField label="تاريخ التسجيل" value={<DateDisplay value={selectedCase.registrationDate as any} />} />
+              <DetailField label="أول جلسة" value={<DateDisplay value={selectedCase.firstSessionDate as any} />} />
+              <DetailField label="تاريخ المداولة" value={<DateDisplay value={selectedCase.delibDate as any} />} />
             </div>
 
             {/* المالية - تفصيل حسب كل موكل */}
@@ -1128,7 +1129,7 @@ export function Cases() {
                       <p className="text-sm font-medium">{d.reason || '—'}</p>
                       {d.notes && <p className="text-xs text-muted-foreground">{d.notes}</p>}
                     </div>
-                    <Badge variant="outline" className="text-xs">{formatDate(d.delayDate)}</Badge>
+                    <Badge variant="outline" className="text-xs"><DateDisplay value={d.delayDate as any} /></Badge>
                   </div>
                 ))}
               </div>
@@ -1348,47 +1349,44 @@ export function Cases() {
                             return courtPhones.length > 0 ? <span className="text-teal-600 dark:text-teal-400 font-mono dir-ltr"><Phone className="w-3 h-3 inline ml-0.5" />{courtPhones[0]}{courtPhones.length > 1 ? ` +${courtPhones.length - 1}` : ''}</span> : null;
                           })()}
                           {c.chamber && <span>• {c.chamber}</span>}
-                          {c.registrationDate && <span>• {formatDate(c.registrationDate)}</span>}
+                          {c.registrationDate && <span>• <DateDisplay value={c.registrationDate as any} /></span>}
                         </div>
                         {/* آخر تاريخ مهم */}
                         {(() => {
                           // جمع كل التواريخ المهمة للقضية
-                          const dateEvents: { date: string; label: string; icon: string; color: string }[] = [];
+                          const dateEvents: { date: Date; label: string; icon: string; color: string }[] = [];
 
                           // التأجيلات
                           const cDelays = allDelays?.filter((d: any) => d.caseId === c.id && d.delayDate) || [];
                           cDelays.forEach((d: any) => {
-                            const dateStr = d.delayDate?.length > 10 ? d.delayDate.substring(0, 10) : d.delayDate;
-                            dateEvents.push({ date: dateStr, label: d.reason || 'تأجيل', icon: 'clock', color: 'amber' });
+                            if (!d.delayDate) return;
+                            dateEvents.push({ date: new Date(d.delayDate), label: d.reason || 'تأجيل', icon: 'clock', color: 'amber' });
                           });
 
                           // الجلسات
                           const cSessions = allSessions?.filter((s: any) => s.caseId === c.id && s.date) || [];
                           cSessions.forEach((s: any) => {
-                            const dateStr = s.date?.length > 10 ? s.date.substring(0, 10) : s.date;
-                            dateEvents.push({ date: dateStr, label: s.result || 'جلسة', icon: 'calendar', color: 'blue' });
+                            if (!s.date) return;
+                            dateEvents.push({ date: new Date(s.date), label: s.result || 'جلسة', icon: 'calendar', color: 'blue' });
                           });
 
                           // تاريخ المداولة
                           if (c.delibDate) {
-                            const dateStr = c.delibDate.length > 10 ? c.delibDate.substring(0, 10) : c.delibDate;
-                            dateEvents.push({ date: dateStr, label: 'مداولة', icon: 'gavel', color: 'purple' });
+                            dateEvents.push({ date: new Date(c.delibDate as any), label: 'مداولة', icon: 'gavel', color: 'purple' });
                           }
 
                           // منطوق الحكم (إذا كانت القضية مفصول فيها)
                           if (c.judgment && c.status === 'مفصول فيها') {
-                            // نستخدم تاريخ المداولة كتاريخ للحكم إذا وجد
-                            const judgDate = c.delibDate || c.firstSessionDate || '';
+                            const judgDate = c.delibDate || c.firstSessionDate;
                             if (judgDate) {
-                              const dateStr = judgDate.length > 10 ? judgDate.substring(0, 10) : judgDate;
-                              dateEvents.push({ date: dateStr, label: `حكم: ${c.judgment.length > 40 ? c.judgment.substring(0, 40) + '...' : c.judgment}`, icon: 'gavel', color: c.caseResult === 'won' ? 'emerald' : c.caseResult === 'lost' ? 'red' : 'purple' });
+                              dateEvents.push({ date: new Date(judgDate as any), label: `حكم: ${c.judgment.length > 40 ? c.judgment.substring(0, 40) + '...' : c.judgment}`, icon: 'gavel', color: c.caseResult === 'won' ? 'emerald' : c.caseResult === 'lost' ? 'red' : 'purple' });
                             }
                           }
 
                           if (dateEvents.length === 0) return null;
 
                           // إيجاد آخر تاريخ (الأبعد)
-                          const latest = dateEvents.sort((a, b) => b.date.localeCompare(a.date))[0];
+                          const latest = dateEvents.sort((a, b) => b.date.getTime() - a.date.getTime())[0];
                           const colorClass = latest.color === 'amber' ? 'text-amber-600 dark:text-amber-400'
                             : latest.color === 'blue' ? 'text-blue-600 dark:text-blue-400'
                             : latest.color === 'emerald' ? 'text-emerald-600 dark:text-emerald-400'
@@ -1404,7 +1402,7 @@ export function Cases() {
                             <div className="flex items-center gap-1 mt-1">
                               <Clock className={`w-3 h-3 ${iconClass}`} />
                               <span className={`text-xs font-medium ${colorClass}`}>
-                                {formatDate(latest.date)} — {latest.label}
+                                <DateDisplay value={latest.date} /> — {latest.label}
                               </span>
                             </div>
                           );
@@ -1780,7 +1778,8 @@ export function Cases() {
                   <Label className="text-xs">تاريخ التسجيل</Label>
                   <Input
                     type="date"
-                    value={formData.registrationDate || ''}
+                    dir="ltr"
+                    value={toDateInputValue(formData.registrationDate as any)}
                     onChange={(e) => setFormData({ ...formData, registrationDate: e.target.value })}
                     className="h-11"
                   />
@@ -1789,7 +1788,8 @@ export function Cases() {
                   <Label className="text-xs">أول جلسة</Label>
                   <Input
                     type="date"
-                    value={formData.firstSessionDate || ''}
+                    dir="ltr"
+                    value={toDateInputValue(formData.firstSessionDate as any)}
                     onChange={(e) => setFormData({ ...formData, firstSessionDate: e.target.value })}
                     className="h-11"
                   />
@@ -1798,7 +1798,8 @@ export function Cases() {
                   <Label className="text-xs">تاريخ المداولة</Label>
                   <Input
                     type="date"
-                    value={formData.delibDate || ''}
+                    dir="ltr"
+                    value={toDateInputValue(formData.delibDate as any)}
                     onChange={(e) => setFormData({ ...formData, delibDate: e.target.value })}
                     className="h-11"
                   />
@@ -2048,7 +2049,8 @@ export function Cases() {
                           <Label className="text-xs">تاريخ التأجيل</Label>
                           <Input
                             type="date"
-                            value={delay.delayDate || ''}
+                            dir="ltr"
+                            value={toDateInputValue(delay.delayDate as any)}
                             onChange={(e) => {
                               const updated = [...delays];
                               updated[idx] = { ...updated[idx], delayDate: e.target.value };
@@ -2326,11 +2328,12 @@ export function Cases() {
   );
 }
 
-function DetailField({ label, value }: { label: string; value?: string | null }) {
+function DetailField({ label, value }: { label: string; value?: React.ReactNode | string | null }) {
+  const display = value === null || value === undefined || value === '' ? '—' : value;
   return (
     <div>
       <p className="text-xs text-muted-foreground">{label}</p>
-      <p className="text-sm font-medium">{value || '—'}</p>
+      <p className="text-sm font-medium">{display}</p>
     </div>
   );
 }

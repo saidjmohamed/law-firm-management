@@ -1,5 +1,6 @@
 import prisma from '@/lib/prisma';
 import { NextRequest, NextResponse } from 'next/server';
+import { toDateOrNull } from '@/lib/date-utils';
 
 export async function GET(
   request: NextRequest,
@@ -47,6 +48,12 @@ export async function PUT(
     const { id: _id, createdAt: _ca, updatedAt: _ua, case: _case, ...updateData } = body;
     if (updateData.amount !== undefined && updateData.amount !== null) {
       updateData.amount = parseInt(String(updateData.amount));
+    }
+    if (updateData.date !== undefined) {
+      updateData.date = toDateOrNull(updateData.date);
+    }
+    if (updateData.caseId !== undefined) {
+      updateData.caseId = updateData.caseId === '' ? null : updateData.caseId;
     }
 
     const payment = await prisma.payment.update({

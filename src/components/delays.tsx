@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
+import { DateDisplay, toDateInputValue } from '@/components/ui/date-display';
 import {
   Dialog,
   DialogContent,
@@ -61,7 +62,11 @@ export function DelaysManager() {
     if (filterUpcoming) {
       filtered = filtered.filter((d) => d.delayDate && new Date(d.delayDate) >= now);
     }
-    return filtered.sort((a, b) => (a.delayDate || '').localeCompare(b.delayDate || ''));
+    return filtered.sort((a, b) => {
+      const da = a.delayDate ? new Date(a.delayDate as any).getTime() : 0;
+      const db = b.delayDate ? new Date(b.delayDate as any).getTime() : 0;
+      return da - db;
+    });
   }, [delays, filterUpcoming]);
 
   function resetForm() {
@@ -128,7 +133,11 @@ export function DelaysManager() {
     }
   }
 
-  const isUpcoming = (date?: string) => date && new Date(date) >= now;
+  const isUpcoming = (date?: string | Date | null) => {
+    if (!date) return false;
+    const d = new Date(date);
+    return !isNaN(d.getTime()) && d >= now;
+  };
 
   return (
     <div className="space-y-4">
@@ -184,7 +193,7 @@ export function DelaysManager() {
                     </div>
                     <div className="flex items-center gap-2 mr-2">
                       <Badge variant={upcoming ? 'default' : 'secondary'} className={`text-xs ${upcoming ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400' : ''}`}>
-                        {formatDate(delay.delayDate)}
+                        <DateDisplay value={delay.delayDate} />
                       </Badge>
                       <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); openEditForm(delay); }}>
                         <Pencil className="w-3 h-3" />
@@ -236,7 +245,8 @@ export function DelaysManager() {
               <Label className="text-xs">تاريخ التأجيل</Label>
               <Input
                 type="date"
-                value={formData.delayDate || ''}
+                dir="ltr"
+                value={toDateInputValue(formData.delayDate as any)}
                 onChange={(e) => setFormData({ ...formData, delayDate: e.target.value })}
               />
             </div>

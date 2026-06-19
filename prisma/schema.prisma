@@ -19,60 +19,64 @@ datasource db {
 model Client {
   id         Int      @id @default(autoincrement())
   name       String   @default("")
-  phone      String   @default("")
-  phone2     String?  @default("")
-  address    String?  @default("")
+  phone      String   @default("") @db.VarChar(40)
+  phone2     String?  @default("") @db.VarChar(40)
+  address    String?
   wilaya     Int?     @default(16)
-  nationalId String?  @default("")
-  notes      String?  @default("")
+  nationalId String?
+  notes      String?
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
   cases Case[]
+
+  @@index([name])
+  @@index([phone])
 }
 
 // ============================================================================
 // القضايا
 // ============================================================================
 model Case {
-  id               Int      @id @default(autoincrement())
-  caseNumber       String   @default("")
-  subject          String   @default("")
-  caseNature       String?  @default("")
-  litigationStage  String?  @default("")
-  origCaseNumber   String?  @default("")
-  customStage      String?  @default("")
-  status           String   @default("جارية")
+  id               Int       @id @default(autoincrement())
+  caseNumber       String    @default("") @db.VarChar(120)
+  subject          String    @default("")
+  caseNature       String?
+  litigationStage  String?
+  origCaseNumber   String?
+  customStage      String?
+  status           String    @default("جارية")
 
   clientId         Int?
-  client           Client?  @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  client           Client?   @relation(fields: [clientId], references: [id], onDelete: SetNull)
 
   // الهيئة القضائية
-  wilayaId         Int?     @default(16)
-  judiciaryType    String?  // 'supreme' | 'ordinary' | 'admin'
-  courtLevel       String?  // 'council' | 'court' | 'admin_appeal' | 'admin_first' | 'commercial'
+  wilayaId         Int?      @default(16)
+  judiciaryType    String?
+  courtLevel       String?
   courtId          Int?
-  chamber          String?  @default("")
+  chamber          String?   @default("")
   chamberNumber    Int?
 
-  councilName      String?  @default("")
-  courtName        String?  @default("")
+  councilName      String?   @default("")
+  courtName        String?   @default("")
 
   // المالية
-  totalFees        Int?     @default(0)
-  paidAmount       Int?     @default(0)
+  totalFees        Int?      @default(0)
+  paidAmount       Int?      @default(0)
 
-  // التواريخ
-  registrationDate String?  @default("")
-  firstSessionDate String?  @default("")
-  delibDate        String?  @default("")
+  // التواريخ (DateTime — كان String سابقاً)
+  registrationDate DateTime?
+  firstSessionDate DateTime?
+  delibDate        DateTime?
+  judgmentDate     DateTime?
 
   // معلومات إضافية
-  barPhone         String?  @default("")
-  lawyer           String?  @default("")
-  notes            String?  @default("")
-  judgment         String?  @default("")
-  caseResult       String?  // 'won' = ربحت القضية | 'lost' = خسرت القضية | null
+  barPhone         String?   @default("")
+  lawyer           String?
+  notes            String?
+  judgment         String?
+  caseResult       String?   // 'won' = ربحت القضية | 'lost' = خسرت القضية | null
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -82,6 +86,12 @@ model Case {
   sessions  Session[]
   payments  Payment[]
   archives  Archive[]
+
+  @@index([caseNumber])
+  @@index([status])
+  @@index([delibDate])
+  @@index([firstSessionDate])
+  @@index([clientId])
 }
 
 // ============================================================================
@@ -91,108 +101,128 @@ model Party {
   id          Int      @id @default(autoincrement())
   caseId      Int
   case        Case     @relation(fields: [caseId], references: [id], onDelete: Cascade)
-  role        String?  @default("")
-  side        String?  @default("for")  // 'for' = في حقه | 'against' = ضده
+  role        String?
+  side        String?  @default("for")   // 'for' = في حقه | 'against' = ضده
   name        String?  @default("")
-  phone       String?  @default("")
-  lawyerName  String?  @default("")
-  lawyerPhone String?  @default("")
-  lawyerId    Int?     // ربط اختياري بجدول المحامين
+  phone       String?  @default("")  @db.VarChar(40)
+  lawyerName  String?
+  lawyerPhone String?  @default("")  @db.VarChar(40)
+  lawyerId    Int?
   lawyer      Lawyer?  @relation(fields: [lawyerId], references: [id], onDelete: SetNull)
 
   // الأتعاب الخاصة بهذا الطرف (فقط للأطراف "في حقه")
-  totalFees   Int?     @default(0)     // إجمالي الأتعاب
-  paidAmount  Int?     @default(0)     // المبلغ المدفوع
+  totalFees   Int?     @default(0)
+  paidAmount  Int?     @default(0)
 
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  @@index([caseId])
+  @@index([name])
+  @@index([phone])
 }
 
 // ============================================================================
 // الآجال
 // ============================================================================
 model Delay {
-  id        Int      @id @default(autoincrement())
+  id        Int       @id @default(autoincrement())
   caseId    Int
-  case      Case     @relation(fields: [caseId], references: [id], onDelete: Cascade)
-  delayDate String?  @default("")
-  reason    String?  @default("")
-  notes     String?  @default("")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  case      Case      @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  delayDate DateTime?
+  reason    String?
+  notes     String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([caseId])
+  @@index([delayDate])
 }
 
 // ============================================================================
 // الجلسات
 // ============================================================================
 model Session {
-  id         Int      @id @default(autoincrement())
+  id         Int       @id @default(autoincrement())
   caseId     Int?
-  case       Case?    @relation(fields: [caseId], references: [id], onDelete: SetNull)
-  caseNumber String?  @default("")
-  date       String?  @default("")
-  time       String?  @default("")
-  court      String?  @default("")
-  chamber    String?  @default("")
-  roomNumber String?  @default("")
-  notes      String?  @default("")
-  status     String?  @default("scheduled")
-  result     String?  @default("")
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  case       Case?     @relation(fields: [caseId], references: [id], onDelete: SetNull)
+  caseNumber String?
+  date       DateTime?
+  time       String?
+  court      String?
+  chamber    String?
+  roomNumber String?
+  notes      String?
+  status     String?   @default("scheduled")
+  result     String?   @default("")
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@index([caseId])
+  @@index([date])
+  @@index([status])
 }
 
 // ============================================================================
 // المدفوعات
 // ============================================================================
 model Payment {
-  id         Int      @id @default(autoincrement())
+  id         Int       @id @default(autoincrement())
   caseId     Int?
-  case       Case?    @relation(fields: [caseId], references: [id], onDelete: SetNull)
-  caseNumber String?  @default("")
-  amount     Int?     @default(0)
-  type       String?  @default("income") // 'income' | 'expense'
-  category   String?  @default("")
-  date       String?  @default("")
-  notes      String?  @default("")
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  case       Case?     @relation(fields: [caseId], references: [id], onDelete: SetNull)
+  caseNumber String?
+  amount     Int?      @default(0)
+  type       String?   @default("income") // 'income' | 'expense'
+  category   String?
+  date       DateTime?
+  notes      String?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@index([caseId])
+  @@index([date])
+  @@index([type])
 }
 
 // ============================================================================
 // الأرشيف
 // ============================================================================
 model Archive {
-  id         Int      @id @default(autoincrement())
-  caseId     Int
-  case       Case     @relation(fields: [caseId], references: [id], onDelete: Cascade)
-  caseData   String   @default("") // JSON string - snapshot of case
-  archiveDate String  @default("")
-  reason     String?  @default("")
-  createdAt  DateTime @default(now())
+  id          Int      @id @default(autoincrement())
+  caseId      Int
+  case        Case     @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  caseData    String   @default("") // JSON string - snapshot of case
+  archiveDate DateTime?
+  reason      String?
+  createdAt   DateTime @default(now())
+
+  @@index([caseId])
 }
 
 // ============================================================================
 // دفتر المحامين
 // ============================================================================
 model Lawyer {
-  id          Int      @id @default(autoincrement())
-  name        String   @default("")
-  phone       String   @default("")
-  phone2      String?  @default("")
-  email       String?  @default("")
-  address     String?  @default("")
-  wilaya      Int?     @default(16)
-  barNumber      String?  @default("")  // رقم القيد في نقابة المحامين
-  barAssociation String?  @default("")  // اسم النقابة
-  specialty      String?  @default("")  // التخصص
+  id             Int      @id @default(autoincrement())
+  name           String   @default("")
+  phone          String   @default("") @db.VarChar(40)
+  phone2         String?  @default("") @db.VarChar(40)
+  email          String?
+  address        String?
+  wilaya         Int?     @default(16)
+  barNumber      String?  // رقم القيد في نقابة المحامين
+  barAssociation String?
+  specialty      String?
   source         String?  @default("manual")  // 'manual' | 'auto'
-  notes          String?  @default("")
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  notes          String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   // العلاقات - القضايا التي يترافع فيها هذا المحامي كطرف مقابل
   parties Party[]
+
+  @@index([name])
+  @@index([phone])
 }
 
 // ============================================================================
@@ -208,6 +238,9 @@ model JudicialBody {
   phones          String?  @default("") // JSON string - array of phone numbers
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+
+  @@index([type])
+  @@index([wilayaId])
 }
 
 // ============================================================================
@@ -229,4 +262,5 @@ model CustomOption {
   createdAt DateTime @default(now())
 
   @@unique([field, value])
+  @@index([field])
 }

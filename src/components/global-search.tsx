@@ -68,14 +68,22 @@ export function GlobalSearch() {
     }
   }, [setActiveSection, setSelectedCaseId, setSelectedClientId, setSelectedLawyerId]);
 
-  // بناء عناصر القضايا للبحث
+  // بناء عناصر القضايا للبحث — يشمل: رقم القضية، الموضوع، المحكمة، الموكل، الأطراف، الملاحظات، الحكم
   const caseItems = useMemo(() => {
     if (casesLoading || clientsLoading) return [];
     return cases.map((c: any) => {
       const clientName = c.clientId ? clients.find((cl: any) => cl.id === c.clientId)?.name : '';
+      // تجميع أسماء الأطراف وأرقام هواتفهم ومحاميهم
+      const partyText = (c.parties || [])
+        .map((p: any) => `${p.name || ''} ${p.phone || ''} ${p.lawyerName || ''} ${p.lawyerPhone || ''} ${p.role || ''}`)
+        .join(' ');
+      // تجميع أسباب التأجيلات
+      const delayText = (c.delays || [])
+        .map((d: any) => `${d.reason || ''} ${d.notes || ''}`)
+        .join(' ');
       return {
         id: c.id!,
-        value: `${c.caseNumber || ''} ${c.subject || ''} ${c.courtName || ''} ${c.councilName || ''} ${c.caseNature || ''} ${clientName || ''} ${c.status || ''}`,
+        value: `${c.caseNumber || ''} ${c.subject || ''} ${c.courtName || ''} ${c.councilName || ''} ${c.caseNature || ''} ${clientName || ''} ${c.status || ''} ${c.notes || ''} ${c.judgment || ''} ${c.lawyer || ''} ${c.chamber || ''} ${partyText} ${delayText}`,
         title: `${c.caseNumber || '—'} — ${c.subject || '—'}`,
         subtitle: `${c.courtName || c.councilName || ''}${clientName ? ` | ${clientName}` : ''}`,
       };
@@ -89,7 +97,7 @@ export function GlobalSearch() {
       const caseCount = cases.filter((c: any) => c.clientId === cl.id).length;
       return {
         id: cl.id!,
-        value: `${cl.name || ''} ${cl.phone || ''} ${cl.phone2 || ''} ${cl.nationalId || ''} ${cl.address || ''}`,
+        value: `${cl.name || ''} ${cl.phone || ''} ${cl.phone2 || ''} ${cl.nationalId || ''} ${cl.address || ''} ${cl.notes || ''}`,
         title: cl.name || '—',
         subtitle: `${cl.phone || ''}${caseCount > 0 ? ` | ${caseCount} قضية` : ''}`,
       };

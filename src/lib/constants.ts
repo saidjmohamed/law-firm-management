@@ -255,34 +255,68 @@ export const STATUS_COLORS: Record<string, string> = {
   'مؤرشفة': 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400',
 };
 
-/** تنسيق التاريخ */
-export function formatDate(date: string | undefined | null): string {
+/** تنسيق التاريخ بصيغة DD/MM/YYYY (لاتيني لمنع انعكاس RTL) */
+export function formatDate(date: string | Date | undefined | null): string {
   if (!date) return '—';
   try {
-    return new Date(date).toLocaleDateString('ar-DZ', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-    });
+    const d = typeof date === 'string' ? new Date(date) : date;
+    if (isNaN(d.getTime())) return '—';
+    const dd = String(d.getDate()).padStart(2, '0');
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const yyyy = d.getFullYear();
+    return `${dd}/${mm}/${yyyy}`;
   } catch {
-    return date;
+    return '—';
   }
 }
 
-/** تنسيق التاريخ والوقت */
-export function formatDateTime(date: string | undefined | null): string {
+/** تنسيق التاريخ والوقت بصيغة DD/MM/YYYY HH:MM */
+export function formatDateTime(date: string | Date | undefined | null): string {
   if (!date) return '—';
   try {
-    return new Date(date).toLocaleDateString('ar-DZ', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
+    const d = typeof date === 'string' ? new Date(date) : date;
+    if (isNaN(d.getTime())) return '—';
+    const dd = String(d.getDate()).padStart(2, '0');
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const yyyy = d.getFullYear();
+    const hh = String(d.getHours()).padStart(2, '0');
+    const min = String(d.getMinutes()).padStart(2, '0');
+    return `${dd}/${mm}/${yyyy} ${hh}:${min}`;
   } catch {
-    return date;
+    return '—';
   }
+}
+
+/**
+ * تحويل قيمة تاريخ (string من input[type=date] أو Date) إلى ISO string لقاعدة البيانات
+ * - يدعم: "2026-04-30" / "30/04/2026" / Date / "" / null
+ */
+export function toDateInput(value: string | Date | undefined | null): string {
+  if (!value) return '';
+  if (value instanceof Date) return value.toISOString().slice(0, 10);
+  const s = String(value).trim();
+  if (!s) return '';
+  // ISO YYYY-MM-DD
+  const isoMatch = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (isoMatch) return `${isoMatch[1]}-${isoMatch[2]}-${isoMatch[3]}`;
+  // DD/MM/YYYY
+  const dmyMatch = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if (dmyMatch) {
+    const dd = dmyMatch[1].padStart(2, '0');
+    const mm = dmyMatch[2].padStart(2, '0');
+    return `${dmyMatch[3]}-${mm}-${dd}`;
+  }
+  // محاولة عامة
+  const d = new Date(s);
+  if (!isNaN(d.getTime())) return d.toISOString().slice(0, 10);
+  return '';
+}
+
+/** هل التاريخ صالح؟ */
+export function isValidDate(value: string | Date | undefined | null): boolean {
+  if (!value) return false;
+  const d = typeof value === 'string' ? new Date(value) : value;
+  return !isNaN(d.getTime());
 }
 
 /** الأيام بالعربية */

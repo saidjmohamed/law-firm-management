@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
+import { DateDisplay, toDateInputValue } from '@/components/ui/date-display';
 import {
   Dialog,
   DialogContent,
@@ -62,12 +63,26 @@ export function PaymentsManager() {
       filtered = filtered.filter((p) => p.type === filterType);
     }
     if (filterDateFrom) {
-      filtered = filtered.filter((p) => p.date && p.date >= filterDateFrom);
+      const fromTime = new Date(filterDateFrom).getTime();
+      filtered = filtered.filter((p) => {
+        if (!p.date) return false;
+        const d = new Date(p.date as any).getTime();
+        return !isNaN(d) && d >= fromTime;
+      });
     }
     if (filterDateTo) {
-      filtered = filtered.filter((p) => p.date && p.date <= filterDateTo);
+      const toTime = new Date(filterDateTo).getTime() + 24 * 60 * 60 * 1000 - 1; // include end of day
+      filtered = filtered.filter((p) => {
+        if (!p.date) return false;
+        const d = new Date(p.date as any).getTime();
+        return !isNaN(d) && d <= toTime;
+      });
     }
-    return filtered.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+    return filtered.sort((a, b) => {
+      const da = a.date ? new Date(a.date as any).getTime() : 0;
+      const db = b.date ? new Date(b.date as any).getTime() : 0;
+      return db - da;
+    });
   }, [payments, filterType, filterDateFrom, filterDateTo]);
 
   const totalIncome = filteredPayments
@@ -216,7 +231,7 @@ export function PaymentsManager() {
                     <span className={`text-sm font-bold ${payment.type === 'income' ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-700 dark:text-red-400'}`}>
                       {payment.type === 'income' ? '+' : '-'}{formatCurrency(payment.amount)}
                     </span>
-                    <Badge variant="outline" className="text-xs">{formatDate(payment.date)}</Badge>
+                    <Badge variant="outline" className="text-xs"><DateDisplay value={payment.date} /></Badge>
                     <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEditForm(payment)}>
                       <Pencil className="w-3 h-3" />
                     </Button>
@@ -291,7 +306,8 @@ export function PaymentsManager() {
               <Label className="text-xs">التاريخ</Label>
               <Input
                 type="date"
-                value={formData.date || ''}
+                dir="ltr"
+                value={toDateInputValue(formData.date as any)}
                 onChange={(e) => setFormData({ ...formData, date: e.target.value })}
               />
             </div>

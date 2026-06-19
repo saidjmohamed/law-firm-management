@@ -129,6 +129,12 @@ export function Clients() {
     }
   }, [selectedClientId, clients, setSelectedClientId]);
 
+  // كشف التكرارات أثناء الكتابة — يجب أن يُستدعى قبل أي return
+  const liveDuplicates = useMemo(() => {
+    if (!formData.name?.trim() || editingClient?.id) return [];
+    return findDuplicateClients(formData.name || '', formData.phone || '', clients, editingClient?.id);
+  }, [formData.name, formData.phone, clients, editingClient]);
+
   // Loading state
   if (clientsLoading || casesLoading) {
     return <ClientsSkeleton />;
@@ -151,12 +157,6 @@ export function Clients() {
     setFormData({ ...client });
     setShowForm(true);
   }
-
-  // كشف التكرارات أثناء الكتابة
-  const liveDuplicates = useMemo(() => {
-    if (!formData.name?.trim() || editingClient?.id) return [];
-    return findDuplicateClients(formData.name || '', formData.phone || '', clients, editingClient?.id);
-  }, [formData.name, formData.phone, clients, editingClient]);
 
   async function saveClient() {
     try {

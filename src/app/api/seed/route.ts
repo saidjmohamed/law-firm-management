@@ -1,5 +1,6 @@
 import prisma from '@/lib/prisma';
 import { NextResponse } from 'next/server';
+import { toDateOrNull } from '@/lib/date-utils';
 
 // ============================================================================
 // بذرة البيانات - 19 قضية حقيقية + 16 موكل + الهيئات القضائية
@@ -865,9 +866,9 @@ export async function POST() {
             chamber: seedCase.chamber ?? '',
             totalFees: seedCase.totalFees ?? 0,
             paidAmount: seedCase.paidAmount ?? 0,
-            registrationDate: seedCase.registrationDate ?? '',
-            firstSessionDate: seedCase.firstSessionDate ?? '',
-            delibDate: seedCase.delibDate ?? '',
+            registrationDate: toDateOrNull(seedCase.registrationDate) ?? null,
+            firstSessionDate: toDateOrNull(seedCase.firstSessionDate) ?? null,
+            delibDate: toDateOrNull(seedCase.delibDate) ?? null,
             barPhone: seedCase.barPhone ?? '',
             lawyer: 'سايج محمد',
             judgment: seedCase.judgment ?? '',
@@ -885,7 +886,7 @@ export async function POST() {
             delays: {
               createMany: {
                 data: (seedCase.delays ?? []).map((d) => ({
-                  delayDate: d.delayDate ?? '',
+                  delayDate: toDateOrNull(d.delayDate) ?? null,
                   reason: d.reason ?? '',
                   notes: '',
                 })),

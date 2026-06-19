@@ -474,3 +474,31 @@ html, body {
 .tabular-nums {
   font-variant-numeric: tabular-nums;
 }
+
+/* ============================================================
+   إصلاح انعكاس التواريخ في RTL - DD/MM/YYYY
+   يجب أن تُلفّ كل التواريخ والأرقام بهذه الفئة أو dir="ltr"
+   ============================================================ */
+.date-display,
+.bidi-ltr {
+  direction: ltr;
+  unicode-bidi: isolate;
+  display: inline-block;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* حقول date/time يجب أن تظهر LTR دائماً */
+input[type="date"],
+input[type="time"],
+input[type="datetime-local"] {
+  direction: ltr;
+  unicode-bidi: isolate;
+  text-align: right;
+}
+
+input[type="number"] {
+  direction: ltr;
+  unicode-bidi: isolate;
+  text-align: right;
+}

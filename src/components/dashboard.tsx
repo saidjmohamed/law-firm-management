@@ -3,6 +3,7 @@
 import React from 'react';
 import { useCases, useClients, useDelays, useSessions, usePayments, useParties } from '@/lib/api';
 import { formatCurrency, STATUS_COLORS, CASE_NATURES, formatDate } from '@/lib/constants';
+import { DateDisplay } from '@/components/ui/date-display';
 import { useAppStore } from '@/lib/store';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -100,55 +101,55 @@ export function Dashboard() {
 
   // التأجيلات القادمة
   const now = new Date();
-  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-
+  const todayStart = new Date(now); todayStart.setHours(0, 0, 0, 0);
   const nextWeekDate = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
-  const nextWeekStr = `${nextWeekDate.getFullYear()}-${String(nextWeekDate.getMonth() + 1).padStart(2, '0')}-${String(nextWeekDate.getDate()).padStart(2, '0')}`;
+  nextWeekDate.setHours(23, 59, 59, 999);
 
   const archivedCaseIds = new Set(
     cases.filter((c: any) => c.status === 'مؤرشفة').map((c: any) => c.id)
   );
   const upcomingDelays = delays
-    .filter((d: any) => d.delayDate && d.delayDate >= todayStr && !archivedCaseIds.has(d.caseId))
-    .sort((a: any, b: any) => (a.delayDate || '').localeCompare(b.delayDate || ''))
+    .filter((d: any) => {
+      if (!d.delayDate) return false;
+      const dd = new Date(d.delayDate);
+      return !isNaN(dd.getTime()) && dd >= todayStart && !archivedCaseIds.has(d.caseId);
+    })
+    .sort((a: any, b: any) => {
+      const da = new Date(a.delayDate).getTime();
+      const db = new Date(b.delayDate).getTime();
+      return da - db;
+    })
     .slice(0, 10);
 
   // القضايا القادمة في 7 أيام — على أساس آخر تاريخ لكل قضية
-  // لكل قضية نجد آخر تاريخ (من التأجيلات + الجلسات + تاريخ المداولة)
-  // ثم نعرض القضية فقط إذا كان آخر تاريخ ضمن 7 أيام
   const allUpcoming = (() => {
     const result: any[] = [];
 
     cases.filter((c: any) => c.status !== 'مؤرشفة').forEach((c: any) => {
-      const allDates: { date: string; source: string; label: string; sourceData: any }[] = [];
+      const allDates: { date: Date; source: string; label: string; sourceData: any }[] = [];
 
-      // جمع كل تواريخ التأجيلات
       const caseDelays = delays.filter((d: any) => d.caseId === c.id && d.delayDate);
       caseDelays.forEach((d: any) => {
-        const dateStr = d.delayDate.length > 10 ? d.delayDate.substring(0, 10) : d.delayDate;
-        allDates.push({ date: dateStr, source: 'delay', label: d.reason || 'تأجيل', sourceData: d });
+        const dd = new Date(d.delayDate);
+        if (!isNaN(dd.getTime())) allDates.push({ date: dd, source: 'delay', label: d.reason || 'تأجيل', sourceData: d });
       });
 
-      // جمع كل تواريخ الجلسات
       const caseSessions = sessions.filter((s: any) => s.caseId === c.id && s.date);
       caseSessions.forEach((s: any) => {
-        const dateStr = s.date.length > 10 ? s.date.substring(0, 10) : s.date;
-        allDates.push({ date: dateStr, source: 'session', label: 'جلسة', sourceData: s });
+        const sd = new Date(s.date);
+        if (!isNaN(sd.getTime())) allDates.push({ date: sd, source: 'session', label: 'جلسة', sourceData: s });
       });
 
-      // إضافة تاريخ المداولة
       if (c.delibDate) {
-        const dateStr = c.delibDate.length > 10 ? c.delibDate.substring(0, 10) : c.delibDate;
-        allDates.push({ date: dateStr, source: 'delib', label: 'مداولة', sourceData: c });
+        const dd = new Date(c.delibDate);
+        if (!isNaN(dd.getTime())) allDates.push({ date: dd, source: 'delib', label: 'مداولة', sourceData: c });
       }
 
       if (allDates.length === 0) return;
 
-      // إيجاد آخر تاريخ (الأبعد في المستقبل)
-      const latest = allDates.sort((a, b) => b.date.localeCompare(a.date))[0];
+      const latest = allDates.sort((a, b) => b.date.getTime() - a.date.getTime())[0];
 
-      // عرض القضية فقط إذا كان آخر تاريخ ضمن نافذة 7 أيام
-      if (latest.date >= todayStr && latest.date <= nextWeekStr) {
+      if (latest.date >= todayStart && latest.date <= nextWeekDate) {
         result.push({
           id: latest.sourceData.id,
           caseId: c.id,
@@ -161,14 +162,19 @@ export function Dashboard() {
       }
     });
 
-    return result.sort((a, b) => a.delayDate.localeCompare(b.delayDate));
+    return result.sort((a, b) => new Date(a.delayDate).getTime() - new Date(b.delayDate).getTime());
   })();
 
   // حساب الأيام المتبقية
-  function daysUntil(dateStr: string) {
-    const normalized = dateStr.length > 10 ? dateStr.substring(0, 10) : dateStr;
-    const parts = normalized.split('-');
-    const target = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+  function daysUntil(dateStr: string | Date) {
+    let target: Date;
+    if (dateStr instanceof Date) {
+      target = new Date(dateStr);
+    } else {
+      const normalized = dateStr.length > 10 ? dateStr.substring(0, 10) : dateStr;
+      target = new Date(normalized);
+    }
+    if (isNaN(target.getTime())) return 0;
     target.setHours(0, 0, 0, 0);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -438,7 +444,7 @@ export function Dashboard() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {allUpcoming.map((item: any) => {
                 const dateStr = item.delayDate || item.date;
-                const days = daysUntil(dateStr);
+                const days = daysUntil(dateStr instanceof Date ? dateStr : dateStr);
                 const caseData = item.caseData;
                 const isToday = days === 0;
                 const isTomorrow = days === 1;
@@ -472,7 +478,7 @@ export function Dashboard() {
                         {isToday ? '🔔 اليوم' : isTomorrow ? '⏰ غداً' : `بعد ${days.toLocaleString('en-US')} أيام`}
                       </Badge>
                       <span className="text-sm font-bold tabular-nums text-muted-foreground">
-                        {formatDate(dateStr)}
+                        <DateDisplay value={dateStr} />
                       </span>
                     </div>
 
@@ -556,7 +562,7 @@ export function Dashboard() {
                       <p className="text-xs text-muted-foreground truncate">{delay.reason}</p>
                     </div>
                     <Badge variant="outline" className="text-xs shrink-0 mr-2">
-                      {formatDate(delay.delayDate)}
+                      <DateDisplay value={delay.delayDate} />
                     </Badge>
                   </div>
                 );
