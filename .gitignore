@@ -30,12 +30,13 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
-.env*
+# env files - يجب ألا تُرفع أبداً إلى المستودع
+.env
+.env.*
+!.env.example
 
 # vercel
 .vercel
-
 
 # typescript
 *.tsbuildinfo
@@ -50,6 +51,19 @@ test
 prompt
 
 server.log
-# Skills directory
-/skills/.next/
+
+# ============================================================================
+# مجلدات غير ضرورية للإنتاج
+# ============================================================================
+/skills/
+/mini-services/
+/examples/
+/agent-ctx/
+/download/
+/db/
+/.zscripts/
 node_modules/
+
+# Claude / Z-AI artifacts
+.claude
+.z-ai-config

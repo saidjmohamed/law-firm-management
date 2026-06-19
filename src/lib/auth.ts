@@ -5,12 +5,20 @@
 import { cookies } from 'next/headers';
 import { SignJWT, jwtVerify } from 'jose';
 
-const SECRET_KEY = new TextEncoder().encode(
-  process.env.AUTH_SECRET || 'lawfirm-dz-secret-key-2026'
-);
-
 const COOKIE_NAME = 'lawfirm-auth';
-const PASSWORD = process.env.APP_PASSWORD || 'saidj2026';
+
+// قراءة الأسرار من البيئة - لا قيم افتراضية (يجب أن تُعرف في Vercel)
+const AUTH_SECRET = process.env.AUTH_SECRET;
+const PASSWORD = process.env.APP_PASSWORD;
+
+if (!AUTH_SECRET) {
+  console.error('[auth] AUTH_SECRET غير معرّف في متغيرات البيئة');
+}
+if (!PASSWORD) {
+  console.error('[auth] APP_PASSWORD غير معرّف في متغيرات البيئة');
+}
+
+const SECRET_KEY = new TextEncoder().encode(AUTH_SECRET ?? 'FALLBACK_INSECURE_DEV_ONLY_DO_NOT_USE_IN_PRODUCTION');
 
 export async function hashPassword(password: string): Promise<string> {
   const encoder = new TextEncoder();
@@ -22,6 +30,7 @@ export async function hashPassword(password: string): Promise<string> {
 }
 
 export async function verifyPassword(inputPassword: string): Promise<boolean> {
+  if (!PASSWORD) return false; // رفض الدخول إذا لم تُعرف كلمة المرور في البيئة
   return inputPassword === PASSWORD;
 }
 
@@ -35,6 +44,7 @@ export async function createToken(): Promise<string> {
 }
 
 export async function verifyToken(token: string): Promise<boolean> {
+  if (!AUTH_SECRET) return false; // رفض التحقق إذا لم يُعرف السر
   try {
     const { payload } = await jwtVerify(token, SECRET_KEY);
     return payload.authenticated === true;

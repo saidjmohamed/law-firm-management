@@ -16,6 +16,7 @@ import {
   Sun,
   LogOut,
   BookOpen,
+  Gavel,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -25,10 +26,11 @@ import { Badge } from '@/components/ui/badge';
 import { GlobalSearch } from '@/components/global-search';
 import { useRouter } from 'next/navigation';
 
-const APP_NAME = 'مكتب الاستاذ سايج محمد محام لدى المجلس';
+const APP_NAME = 'مكتب الأستاذ سايج محمد';
+const APP_SUBTITLE = 'محام لدى المجلس';
 
-const navItems: { id: Section; label: string; icon: React.ElementType }[] = [
-  { id: 'dashboard', label: 'لوحة التحكم', icon: LayoutDashboard },
+const navItems: { id: Section; label: string; icon: React.ElementType; hint?: string }[] = [
+  { id: 'dashboard', label: 'لوحة التحكم', icon: LayoutDashboard, hint: 'نظرة عامة' },
   { id: 'clients', label: 'الموكلون', icon: Users },
   { id: 'cases', label: 'القضايا', icon: Briefcase },
   { id: 'courts', label: 'الهيئات القضائية', icon: Scale },
@@ -37,6 +39,10 @@ const navItems: { id: Section; label: string; icon: React.ElementType }[] = [
   { id: 'backup', label: 'النسخ الاحتياطي', icon: HardDrive },
   { id: 'settings', label: 'الإعدادات', icon: Settings },
 ];
+
+function cn(...inputs: (string | undefined | false)[]) {
+  return inputs.filter(Boolean).join(' ');
+}
 
 function SidebarContent({ activeSection, onNavigate }: { activeSection: Section; onNavigate: (s: Section) => void }) {
   const router = useRouter();
@@ -53,26 +59,33 @@ function SidebarContent({ activeSection, onNavigate }: { activeSection: Section;
 
   return (
     <div className="flex flex-col h-full text-right" dir="rtl">
-      {/* Logo area */}
-      <div className="p-3 flex items-center gap-2">
-        <div className="w-8 h-8 rounded-lg bg-teal-600 shadow-md flex items-center justify-center shrink-0">
-          <Scale className="w-4 h-4 text-white" />
+      {/* شعار التطبيق */}
+      <div className="p-4 flex items-center gap-3">
+        <div className="relative shrink-0">
+          <div className="w-10 h-10 rounded-xl bg-gradient-primary shadow-card flex items-center justify-center">
+            <Gavel className="w-5 h-5 text-white" />
+          </div>
+          <div className="absolute -bottom-0.5 -left-0.5 w-3 h-3 rounded-full bg-emerald-500 border-2 border-background" />
         </div>
         <div className="min-w-0">
-          <h2 className="font-bold text-foreground text-xs leading-snug truncate">{APP_NAME}</h2>
-          <p className="text-[10px] text-muted-foreground mt-0.5">إدارة مكتب المحاماة</p>
+          <h2 className="font-bold text-foreground text-[13px] leading-tight truncate">{APP_NAME}</h2>
+          <p className="text-[10px] text-muted-foreground mt-0.5">{APP_SUBTITLE}</p>
         </div>
       </div>
-      <Separator />
+
+      <div className="divider-gradient mx-3" />
 
       {/* بحث ذكي */}
-      <div className="px-2 pt-2">
+      <div className="px-3 pt-3">
         <GlobalSearch />
       </div>
 
-      {/* Navigation */}
-      <ScrollArea className="flex-1 px-2 py-2 smooth-scroll">
-        <nav className="space-y-0.5">
+      {/* قائمة التنقل */}
+      <ScrollArea className="flex-1 px-3 py-3 smooth-scroll">
+        <nav className="space-y-1">
+          <p className="px-2 pb-1 text-[10px] font-semibold text-muted-foreground/70 uppercase tracking-wider">
+            القائمة الرئيسية
+          </p>
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = activeSection === item.id;
@@ -81,42 +94,48 @@ function SidebarContent({ activeSection, onNavigate }: { activeSection: Section;
                 key={item.id}
                 onClick={() => onNavigate(item.id)}
                 className={cn(
-                  'w-full flex items-center gap-2.5 px-2 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 text-right',
+                  'group w-full flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition-all duration-200 text-right',
                   isActive
-                    ? 'bg-teal-100 dark:bg-teal-900/40 text-teal-800 dark:text-teal-300 font-bold'
-                    : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground'
+                    ? 'bg-gradient-primary text-white shadow-soft'
+                    : 'text-muted-foreground hover:bg-accent/60 hover:text-foreground'
                 )}
               >
                 <Icon className={cn(
-                  'w-4 h-4 shrink-0 transition-colors duration-200',
-                  isActive ? 'text-teal-600 dark:text-teal-400' : ''
+                  'w-4 h-4 shrink-0 transition-transform duration-200',
+                  isActive
+                    ? 'text-white'
+                    : 'text-muted-foreground/80 group-hover:text-foreground group-hover:scale-110'
                 )} />
-                <span>{item.label}</span>
+                <span className="flex-1">{item.label}</span>
+                {isActive && (
+                  <span className="w-1.5 h-1.5 rounded-full bg-white/80" />
+                )}
               </button>
             );
           })}
         </nav>
       </ScrollArea>
 
-      <Separator />
+      <div className="divider-gradient mx-3" />
 
-      {/* Footer */}
-      <div className="p-3 flex items-center justify-between">
-        <Badge variant="outline" className="text-[10px]">الإصدار 3.0</Badge>
+      {/* تذييل */}
+      <div className="p-3 flex items-center justify-between gap-2">
+        <Badge
+          variant="outline"
+          className="text-[10px] font-mono px-2 py-0.5"
+        >
+          v3.0
+        </Badge>
         <button
           onClick={handleLogout}
-          className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-red-500 transition-colors"
+          className="flex items-center gap-1.5 text-[11px] text-muted-foreground hover:text-destructive transition-colors px-2 py-1 rounded-md hover:bg-destructive/5"
         >
-          <LogOut className="w-3 h-3" />
-          خروج
+          <LogOut className="w-3.5 h-3.5" />
+          <span>تسجيل الخروج</span>
         </button>
       </div>
     </div>
   );
-}
-
-function cn(...inputs: (string | undefined | false)[]) {
-  return inputs.filter(Boolean).join(' ');
 }
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -131,10 +150,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const currentNav = navItems.find((n) => n.id === activeSection);
 
   return (
-    <div className="min-h-screen flex flex-col overflow-x-hidden">
-      {/* Top bar - mobile */}
-      <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-md border-b lg:hidden">
-        <div className="flex items-center justify-between h-12 px-3">
+    <div className="min-h-screen flex flex-col overflow-x-hidden bg-background">
+      {/* الشريط العلوي - الجوال */}
+      <header className="sticky top-0 z-40 bg-background/85 backdrop-blur-xl border-b border-border/60 lg:hidden">
+        <div className="flex items-center justify-between h-14 px-3">
           <div className="flex items-center gap-2">
             <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
               <SheetTrigger asChild>
@@ -144,7 +163,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               </SheetTrigger>
               <SheetContent
                 side="right"
-                className="w-60 p-0 bg-background border-l"
+                className="w-64 p-0 bg-background border-l"
               >
                 <SheetTitle className="sr-only">القائمة الرئيسية</SheetTitle>
                 <SidebarContent
@@ -156,15 +175,18 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 />
               </SheetContent>
             </Sheet>
-            <div className="flex items-center gap-1.5">
-              <div className="w-7 h-7 rounded-md bg-teal-700 shadow flex items-center justify-center">
-                <Scale className="w-3.5 h-3.5 text-white" />
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-gradient-primary shadow-soft flex items-center justify-center">
+                <Gavel className="w-4 h-4 text-white" />
               </div>
-              <span className="font-bold text-xs leading-tight line-clamp-1">{APP_NAME}</span>
+              <div className="min-w-0">
+                <span className="font-bold text-[12px] leading-tight line-clamp-1 block">{APP_NAME}</span>
+                <span className="text-[10px] text-muted-foreground">{APP_SUBTITLE}</span>
+              </div>
             </div>
           </div>
           <div className="flex items-center gap-1">
-            <div className="w-32">
+            <div className="w-28">
               <GlobalSearch />
             </div>
             {mounted && (
@@ -173,6 +195,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 size="icon"
                 onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
                 className="h-9 w-9"
+                aria-label="تبديل السمة"
               >
                 {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
               </Button>
@@ -182,14 +205,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </header>
 
       <div className="flex flex-1 overflow-x-hidden">
-        {/* Desktop sidebar */}
-        <aside className="hidden lg:flex lg:w-56 lg:flex-col lg:fixed lg:inset-y-0 lg:right-0 bg-background border-l z-30">
-          <div className="flex items-center justify-between h-12 px-3">
+        {/* الشريط الجانبي - سطح المكتب */}
+        <aside className="hidden lg:flex lg:w-64 lg:flex-col lg:fixed lg:inset-y-0 lg:right-0 bg-sidebar border-l border-sidebar-border z-30">
+          <div className="flex items-center justify-between h-14 px-4">
             <div className="flex items-center gap-2 min-w-0">
-              <div className="w-7 h-7 rounded-md bg-teal-600 shadow flex items-center justify-center shrink-0">
-                <Scale className="w-3.5 h-3.5 text-white" />
+              <div className="w-8 h-8 rounded-lg bg-gradient-primary shadow-soft flex items-center justify-center shrink-0">
+                <Gavel className="w-4 h-4 text-white" />
               </div>
-              <span className="font-bold text-xs text-foreground truncate">{APP_NAME}</span>
+              <span className="font-bold text-[13px] text-foreground truncate">{APP_NAME}</span>
             </div>
             {mounted && (
               <Button
@@ -197,31 +220,35 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 size="icon"
                 onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
                 className="text-muted-foreground hover:text-foreground h-8 w-8 shrink-0"
+                aria-label="تبديل السمة"
               >
                 {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
               </Button>
             )}
           </div>
-          <Separator />
+          <Separator className="bg-sidebar-border" />
           <SidebarContent activeSection={activeSection} onNavigate={setActiveSection} />
         </aside>
 
-        {/* Main content */}
-        <main className="flex-1 lg:mr-56 min-w-0 overflow-x-hidden">
-          <div className="p-3 md:p-5 max-w-5xl mx-auto">
-            {/* Section header */}
-            <div className="flex items-center gap-2 mb-4">
-              {currentNav && (
-                <>
-                  <div className="w-8 h-8 rounded-lg bg-teal-100 dark:bg-teal-900/30 flex items-center justify-center shrink-0">
-                    <currentNav.icon className="w-4 h-4 text-teal-700 dark:text-teal-400" />
-                  </div>
-                  <div>
-                    <h1 className="text-lg md:text-xl font-extrabold leading-tight">{currentNav.label}</h1>
-                  </div>
-                </>
-              )}
-            </div>
+        {/* المحتوى الرئيسي */}
+        <main className="flex-1 lg:mr-64 min-w-0 overflow-x-hidden gradient-mesh">
+          <div className="p-4 md:p-6 max-w-6xl mx-auto">
+            {/* رأس القسم */}
+            {currentNav && (
+              <div className="mb-5 flex items-center gap-3 animate-fade-in">
+                <div className="w-10 h-10 rounded-xl bg-gradient-primary shadow-soft flex items-center justify-center shrink-0">
+                  <currentNav.icon className="w-5 h-5 text-white" />
+                </div>
+                <div className="min-w-0">
+                  <h1 className="text-xl md:text-2xl font-extrabold leading-tight text-foreground">
+                    {currentNav.label}
+                  </h1>
+                  {currentNav.hint && (
+                    <p className="text-xs text-muted-foreground mt-0.5">{currentNav.hint}</p>
+                  )}
+                </div>
+              </div>
+            )}
             {children}
           </div>
         </main>

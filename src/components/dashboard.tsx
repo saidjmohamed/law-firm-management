@@ -272,41 +272,47 @@ export function Dashboard() {
       </div>
 
       {/* ملخص مالي */}
-      <Card className="border-teal-200 dark:border-teal-800/40 bg-gradient-to-l from-teal-50/80 to-emerald-50/50 dark:from-teal-950/30 dark:to-emerald-950/20">
-        <CardContent className="p-5">
-          <div className="flex items-center gap-2 mb-4">
-            <CircleDollarSign className="w-5 h-5 text-teal-600 dark:text-teal-400" />
-            <h3 className="text-base font-bold text-teal-900 dark:text-teal-200">الملخص المالي</h3>
+      <Card className="border-primary/20 dark:border-primary/30 bg-gradient-to-l from-teal-50/80 via-emerald-50/50 to-cyan-50/30 dark:from-teal-950/40 dark:via-emerald-950/30 dark:to-cyan-950/20 shadow-card overflow-hidden relative">
+        <div className="absolute top-0 left-0 w-32 h-32 bg-primary/5 rounded-full -translate-y-1/2 -translate-x-1/2 blur-2xl" />
+        <CardContent className="p-5 relative">
+          <div className="flex items-center gap-2.5 mb-5">
+            <div className="w-9 h-9 rounded-lg bg-primary/15 flex items-center justify-center">
+              <CircleDollarSign className="w-5 h-5 text-primary" />
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-foreground">الملخص المالي</h3>
+              <p className="text-[11px] text-muted-foreground">تتبع الأتعاب والمدفوعات</p>
+            </div>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="text-center">
-              <p className="text-xs text-muted-foreground mb-1">إجمالي الأتعاب</p>
-              <p className="text-lg font-extrabold text-foreground">{formatCurrency(totalFees)}</p>
+            <div className="text-center p-2 rounded-lg hover:bg-background/60 transition-colors">
+              <p className="text-[11px] text-muted-foreground mb-1.5">إجمالي الأتعاب</p>
+              <p className="text-lg font-extrabold text-foreground tabular-nums">{formatCurrency(totalFees)}</p>
             </div>
-            <div className="text-center">
-              <p className="text-xs text-muted-foreground mb-1">المبالغ المحصّلة</p>
+            <div className="text-center p-2 rounded-lg hover:bg-background/60 transition-colors">
+              <p className="text-[11px] text-muted-foreground mb-1.5">المبالغ المحصّلة</p>
               <div className="flex items-center justify-center gap-1">
                 <ArrowUpLeft className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                <p className="text-lg font-extrabold text-emerald-700 dark:text-emerald-400">{formatCurrency(totalPaid)}</p>
+                <p className="text-lg font-extrabold text-emerald-700 dark:text-emerald-400 tabular-nums">{formatCurrency(totalPaid)}</p>
               </div>
             </div>
-            <div className="text-center">
-              <p className="text-xs text-muted-foreground mb-1">المتبقي التحصيل</p>
+            <div className="text-center p-2 rounded-lg hover:bg-background/60 transition-colors">
+              <p className="text-[11px] text-muted-foreground mb-1.5">المتبقي التحصيل</p>
               <div className="flex items-center justify-center gap-1">
                 <ArrowDownLeft className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-                <p className={`text-lg font-extrabold ${totalRemaining > 0 ? 'text-amber-700 dark:text-amber-400' : 'text-emerald-700 dark:text-emerald-400'}`}>
+                <p className={`text-lg font-extrabold tabular-nums ${totalRemaining > 0 ? 'text-amber-700 dark:text-amber-400' : 'text-emerald-700 dark:text-emerald-400'}`}>
                   {formatCurrency(totalRemaining)}
                 </p>
               </div>
             </div>
-            <div className="text-center">
-              <p className="text-xs text-muted-foreground mb-1">نسبة التحصيل</p>
+            <div className="text-center p-2 rounded-lg hover:bg-background/60 transition-colors">
+              <p className="text-[11px] text-muted-foreground mb-1.5">نسبة التحصيل</p>
               <div className="flex items-center justify-center gap-2">
-                <p className="text-lg font-extrabold text-teal-700 dark:text-teal-400">{paymentRate.toLocaleString('en-US')}%</p>
+                <p className="text-lg font-extrabold text-primary tabular-nums">{paymentRate.toLocaleString('en-US')}%</p>
               </div>
-              <div className="mt-1.5 h-2 bg-teal-100 dark:bg-teal-900/40 rounded-full overflow-hidden">
+              <div className="mt-2 h-2 bg-primary/15 rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-teal-500 rounded-full transition-all duration-500"
+                  className="h-full bg-gradient-primary rounded-full transition-all duration-700 ease-out"
                   style={{ width: `${Math.min(paymentRate, 100)}%` }}
                 />
               </div>
@@ -322,7 +328,7 @@ export function Dashboard() {
             setSelectedCaseId(null);
             setActiveSection('cases');
           }}
-          className="bg-teal-600 hover:bg-teal-700 touch-target"
+          className="bg-gradient-primary hover:shadow-elevated touch-target btn-luxe"
         >
           <Plus className="w-4 h-4 ml-2" />
           إضافة قضية
@@ -330,7 +336,7 @@ export function Dashboard() {
         <Button
           variant="outline"
           onClick={() => setActiveSection('clients')}
-          className="touch-target"
+          className="touch-target hover:border-primary/40 hover:bg-accent/50"
         >
           <Plus className="w-4 h-4 ml-2" />
           إضافة موكل
@@ -338,7 +344,7 @@ export function Dashboard() {
         <Button
           variant="outline"
           onClick={() => setActiveSection('cases')}
-          className="touch-target"
+          className="touch-target hover:border-primary/40 hover:bg-accent/50"
         >
           <Calendar className="w-4 h-4 ml-2" />
           الجلسات
@@ -631,15 +637,15 @@ function StatCard({
   };
 
   return (
-    <Card className="stat-card-hover">
+    <Card className="stat-card-hover border-border/60 shadow-soft hover:shadow-elevated hover:border-primary/30">
       <CardContent className="p-4">
-        <div className="flex items-center gap-3">
-          <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${iconClasses[color]}`}>
+        <div className="flex items-start gap-3">
+          <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 transition-transform duration-200 group-hover:scale-105 ${iconClasses[color]}`}>
             <Icon className="w-5 h-5" />
           </div>
-          <div className="min-w-0">
-            <p className="text-xs text-muted-foreground truncate leading-relaxed">{title}</p>
-            <p className="text-sm font-extrabold truncate tabular-nums">{value}</p>
+          <div className="min-w-0 flex-1">
+            <p className="text-[11px] text-muted-foreground truncate leading-relaxed mb-0.5">{title}</p>
+            <p className="text-base font-extrabold truncate tabular-nums text-foreground leading-tight">{value}</p>
           </div>
         </div>
       </CardContent>

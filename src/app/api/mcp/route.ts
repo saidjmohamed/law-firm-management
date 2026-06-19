@@ -6,7 +6,8 @@ import prisma from '@/lib/prisma';
 // قراءة + كتابة آمنة - يحتاج API Key للمصادقة
 // ============================================================================
 
-const API_KEY = process.env.MCP_API_KEY || 'lawfirm-mcp-2026-secure';
+// مفتاح API يجب تعريفه في متغيرات البيئة (لا قيمة افتراضية لأسباب أمنية)
+const API_KEY = process.env.MCP_API_KEY;
 
 // ============================================================================
 // تعريف الأدوات - أوصاف قصيرة للنافذة السياقية الصغيرة
@@ -588,7 +589,8 @@ async function addNote(caseId: number, notes: string): Promise<string> {
 
 export async function POST(request: NextRequest) {
   const authHeader = request.headers.get('x-api-key');
-  if (authHeader !== API_KEY) {
+  // رفض الطلب إذا لم يُعرف MCP_API_KEY أو إذا لم يتطابق المفتاح
+  if (!API_KEY || authHeader !== API_KEY) {
     return new Response(
       JSON.stringify({ jsonrpc: '2.0', error: { code: -32001, message: 'Unauthorized' }, id: null }),
       { status: 401, headers: { 'Content-Type': 'application/json' } }
