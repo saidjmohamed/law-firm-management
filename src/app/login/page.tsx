@@ -58,37 +58,37 @@ export default function LoginPage() {
         background: 'linear-gradient(135deg, oklch(0.14 0.012 170) 0%, oklch(0.18 0.022 170) 100%)'
       }} />
 
-      <div className="w-full max-w-md animate-scale-in">
+      <div className="w-full max-w-lg animate-scale-in">
         <div className="bg-card/95 dark:bg-card/95 backdrop-blur-xl rounded-2xl shadow-elevated border border-border/60 p-8 md:p-10">
           {/* الشعار */}
           <div className="flex flex-col items-center mb-8">
-            <div className="relative mb-5">
-              <div className="w-20 h-20 rounded-2xl bg-gradient-primary shadow-elevated flex items-center justify-center">
-                <Gavel className="w-10 h-10 text-white" />
+            <div className="relative mb-6">
+              <div className="w-24 h-24 rounded-2xl bg-gradient-primary shadow-elevated flex items-center justify-center">
+                <Gavel className="w-12 h-12 text-white" />
               </div>
-              <div className="absolute -bottom-1 -left-1 w-7 h-7 rounded-full bg-emerald-500 border-4 border-card flex items-center justify-center">
-                <ShieldCheck className="w-3.5 h-3.5 text-white" />
+              <div className="absolute -bottom-1 -left-1 w-8 h-8 rounded-full bg-emerald-500 border-4 border-card flex items-center justify-center">
+                <ShieldCheck className="w-4 h-4 text-white" />
               </div>
             </div>
-            <h1 className="text-2xl font-extrabold text-foreground text-center">
+            <h1 className="text-3xl font-extrabold text-foreground text-center">
               مكتب الأستاذ سايج محمد
             </h1>
-            <p className="text-sm text-muted-foreground mt-1.5">
+            <p className="text-base text-muted-foreground mt-2">
               محام لدى المجلس
             </p>
           </div>
 
           {/* نموذج تسجيل الدخول */}
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form onSubmit={handleSubmit} className="space-y-6">
             <div>
               <label
                 htmlFor="password"
-                className="block text-[13px] font-medium text-foreground mb-2"
+                className="block text-base font-medium text-foreground mb-2.5"
               >
                 كلمة المرور
               </label>
               <div className="relative">
-                <div className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                <div className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground">
                   <Lock className="w-5 h-5" />
                 </div>
                 <input
@@ -96,7 +96,7 @@ export default function LoginPage() {
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pr-11 pl-11 py-3 border border-input rounded-xl bg-background text-foreground focus:ring-2 focus:ring-ring focus:border-transparent outline-none transition-all text-[15px]"
+                  className="w-full pr-12 pl-12 py-3.5 border border-input rounded-xl bg-background text-foreground focus:ring-2 focus:ring-ring focus:border-transparent outline-none transition-all text-base"
                   placeholder="أدخل كلمة المرور"
                   autoFocus
                   disabled={loading}
@@ -106,7 +106,7 @@ export default function LoginPage() {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                   aria-label={showPassword ? 'إخفاء كلمة المرور' : 'إظهار كلمة المرور'}
                 >
                   {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
@@ -116,7 +116,7 @@ export default function LoginPage() {
 
             {error && (
               <div
-                className="bg-destructive/10 text-destructive text-[13px] p-3 rounded-lg text-center border border-destructive/20 animate-fade-in"
+                className="bg-destructive/10 text-destructive text-base p-3.5 rounded-lg text-center border border-destructive/20 animate-fade-in"
                 role="alert"
               >
                 {error}
@@ -126,7 +126,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading || !password}
-              className="btn-luxe w-full py-3 bg-gradient-primary hover:shadow-elevated disabled:opacity-60 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-all flex items-center justify-center gap-2 text-[15px]"
+              className="btn-luxe w-full py-4 bg-gradient-primary hover:shadow-elevated disabled:opacity-60 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-all flex items-center justify-center gap-2 text-base"
             >
               {loading ? (
                 <>
@@ -141,12 +141,12 @@ export default function LoginPage() {
 
           <div className="divider-gradient my-6" />
 
-          <p className="text-[11px] text-muted-foreground text-center">
+          <p className="text-sm text-muted-foreground text-center">
             نظام إدارة مكتب المحاماة — الجزائر
           </p>
         </div>
 
-        <p className="text-[11px] text-muted-foreground/60 text-center mt-4">
+        <p className="text-xs text-muted-foreground/60 text-center mt-4">
           © {new Date().getFullYear()} مكتب الأستاذ سايج محمد. جميع الحقوق محفوظة.
         </p>
       </div>

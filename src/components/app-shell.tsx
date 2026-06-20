@@ -62,14 +62,14 @@ function SidebarContent({ activeSection, onNavigate }: { activeSection: Section;
       {/* شعار التطبيق */}
       <div className="p-4 flex items-center gap-3">
         <div className="relative shrink-0">
-          <div className="w-10 h-10 rounded-xl bg-gradient-primary shadow-card flex items-center justify-center">
-            <Gavel className="w-5 h-5 text-white" />
+          <div className="w-12 h-12 rounded-xl bg-gradient-primary shadow-card flex items-center justify-center">
+            <Gavel className="w-6 h-6 text-white" />
           </div>
-          <div className="absolute -bottom-0.5 -left-0.5 w-3 h-3 rounded-full bg-emerald-500 border-2 border-background" />
+          <div className="absolute -bottom-0.5 -left-0.5 w-3.5 h-3.5 rounded-full bg-emerald-500 border-2 border-background" />
         </div>
         <div className="min-w-0">
-          <h2 className="font-bold text-foreground text-[13px] leading-tight truncate">{APP_NAME}</h2>
-          <p className="text-[10px] text-muted-foreground mt-0.5">{APP_SUBTITLE}</p>
+          <h2 className="font-bold text-foreground text-[15px] leading-tight truncate">{APP_NAME}</h2>
+          <p className="text-[12px] text-muted-foreground mt-0.5">{APP_SUBTITLE}</p>
         </div>
       </div>
 
@@ -82,8 +82,8 @@ function SidebarContent({ activeSection, onNavigate }: { activeSection: Section;
 
       {/* قائمة التنقل */}
       <ScrollArea className="flex-1 px-3 py-3 smooth-scroll">
-        <nav className="space-y-1">
-          <p className="px-2 pb-1 text-[10px] font-semibold text-muted-foreground/70 uppercase tracking-wider">
+        <nav className="space-y-1.5">
+          <p className="px-2 pb-1.5 text-[12px] font-semibold text-muted-foreground/70 uppercase tracking-wider">
             القائمة الرئيسية
           </p>
           {navItems.map((item) => {
@@ -94,21 +94,21 @@ function SidebarContent({ activeSection, onNavigate }: { activeSection: Section;
                 key={item.id}
                 onClick={() => onNavigate(item.id)}
                 className={cn(
-                  'group w-full flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition-all duration-200 text-right',
+                  'group w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-[15px] font-medium transition-all duration-200 text-right',
                   isActive
                     ? 'bg-gradient-primary text-white shadow-soft'
                     : 'text-muted-foreground hover:bg-accent/60 hover:text-foreground'
                 )}
               >
                 <Icon className={cn(
-                  'w-4 h-4 shrink-0 transition-transform duration-200',
+                  'w-5 h-5 shrink-0 transition-transform duration-200',
                   isActive
                     ? 'text-white'
                     : 'text-muted-foreground/80 group-hover:text-foreground group-hover:scale-110'
                 )} />
                 <span className="flex-1">{item.label}</span>
                 {isActive && (
-                  <span className="w-1.5 h-1.5 rounded-full bg-white/80" />
+                  <span className="w-2 h-2 rounded-full bg-white/80" />
                 )}
               </button>
             );
@@ -122,15 +122,15 @@ function SidebarContent({ activeSection, onNavigate }: { activeSection: Section;
       <div className="p-3 flex items-center justify-between gap-2">
         <Badge
           variant="outline"
-          className="text-[10px] font-mono px-2 py-0.5"
+          className="text-[12px] font-mono px-2 py-0.5"
         >
           v3.0
         </Badge>
         <button
           onClick={handleLogout}
-          className="flex items-center gap-1.5 text-[11px] text-muted-foreground hover:text-destructive transition-colors px-2 py-1 rounded-md hover:bg-destructive/5"
+          className="flex items-center gap-1.5 text-[13px] text-muted-foreground hover:text-destructive transition-colors px-2.5 py-1.5 rounded-md hover:bg-destructive/5"
         >
-          <LogOut className="w-3.5 h-3.5" />
+          <LogOut className="w-4 h-4" />
           <span>تسجيل الخروج</span>
         </button>
       </div>
@@ -153,17 +153,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen flex flex-col overflow-x-hidden bg-background">
       {/* الشريط العلوي - الجوال */}
       <header className="sticky top-0 z-40 bg-background/85 backdrop-blur-xl border-b border-border/60 lg:hidden">
-        <div className="flex items-center justify-between h-14 px-3">
+        <div className="flex items-center justify-between h-16 px-3">
           <div className="flex items-center gap-2">
             <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
               <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="shrink-0 h-9 w-9">
+                <Button variant="ghost" size="icon" className="shrink-0 h-10 w-10">
                   <Menu className="w-5 h-5" />
                 </Button>
               </SheetTrigger>
               <SheetContent
                 side="right"
-                className="w-64 p-0 bg-background border-l"
+                className="w-72 p-0 bg-background border-l"
               >
                 <SheetTitle className="sr-only">القائمة الرئيسية</SheetTitle>
                 <SidebarContent
@@ -176,17 +176,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               </SheetContent>
             </Sheet>
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-gradient-primary shadow-soft flex items-center justify-center">
-                <Gavel className="w-4 h-4 text-white" />
+              <div className="w-9 h-9 rounded-lg bg-gradient-primary shadow-soft flex items-center justify-center">
+                <Gavel className="w-5 h-5 text-white" />
               </div>
               <div className="min-w-0">
-                <span className="font-bold text-[12px] leading-tight line-clamp-1 block">{APP_NAME}</span>
-                <span className="text-[10px] text-muted-foreground">{APP_SUBTITLE}</span>
+                <span className="font-bold text-[13px] leading-tight line-clamp-1 block">{APP_NAME}</span>
+                <span className="text-[11px] text-muted-foreground">{APP_SUBTITLE}</span>
               </div>
             </div>
           </div>
           <div className="flex items-center gap-1">
-            <div className="w-28">
+            <div className="w-32">
               <GlobalSearch />
             </div>
             {mounted && (
@@ -194,10 +194,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 variant="ghost"
                 size="icon"
                 onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-                className="h-9 w-9"
+                className="h-10 w-10"
                 aria-label="تبديل السمة"
               >
-                {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+                {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
               </Button>
             )}
           </div>
@@ -206,23 +206,23 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       <div className="flex flex-1 overflow-x-hidden">
         {/* الشريط الجانبي - سطح المكتب */}
-        <aside className="hidden lg:flex lg:w-64 lg:flex-col lg:fixed lg:inset-y-0 lg:right-0 bg-sidebar border-l border-sidebar-border z-30">
-          <div className="flex items-center justify-between h-14 px-4">
+        <aside className="hidden lg:flex lg:w-72 lg:flex-col lg:fixed lg:inset-y-0 lg:right-0 bg-sidebar border-l border-sidebar-border z-30">
+          <div className="flex items-center justify-between h-16 px-4">
             <div className="flex items-center gap-2 min-w-0">
-              <div className="w-8 h-8 rounded-lg bg-gradient-primary shadow-soft flex items-center justify-center shrink-0">
-                <Gavel className="w-4 h-4 text-white" />
+              <div className="w-9 h-9 rounded-lg bg-gradient-primary shadow-soft flex items-center justify-center shrink-0">
+                <Gavel className="w-5 h-5 text-white" />
               </div>
-              <span className="font-bold text-[13px] text-foreground truncate">{APP_NAME}</span>
+              <span className="font-bold text-[15px] text-foreground truncate">{APP_NAME}</span>
             </div>
             {mounted && (
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-                className="text-muted-foreground hover:text-foreground h-8 w-8 shrink-0"
+                className="text-muted-foreground hover:text-foreground h-10 w-10 shrink-0"
                 aria-label="تبديل السمة"
               >
-                {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+                {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
               </Button>
             )}
           </div>
@@ -231,20 +231,20 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </aside>
 
         {/* المحتوى الرئيسي */}
-        <main className="flex-1 lg:mr-64 min-w-0 overflow-x-hidden gradient-mesh">
-          <div className="p-4 md:p-6 max-w-6xl mx-auto">
+        <main className="flex-1 lg:mr-72 min-w-0 overflow-x-hidden gradient-mesh">
+          <div className="p-5 md:p-8 max-w-6xl mx-auto">
             {/* رأس القسم */}
             {currentNav && (
-              <div className="mb-5 flex items-center gap-3 animate-fade-in">
-                <div className="w-10 h-10 rounded-xl bg-gradient-primary shadow-soft flex items-center justify-center shrink-0">
-                  <currentNav.icon className="w-5 h-5 text-white" />
+              <div className="mb-6 flex items-center gap-3.5 animate-fade-in">
+                <div className="w-12 h-12 rounded-xl bg-gradient-primary shadow-soft flex items-center justify-center shrink-0">
+                  <currentNav.icon className="w-6 h-6 text-white" />
                 </div>
                 <div className="min-w-0">
-                  <h1 className="text-xl md:text-2xl font-extrabold leading-tight text-foreground">
+                  <h1 className="text-2xl md:text-3xl font-extrabold leading-tight text-foreground">
                     {currentNav.label}
                   </h1>
                   {currentNav.hint && (
-                    <p className="text-xs text-muted-foreground mt-0.5">{currentNav.hint}</p>
+                    <p className="text-sm text-muted-foreground mt-1">{currentNav.hint}</p>
                   )}
                 </div>
               </div>

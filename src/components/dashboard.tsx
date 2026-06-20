@@ -238,7 +238,7 @@ export function Dashboard() {
   return (
     <div className="space-y-6">
       {/* بطاقات الإحصائيات */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         <StatCard
           title="إجمالي القضايا"
           value={(totalCases).toLocaleString('en-US')}
@@ -644,14 +644,14 @@ function StatCard({
 
   return (
     <Card className="stat-card-hover border-border/60 shadow-soft hover:shadow-elevated hover:border-primary/30">
-      <CardContent className="p-4">
-        <div className="flex items-start gap-3">
-          <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 transition-transform duration-200 group-hover:scale-105 ${iconClasses[color]}`}>
-            <Icon className="w-5 h-5" />
+      <CardContent className="p-5">
+        <div className="flex items-start gap-3.5">
+          <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 transition-transform duration-200 group-hover:scale-105 ${iconClasses[color]}`}>
+            <Icon className="w-6 h-6" />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-[11px] text-muted-foreground truncate leading-relaxed mb-0.5">{title}</p>
-            <p className="text-base font-extrabold truncate tabular-nums text-foreground leading-tight">{value}</p>
+            <p className="text-[13px] text-muted-foreground truncate leading-relaxed mb-1">{title}</p>
+            <p className="text-lg font-extrabold truncate tabular-nums text-foreground leading-tight">{value}</p>
           </div>
         </div>
       </CardContent>
