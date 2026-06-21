@@ -17,6 +17,7 @@ import {
   LogOut,
   BookOpen,
   Gavel,
+  ListChecks,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -24,6 +25,7 @@ import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/s
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { GlobalSearch } from '@/components/global-search';
+import { DailyTasksDialog } from '@/components/daily-tasks-dialog';
 import { useRouter } from 'next/navigation';
 
 const APP_NAME = 'مكتب الأستاذ سايج محمد';
@@ -33,6 +35,7 @@ const navItems: { id: Section; label: string; icon: React.ElementType; hint?: st
   { id: 'dashboard', label: 'لوحة التحكم', icon: LayoutDashboard, hint: 'نظرة عامة' },
   { id: 'clients', label: 'الموكلون', icon: Users },
   { id: 'cases', label: 'القضايا', icon: Briefcase },
+  { id: 'tasks', label: 'المهام والإجراءات', icon: ListChecks, hint: 'المهام والآجال القانونية' },
   { id: 'courts', label: 'الهيئات القضائية', icon: Scale },
   { id: 'payments', label: 'المدفوعات', icon: Banknote },
   { id: 'lawyers', label: 'دفتر المحامين', icon: BookOpen },
@@ -151,6 +154,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen flex flex-col overflow-x-hidden bg-background">
+      {/* نافذة منبثقة يومية — تظهر مرة واحدة كل يوم */}
+      <DailyTasksDialog />
+
       {/* الشريط العلوي - الجوال */}
       <header className="sticky top-0 z-40 bg-background/85 backdrop-blur-xl border-b border-border/60 lg:hidden">
         <div className="flex items-center justify-between h-16 px-3">

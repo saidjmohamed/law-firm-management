@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { Calendar as CalendarIcon } from 'lucide-react';
-import { useCases, useClients, useParties, useDelays, useSessions, useJudicialBodies, useLawyers, createCase, updateCase, deleteCase as apiDeleteCase, createParty, updateParty as apiUpdateParty, deleteParty as apiDeleteParty, createDelay, updateDelay as apiUpdateDelay, deleteDelay as apiDeleteDelay, createClient, createJudicialBody, createArchive, syncPartiesToClients } from '@/lib/api';
+import { useCases, useClients, useParties, useDelays, useSessions, useJudicialBodies, useLawyers, useTasks, createCase, updateCase, deleteCase as apiDeleteCase, createParty, updateParty as apiUpdateParty, deleteParty as apiDeleteParty, createDelay, updateDelay as apiUpdateDelay, deleteDelay as apiDeleteDelay, createClient, createJudicialBody, createArchive, syncPartiesToClients } from '@/lib/api';
 import { mutate } from 'swr';
 import { formatCurrency, STATUS_COLORS, CASE_NATURES, CASE_STATUSES, LITIGATION_STAGES, PARTY_ROLES, JUDICIAL_CHAMBERS, WILAYAS, JUDICIARY_TYPES, ORDINARY_COURT_LEVELS, ADMIN_COURT_LEVELS, CHAMBER_NUMBERS, formatDate } from '@/lib/constants';
 import { CasePrintButton } from '@/components/case-print';
@@ -14,6 +14,13 @@ import { useAppStore } from '@/lib/store';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { DateDisplay, toDateInputValue } from '@/components/ui/date-display';
+import {
+  TASK_TYPE_LABELS, PRIORITY_LABELS, STATUS_LABELS as TASK_STATUS_LABELS,
+  TASK_TYPE_COLORS, PRIORITY_COLORS,
+  getTaskUrgency, daysRemaining, URGENCY_COLORS, URGENCY_LABELS,
+} from '@/lib/tasks';
+import { ListChecks, Gavel as GavelIcon } from 'lucide-react';
+import { createTask, updateTask, deleteTask } from '@/lib/api';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
@@ -271,6 +278,7 @@ export function Cases() {
   const { judicialBodies, isLoading: bodiesLoading } = useJudicialBodies();
   const { sessions: allSessions } = useSessions();
   const { lawyers } = useLawyers();
+  const { tasks: allTasks } = useTasks();
 
   // مزامنة الأطراف مع الموكلين عند التحميل (مرة واحدة)
   useEffect(() => {
@@ -1138,6 +1146,15 @@ export function Cases() {
             )}
           </CardContent>
         </Card>
+
+        {/* المهام المرتبطة بالقضية */}
+        {selectedCase.id && (
+          <CaseTasksCard
+            caseId={selectedCase.id}
+            allTasks={allTasks}
+            clientId={selectedCase.clientId}
+          />
+        )}
 
         {/* الجلسات */}
         <Card>
@@ -2335,5 +2352,207 @@ function DetailField({ label, value }: { label: string; value?: React.ReactNode 
       <p className="text-xs text-muted-foreground">{label}</p>
       <p className="text-sm font-medium">{display}</p>
     </div>
+  );
+}
+
+// ============================================================================
+// بطاقة المهام المرتبطة بقضية — تُعرض داخل تفاصيل القضية
+// ============================================================================
+function CaseTasksCard({ caseId, allTasks, clientId }: {
+  caseId: number;
+  allTasks: any[];
+  clientId?: number | null;
+}) {
+  const { setActiveSection, setSelectedTaskId } = useAppStore();
+  const [showQuickAdd, setShowQuickAdd] = React.useState(false);
+  const [quickTitle, setQuickTitle] = React.useState('');
+
+  const caseTasks = React.useMemo(() =>
+    allTasks.filter((t) => t.relatedCaseId === caseId),
+    [allTasks, caseId]
+  );
+
+  const pending = caseTasks.filter((t) => t.status !== 'completed');
+  const completed = caseTasks.filter((t) => t.status === 'completed');
+
+  async function handleQuickAdd() {
+    if (!quickTitle.trim()) return;
+    try {
+      await createTask({
+        title: quickTitle.trim(),
+        taskType: 'other',
+        priority: 'medium',
+        status: 'pending',
+        relatedCaseId: caseId,
+        relatedClientId: clientId ?? null,
+        reminderOffsets: [7, 1, 0],
+      });
+      setQuickTitle('');
+      setShowQuickAdd(false);
+    } catch {
+      // swallow
+    }
+  }
+
+  async function handleToggleStatus(task: any) {
+    try {
+      await updateTask(task.id, {
+        status: task.status === 'completed' ? 'pending' : 'completed',
+      });
+    } catch {
+      // swallow
+    }
+  }
+
+  async function handleDelete(id: number) {
+    if (!confirm('حذف هذه المهمة؟')) return;
+    try {
+      await deleteTask(id);
+    } catch {
+      // swallow
+    }
+  }
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base font-bold flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <ListChecks className="w-4 h-4" />
+            المهام المرتبطة
+            {caseTasks.length > 0 && (
+              <Badge variant="secondary" className="text-xs">
+                {caseTasks.length.toLocaleString('en-US')}
+              </Badge>
+            )}
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8"
+            onClick={() => setShowQuickAdd(!showQuickAdd)}
+          >
+            <Plus className="w-4 h-4" />
+            مهمة
+          </Button>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {/* إضافة سريعة */}
+        {showQuickAdd && (
+          <div className="flex gap-2 p-2 rounded-lg border bg-muted/30">
+            <Input
+              autoFocus
+              value={quickTitle}
+              onChange={(e) => setQuickTitle(e.target.value)}
+              placeholder="عنوان المهمة..."
+              onKeyDown={(e) => { if (e.key === 'Enter') handleQuickAdd(); }}
+            />
+            <Button size="sm" onClick={handleQuickAdd} className="bg-gradient-primary">
+              حفظ
+            </Button>
+          </div>
+        )}
+
+        {/* قائمة المهام */}
+        {caseTasks.length === 0 ? (
+          <p className="text-sm text-muted-foreground text-center py-3">لا توجد مهام مرتبطة بهذه القضية</p>
+        ) : (
+          <div className="space-y-2">
+            {/* المهام غير المنجزة */}
+            {pending.map((task) => {
+              const urgency = getTaskUrgency(task);
+              const days = daysRemaining(task.dueDate, task.legalDeadline);
+              return (
+                <div
+                  key={task.id}
+                  className={`flex items-start gap-2 p-2.5 rounded-lg border ${URGENCY_COLORS[urgency]}`}
+                >
+                  <button
+                    onClick={() => handleToggleStatus(task)}
+                    className="mt-0.5 w-5 h-5 rounded-full border-2 border-gray-300 dark:border-gray-600 hover:border-emerald-500 shrink-0"
+                    aria-label="إكمال"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold">
+                      {task.title}
+                      {task.taskType === 'legal_procedure' && (
+                        <GavelIcon className="inline w-3.5 h-3.5 mr-1 text-emerald-600 dark:text-emerald-400" />
+                      )}
+                    </p>
+                    <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                      <Badge variant="outline" className={`text-[11px] ${TASK_TYPE_COLORS[task.taskType] || ''}`}>
+                        {TASK_TYPE_LABELS[task.taskType] || task.taskType}
+                      </Badge>
+                      <Badge variant="outline" className={`text-[11px] ${PRIORITY_COLORS[task.priority] || ''}`}>
+                        {PRIORITY_LABELS[task.priority]}
+                      </Badge>
+                      {(task.legalDeadline || task.dueDate) && (
+                        <span className="text-[12px] text-muted-foreground">
+                          <DateDisplay value={task.legalDeadline || task.dueDate} />
+                        </span>
+                      )}
+                      {days !== null && (
+                        <span className={`text-[12px] font-bold ${
+                          days < 0 ? 'text-red-600 dark:text-red-400'
+                          : days === 0 ? 'text-orange-600 dark:text-orange-400'
+                          : days <= 7 ? 'text-amber-600 dark:text-amber-400'
+                          : 'text-muted-foreground'
+                        }`}>
+                          {days < 0 ? `متأخرة ${Math.abs(days)}ي` : days === 0 ? 'اليوم' : days === 1 ? 'غداً' : `${days}ي`}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <Button
+                    variant="ghost" size="icon" className="h-7 w-7 text-destructive shrink-0"
+                    onClick={() => handleDelete(task.id)}
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </Button>
+                </div>
+              );
+            })}
+
+            {/* المهام المنجزة */}
+            {completed.length > 0 && (
+              <>
+                <div className="text-[12px] text-muted-foreground pt-2">منجزة ({completed.length})</div>
+                {completed.map((task) => (
+                  <div
+                    key={task.id}
+                    className="flex items-center gap-2 p-2 rounded-lg border opacity-60"
+                  >
+                    <button
+                      onClick={() => handleToggleStatus(task)}
+                      className="w-5 h-5 rounded-full bg-emerald-500 border-2 border-emerald-500 text-white flex items-center justify-center shrink-0"
+                    >
+                      <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                        <path d="M5 13l4 4L19 7" />
+                      </svg>
+                    </button>
+                    <p className="text-sm line-through flex-1">{task.title}</p>
+                    <Button
+                      variant="ghost" size="icon" className="h-7 w-7 text-destructive"
+                      onClick={() => handleDelete(task.id)}
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </Button>
+                  </div>
+                ))}
+              </>
+            )}
+          </div>
+        )}
+
+        {/* رابط لصفحة المهام الكاملة */}
+        <button
+          onClick={() => setActiveSection('tasks')}
+          className="text-sm text-primary hover:underline w-full text-center pt-1"
+        >
+          عرض كل المهام ←
+        </button>
+      </CardContent>
+    </Card>
   );
 }

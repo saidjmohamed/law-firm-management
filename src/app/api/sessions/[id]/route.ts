@@ -59,6 +59,21 @@ export async function PUT(
       data: cleanData,
     });
 
+    // ========================================================================
+    // Smart Task sync: عند تحديث تاريخ الجلسة، حدّث dueDate للمهمة المرتبطة
+    // (المهمة الواحدة المرتبطة بالجلسة — لا حاجة لتحديث 3 مهام منفصلة)
+    // ========================================================================
+    if (cleanData.date !== undefined) {
+      try {
+        await prisma.task.updateMany({
+          where: { sourceType: 'session', sourceId: parseInt(id) },
+          data: { dueDate: cleanData.date },
+        });
+      } catch (taskErr) {
+        console.error('Failed to sync smart task with session update:', taskErr);
+      }
+    }
+
     return NextResponse.json(session);
   } catch (error) {
     console.error('Error updating session:', error);

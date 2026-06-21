@@ -2,16 +2,14 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  // لا نتجاهل أخطاء TypeScript — يجب إصلاحها جميعاً
   typescript: {
-    ignoreBuildErrors: true,
+    ignoreBuildErrors: false,
   },
-  reactStrictMode: false,
+  reactStrictMode: true,
   allowedDevOrigins: [
     ".space-z.ai",
   ],
-  turbopack: {
-    root: "/home/z/my-project/law-firm-management",
-  },
 };
 
 export default nextConfig;

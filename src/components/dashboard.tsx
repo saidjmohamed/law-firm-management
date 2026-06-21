@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { useCases, useClients, useDelays, useSessions, usePayments, useParties } from '@/lib/api';
+import { useCases, useClients, useDelays, useSessions, usePayments, useParties, useTasks } from '@/lib/api';
 import { formatCurrency, STATUS_COLORS, CASE_NATURES, formatDate } from '@/lib/constants';
 import { DateDisplay } from '@/components/ui/date-display';
 import { useAppStore } from '@/lib/store';
@@ -9,6 +9,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import {
+  computeTaskStats,
+  getTaskUrgency,
+  daysRemaining,
+  TASK_TYPE_LABELS,
+  URGENCY_LABELS,
+} from '@/lib/tasks';
+import { FlashNotifications } from '@/components/flash-notifications';
 import {
   Briefcase,
   TrendingUp,
@@ -22,6 +30,9 @@ import {
   CircleDollarSign,
   ArrowUpLeft,
   ArrowDownLeft,
+  ListChecks,
+  CheckCircle2,
+  Flag,
 } from 'lucide-react';
 
 // Colors for nature progress bars
@@ -73,6 +84,9 @@ export function Dashboard() {
   const { sessions } = useSessions();
   const { payments } = usePayments();
   const { parties } = useParties();
+  const { tasks } = useTasks();
+
+  const taskStats = React.useMemo(() => computeTaskStats(tasks), [tasks]);
 
   const isLoading = casesLoading || clientsLoading;
 
@@ -237,6 +251,9 @@ export function Dashboard() {
 
   return (
     <div className="space-y-6">
+      {/* تنبيهات فورية في الأعلى — ثابتة دائماً */}
+      <FlashNotifications />
+
       {/* بطاقات الإحصائيات */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         <StatCard
@@ -356,6 +373,96 @@ export function Dashboard() {
           الجلسات
         </Button>
       </div>
+
+      {/* ============== Widget: المهام والإجراءات ============== */}
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+        <TaskStatBox
+          label="مهام متأخرة" value={taskStats.overdue}
+          icon={AlertTriangle} color="red"
+          onClick={() => setActiveSection('tasks')}
+        />
+        <TaskStatBox
+          label="مهام اليوم" value={taskStats.today}
+          icon={Clock} color="orange"
+          onClick={() => setActiveSection('tasks')}
+        />
+        <TaskStatBox
+          label="مهام الأسبوع" value={taskStats.thisWeek}
+          icon={Calendar} color="amber"
+          onClick={() => setActiveSection('tasks')}
+        />
+        <TaskStatBox
+          label="مهام مستعجلة" value={taskStats.urgent}
+          icon={Flag} color="rose"
+          onClick={() => setActiveSection('tasks')}
+        />
+        <TaskStatBox
+          label="مهام منجزة" value={taskStats.completed}
+          icon={CheckCircle2} color="emerald"
+          onClick={() => setActiveSection('tasks')}
+        />
+      </div>
+
+      {/* قائمة المهام العاجلة (5 الأكثر إلحاحاً) */}
+      {tasks.length > 0 && (() => {
+        const urgentTasks = tasks
+          .filter((t: any) => t.status !== 'completed')
+          .map((t: any) => ({ t, urgency: getTaskUrgency(t), days: daysRemaining(t.dueDate, t.legalDeadline) }))
+          .filter((x) => x.urgency === 'overdue' || x.urgency === 'today' || x.urgency === 'week' || x.urgency === 'urgent')
+          .sort((a, b) => {
+            // المتأخرة أولاً، ثم الأقرب تاريخاً
+            if (a.urgency === 'overdue' && b.urgency !== 'overdue') return -1;
+            if (b.urgency === 'overdue' && a.urgency !== 'overdue') return 1;
+            return (a.days ?? 999) - (b.days ?? 999);
+          })
+          .slice(0, 5);
+
+        if (urgentTasks.length === 0) return null;
+
+        return (
+          <Card className="border-amber-200 dark:border-amber-900/40 bg-amber-50/30 dark:bg-amber-950/10">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base font-bold flex items-center gap-2">
+                <ListChecks className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+                مهام تحتاج اهتمامك ({urgentTasks.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {urgentTasks.map(({ t, urgency, days }) => (
+                <button
+                  key={t.id}
+                  onClick={() => { setSelectedCaseId(t.relatedCaseId || null); setActiveSection('tasks'); }}
+                  className={`w-full flex items-center justify-between gap-3 p-2.5 rounded-lg border text-right transition-colors hover:bg-accent/50 ${
+                    urgency === 'overdue' ? 'border-red-300 dark:border-red-900/50 bg-red-50/50 dark:bg-red-950/20'
+                    : urgency === 'today' ? 'border-orange-300 dark:border-orange-900/50 bg-orange-50/50 dark:bg-orange-950/20'
+                    : urgency === 'urgent' ? 'border-rose-300 dark:border-rose-900/50 bg-rose-50/50 dark:bg-rose-950/20'
+                    : 'border-amber-200 dark:border-amber-900/30'
+                  }`}
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-bold truncate">{t.title}</p>
+                    <div className="flex items-center gap-2 mt-0.5 text-xs text-muted-foreground">
+                      {t.relatedCase?.caseNumber && <span>📁 {t.relatedCase.caseNumber}</span>}
+                      {TASK_TYPE_LABELS[t.taskType] && <span>• {TASK_TYPE_LABELS[t.taskType]}</span>}
+                    </div>
+                  </div>
+                  <div className="shrink-0 text-left">
+                    {days !== null && (
+                      <span className={`text-[13px] font-bold ${
+                        days < 0 ? 'text-red-600 dark:text-red-400'
+                        : days === 0 ? 'text-orange-600 dark:text-orange-400'
+                        : 'text-amber-700 dark:text-amber-400'
+                      }`}>
+                        {days < 0 ? `متأخرة ${Math.abs(days)}ي` : days === 0 ? 'اليوم' : days === 1 ? 'غداً' : `${days}ي`}
+                      </span>
+                    )}
+                  </div>
+                </button>
+              ))}
+            </CardContent>
+          </Card>
+        );
+      })()}
 
       <div className="grid md:grid-cols-2 gap-6">
         {/* القضايا حسب الطبيعة */}
@@ -656,5 +763,41 @@ function StatCard({
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+// ============================================================================
+// بطاقة إحصائية للمهام — قابلة للنقر للانتقال لصفحة المهام
+// ============================================================================
+function TaskStatBox({ label, value, icon: Icon, color, onClick }: {
+  label: string;
+  value: number;
+  icon: React.ElementType;
+  color: string;
+  onClick?: () => void;
+}) {
+  const colors: Record<string, string> = {
+    red: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+    orange: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
+    amber: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
+    rose: 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400',
+    emerald: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
+  };
+  return (
+    <button onClick={onClick} className="text-right">
+      <Card className="stat-card-hover hover:shadow-elevated cursor-pointer">
+        <CardContent className="p-4">
+          <div className="flex items-center gap-3">
+            <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${colors[color]}`}>
+              <Icon className="w-5 h-5" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[13px] text-muted-foreground truncate">{label}</p>
+              <p className="text-lg font-extrabold tabular-nums">{value.toLocaleString('en-US')}</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </button>
   );
 }

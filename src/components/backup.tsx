@@ -108,7 +108,7 @@ export function BackupManager() {
       // تسجيل تاريخ آخر نسخ احتياطي
       try {
         await fetch('/api/settings', {
-          method: 'POST',
+          method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ key: 'lastBackupDate', value: new Date().toISOString() }),
         });

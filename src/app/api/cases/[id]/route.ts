@@ -98,6 +98,55 @@ export async function PUT(
       data: normalized,
     });
 
+    // ========================================================================
+    // Smart Task: عند تسجيل نتيجة الحكم (caseResult)، اقترح مهام متابعة
+    // كـ legal_procedure فارغة (المستخدم يكمل الأجل القانوني لاحقاً)
+    // ========================================================================
+    if (normalized.caseResult && (normalized.caseResult === 'won' || normalized.caseResult === 'lost')) {
+      try {
+        // تحقق إن لم تكن مهام المتابعة موجودة مسبقاً لهذه القضية
+        const existingFollowup = await prisma.task.findFirst({
+          where: {
+            relatedCaseId: parseInt(id),
+            sourceType: 'judgment',
+            status: { not: 'completed' },
+          },
+        });
+
+        if (!existingFollowup) {
+          // أنواع الطعون حسب نتيجة الحكم
+          const followupTypes = normalized.caseResult === 'lost'
+            ? [
+                { title: 'متابعة الاستئناف', taskType: 'appeal' },
+                { title: 'متابعة المعارضة', taskType: 'appeal' },
+                { title: 'متابعة الطعن بالنقض', taskType: 'appeal' },
+              ]
+            : [
+                { title: 'متابعة التنفيذ', taskType: 'execution' },
+              ];
+
+          for (const ft of followupTypes) {
+            await prisma.task.create({
+              data: {
+                title: `${ft.title} — القضية ${updatedCase.caseNumber || ''}`.trim(),
+                description: `تم إنشاء هذه المهمة تلقائياً بعد تسجيل حكم (${normalized.caseResult === 'won' ? 'ربحت' : 'خسرت'} القضية). يرجى تحديد الأجل القانوني.`,
+                taskType: ft.taskType,
+                priority: 'high',
+                status: 'pending',
+                sourceType: 'judgment',
+                sourceId: parseInt(id),
+                relatedCaseId: parseInt(id),
+                relatedClientId: updatedCase.clientId ?? null,
+                // الأجل يُترك null — المستخدم يملؤه بعد معرفة القانون
+              },
+            });
+          }
+        }
+      } catch (taskErr) {
+        console.error('Failed to create judgment follow-up tasks:', taskErr);
+      }
+    }
+
     return NextResponse.json(updatedCase);
   } catch (error: any) {
     console.error('PUT /api/cases/[id] error:', error);

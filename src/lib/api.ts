@@ -441,7 +441,7 @@ export async function deleteJudicialBody(id: number) {
 // ============================================================================
 export function useSettings() {
   const { data, error, isLoading } = useSWR('/api/settings', fetcher);
-  return { settings: data || {}, error, isLoading };
+  return { settings: (data && typeof data === 'object' && !Array.isArray(data)) ? data : {}, error, isLoading };
 }
 
 export async function updateSetting(key: string, value: string) {
@@ -478,6 +478,7 @@ export async function refreshAll() {
   await mutate('/api/lawyers');
   await mutate('/api/judicial-bodies');
   await mutate('/api/settings');
+  await mutate('/api/tasks');
 }
 
 // ============================================================================
@@ -500,6 +501,48 @@ export function useCustomOptions(field: string) {
   };
 
   return { customOptions: data || [], addOption };
+}
+
+// ============================================================================
+// المهام والإجراءات القانونية
+// ============================================================================
+export function useTasks() {
+  const { data, error, isLoading } = useSWR('/api/tasks', fetcher);
+  return { tasks: Array.isArray(data) ? data : [], error, isLoading };
+}
+
+export function useTask(id: number | null) {
+  const { data, error, isLoading } = useSWR(id ? `/api/tasks/${id}` : null, fetcher);
+  return { task: data, error, isLoading };
+}
+
+export async function createTask(data: Record<string, unknown>) {
+  const res = await fetch('/api/tasks', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error('فشل في إنشاء المهمة');
+  await mutate('/api/tasks');
+  return res.json();
+}
+
+export async function updateTask(id: number, data: Record<string, unknown>) {
+  const res = await fetch(`/api/tasks/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error('فشل في تحديث المهمة');
+  await mutate('/api/tasks');
+  return res.json();
+}
+
+export async function deleteTask(id: number) {
+  const res = await fetch(`/api/tasks/${id}`, { method: 'DELETE' });
+  if (!res.ok) throw new Error('فشل في حذف المهمة');
+  await mutate('/api/tasks');
+  return res.json();
 }
 
 // ============================================================================

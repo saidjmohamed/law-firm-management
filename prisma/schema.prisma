@@ -29,6 +29,7 @@ model Client {
   updatedAt  DateTime @updatedAt
 
   cases Case[]
+  tasks Task[]
 
   @@index([name])
   @@index([phone])
@@ -86,6 +87,7 @@ model Case {
   sessions  Session[]
   payments  Payment[]
   archives  Archive[]
+  tasks     Task[]
 
   @@index([caseNumber])
   @@index([status])
@@ -263,4 +265,68 @@ model CustomOption {
 
   @@unique([field, value])
   @@index([field])
+}
+
+// ============================================================================
+// المهام والإجراءات القانونية
+// ============================================================================
+// تصميم قابل للتوسعة: يدعم حالياً المهام العادية + الإجراءات القانونية.
+// مستقبلاً يمكن إضافة جدول LegalDeadlineRule منفصل يحتوي قواعد حساب الآجال
+// (الاستئناف/المعارضة/الطعن بالنقض/التنفيذ) وربطها بـ task_type = 'legal_procedure'
+// عبر حقل deadline_rule_id (مُعد مسبقاً كـ String? مرن).
+// ============================================================================
+model Task {
+  id              Int       @id @default(autoincrement())
+
+  // المحتوى الأساسي
+  title           String    @default("")
+  description     String?   @default("")
+  taskType        String    @default("other")
+  // قيم taskType:
+  //   'session'        | 'memo'        | 'appeal'      | 'notification'
+  //   | 'notice'        | 'execution'   | 'consultation'
+  //   | 'legal_procedure' | 'other'
+  // legal_procedure = إجراء قانوني بأجل نهائي محسوب
+
+  priority        String    @default("medium")  // 'high' | 'medium' | 'low'
+  status          String    @default("pending") // 'pending' | 'in_progress' | 'completed'
+
+  // التواريخ الأساسية
+  dueDate         DateTime?                          // تاريخ الاستحقاق (للمهام العادية)
+  startDate       DateTime?                          // تاريخ بداية الإجراء القانوني
+  legalDeadline   DateTime?                          // الأجل القانوني النهائي (للإجراءات القانونية)
+
+  // التذكيرات — مهمة واحدة + offsets تُحسب ديناميكياً عند العرض
+  // مثال: [7, 1, 0] = تذكير قبل 7 أيام + قبل يوم + يوم الاستحقاق
+  reminderOffsets String?   @default("[]")           // JSON array of integers (days)
+
+  // التكامل مع Smart Tasks
+  sourceType      String?   @default("manual")       // 'manual' | 'session' | 'judgment' | 'delay'
+  sourceId        Int?                                 // ID الجلسة/الحكم/التأجيل الأصلي
+
+  // الربط بالقضايا والموكلين (اختياري)
+  relatedCaseId   Int?
+  relatedCase     Case?     @relation(fields: [relatedCaseId], references: [id], onDelete: SetNull)
+  relatedClientId Int?
+  relatedClient   Client?   @relation(fields: [relatedClientId], references: [id], onDelete: SetNull)
+
+  // إضافة مستقبلية: ربط بقواعد الآجال القانونية
+  // deadlineRuleId String?                              // مرجع لقاعدة آجال في جدول مستقبلي
+
+  // حقول إدارية
+  assignedTo      String?                             // اسم المسؤول (مستقبلاً: userId)
+  notes           String?
+  completedAt     DateTime?
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([relatedCaseId])
+  @@index([relatedClientId])
+  @@index([status])
+  @@index([priority])
+  @@index([dueDate])
+  @@index([legalDeadline])
+  @@index([taskType])
+  @@index([sourceType, sourceId])
 }

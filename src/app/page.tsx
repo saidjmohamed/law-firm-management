@@ -11,6 +11,7 @@ import { Lawyers } from '@/components/lawyers';
 import { PaymentsManager } from '@/components/payments';
 import { BackupManager } from '@/components/backup';
 import { SettingsManager } from '@/components/settings';
+import { TasksManager } from '@/components/tasks';
 
 
 // ============================================================================
@@ -94,6 +95,7 @@ function AppContent() {
     dashboard: <Dashboard />,
     clients: <Clients />,
     cases: <Cases />,
+    tasks: <TasksManager />,
     courts: <CourtsManager />,
     lawyers: <Lawyers />,
     payments: <PaymentsManager />,

@@ -1,9 +1,10 @@
 import { create } from 'zustand';
 
-type Section = 
+type Section =
   | 'dashboard'
   | 'clients'
   | 'cases'
+  | 'tasks'
   | 'payments'
   | 'lawyers'
   | 'courts'
@@ -21,6 +22,8 @@ interface AppState {
   setSelectedClientId: (id: number | null) => void;
   selectedLawyerId: number | null;
   setSelectedLawyerId: (id: number | null) => void;
+  selectedTaskId: number | null;
+  setSelectedTaskId: (id: number | null) => void;
 }
 
 export const useAppStore = create<AppState>((set) => ({
@@ -34,6 +37,8 @@ export const useAppStore = create<AppState>((set) => ({
   setSelectedClientId: (id) => set({ selectedClientId: id }),
   selectedLawyerId: null,
   setSelectedLawyerId: (id) => set({ selectedLawyerId: id }),
+  selectedTaskId: null,
+  setSelectedTaskId: (id) => set({ selectedTaskId: id }),
 }));
 
 export type { Section };
