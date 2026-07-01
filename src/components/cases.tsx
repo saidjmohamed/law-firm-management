@@ -549,10 +549,27 @@ export function Cases() {
 
     if (editingCase?.id) {
       // تحديث قضية
+      // كشف تغيير نتيجة القضية لإشعار المستخدم بالمهام التلقائية
+      const previousResult = editingCase.caseResult;
+      const newResult = cleanFormData.caseResult;
+      const resultChanged = newResult && newResult !== previousResult && (newResult === 'won' || newResult === 'lost');
+
       await updateCase(editingCase.id, {
         ...cleanFormData,
         updatedAt: new Date().toISOString(),
       });
+
+      // إشعار المستخدم بإنشاء المهام التلقائية
+      if (resultChanged) {
+        const resultLabel = newResult === 'won' ? 'ربحت' : 'خسرت';
+        const taskCount = newResult === 'won' ? 2 : 5; // سحب الحكم + متابعة
+        toast.success(`تم إنشاء ${taskCount} مهام تلقائية بعد تحديد نتيجة القضية (${resultLabel})`, {
+          description: 'سحب الحكم ومهام المتابعة أُضيفت لنظام المهام المستعجلة',
+          duration: 6000,
+        });
+        // تحديث قائمة المهام
+        await mutate('/api/tasks');
+      }
 
       // فرق ذكي للأطراف: تحديث الموجودة، إنشاء الجديدة، حذف المحذوفة
       const existingParties = caseParties || [];
@@ -980,6 +997,22 @@ export function Cases() {
                       <span className="text-sm font-bold text-red-700 dark:text-red-400">خسرت القضية</span>
                     </div>
                   )}
+                  {/* مؤشر المهام التلقائية */}
+                  {(() => {
+                    const autoTasks = (allTasks || []).filter((t: any) => t.relatedCaseId === selectedCase.id && t.sourceType === 'judgment');
+                    const pendingTasks = autoTasks.filter((t: any) => t.status !== 'completed');
+                    if (pendingTasks.length > 0) {
+                      return (
+                        <div className="flex items-center gap-2 mt-2 p-2 bg-amber-50 dark:bg-amber-900/20 rounded-lg">
+                          <ListChecks className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                          <span className="text-sm text-amber-700 dark:text-amber-400">
+                            {pendingTasks.length} مهام تلقائية قيد الإنجاز (سحب الحكم ومهام المتابعة)
+                          </span>
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()}
                 </div>
               )}
               <DetailField label="تاريخ التسجيل" value={<DateDisplay value={selectedCase.registrationDate as any} />} />

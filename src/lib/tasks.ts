@@ -10,6 +10,7 @@ export const TASK_TYPES = [
   { value: 'notification',    label: 'تبليغ' },
   { value: 'notice',          label: 'إعذار' },
   { value: 'execution',       label: 'تنفيذ' },
+  { value: 'judgment_extract', label: 'سحب أحكام' },
   { value: 'consultation',    label: 'استشارة' },
   { value: 'legal_procedure', label: 'إجراء قانوني' },
   { value: 'other',           label: 'أخرى' },
@@ -55,15 +56,16 @@ export const PRIORITY_COLORS: Record<string, string> = {
 // ألوان النوع
 // ============================================================================
 export const TASK_TYPE_COLORS: Record<string, string> = {
-  session:         'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
-  memo:            'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-400',
-  appeal:          'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400',
-  notification:    'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-400',
-  notice:          'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400',
-  execution:       'bg-rose-100 text-rose-800 dark:bg-rose-900/30 dark:text-rose-400',
-  consultation:    'bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-400',
-  legal_procedure: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400 border-emerald-300 dark:border-emerald-800',
-  other:           'bg-gray-100 text-gray-800 dark:bg-gray-800/30 dark:text-gray-400',
+  session:          'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
+  memo:             'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-400',
+  appeal:           'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400',
+  notification:     'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-400',
+  notice:           'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400',
+  execution:        'bg-rose-100 text-rose-800 dark:bg-rose-900/30 dark:text-rose-400',
+  judgment_extract: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400 border-amber-300 dark:border-amber-800',
+  consultation:     'bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-400',
+  legal_procedure:  'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400 border-emerald-300 dark:border-emerald-800',
+  other:            'bg-gray-100 text-gray-800 dark:bg-gray-800/30 dark:text-gray-400',
 };
 
 // ============================================================================
