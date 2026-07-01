@@ -1,14 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
 
-const COOKIE_NAME = 'lawfirm-auth';
-
-export const config = {
-  matcher: [
-    '/((?!_next/static|_next/image|favicon.ico).*)',
-  ],
-};
-
-export async function middleware(request: NextRequest) {
+export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // السماح بالوصول لصفحة تسجيل الدخول و API المصادقة و MCP Server
@@ -26,12 +19,17 @@ export async function middleware(request: NextRequest) {
   }
 
   // التحقق من وجود كوكي المصادقة فقط (التحقق الفعلي يتم في API routes)
-  const token = request.cookies.get(COOKIE_NAME)?.value;
+  const token = request.cookies.get('lawfirm-auth')?.value;
 
   if (!token) {
-    const loginUrl = new URL('/login', request.url);
-    return NextResponse.redirect(loginUrl);
+    return NextResponse.redirect(new URL('/login', request.url));
   }
 
   return NextResponse.next();
 }
+
+export const config = {
+  matcher: [
+    '/((?!_next/static|_next/image|favicon.ico).*)',
+  ],
+};
