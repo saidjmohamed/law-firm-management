@@ -1221,7 +1221,7 @@ export function Cases() {
                            s.status === 'postponed' ? 'مؤجلة' :
                            s.status === 'cancelled' ? 'ملغاة' : 'مجدولة'}
                         </Badge>
-                        <span className="text-sm font-semibold tabular-nums">{formatDate(s.date)}</span>
+                        <span className="text-sm font-semibold tabular-nums"><DateDisplay value={s.date as any} /></span>
                         {s.time && <span className="text-xs text-muted-foreground">{s.time}</span>}
                       </div>
                     </div>
