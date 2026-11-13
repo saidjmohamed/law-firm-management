@@ -12,11 +12,11 @@ import { PaymentsManager } from '@/components/payments';
 import { BackupManager } from '@/components/backup';
 import { SettingsManager } from '@/components/settings';
 import { TasksManager } from '@/components/tasks';
-import { SessionsManager } from '@/components/sessions';
+import { Sessions } from '@/components/sessions';
 import { CalendarView } from '@/components/calendar';
 import { DelaysManager } from '@/components/delays';
 import { ArchivesManager } from '@/components/archives';
-import { ConverterManager } from '@/components/converter';
+import { Converter } from '@/components/converter';
 import { Loader2, AlertTriangle, RefreshCw } from 'lucide-react';
 
 interface ErrorBoundaryProps {
