@@ -4,11 +4,16 @@ type Section =
   | 'dashboard'
   | 'clients'
   | 'cases'
+  | 'sessions'
+  | 'calendar'
+  | 'delays'
   | 'tasks'
   | 'payments'
   | 'lawyers'
   | 'courts'
   | 'backup'
+  | 'archives'
+  | 'converter'
   | 'settings';
 
 interface AppState {
