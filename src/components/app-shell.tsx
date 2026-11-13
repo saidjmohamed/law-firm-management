@@ -1,8 +1,9 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useAppStore, type Section } from '@/lib/store';
 import { useTheme } from 'next-themes';
+import { cn } from '@/lib/utils';
 import {
   LayoutDashboard,
   Users,
@@ -15,248 +16,191 @@ import {
   Moon,
   Sun,
   LogOut,
-  BookOpen,
-  Gavel,
   ListChecks,
+  CalendarDays,
+  Calendar,
+  Clock,
+  Archive,
+  ArrowLeftRight,
+  Landmark,
+  UserCheck,
+  X,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/sheet';
-import { Separator } from '@/components/ui/separator';
-import { Badge } from '@/components/ui/badge';
-import { GlobalSearch } from '@/components/global-search';
-import { DailyTasksDialog } from '@/components/daily-tasks-dialog';
-import { useRouter } from 'next/navigation';
 
-const APP_NAME = 'مكتب الأستاذ سايج محمد';
-const APP_SUBTITLE = 'محام لدى المجلس';
-
-const navItems: { id: Section; label: string; icon: React.ElementType; hint?: string }[] = [
-  { id: 'dashboard', label: 'لوحة التحكم', icon: LayoutDashboard, hint: 'نظرة عامة' },
-  { id: 'clients', label: 'الموكلون', icon: Users },
-  { id: 'cases', label: 'القضايا', icon: Briefcase },
-  { id: 'tasks', label: 'المهام والإجراءات', icon: ListChecks, hint: 'المهام والآجال القانونية' },
-  { id: 'courts', label: 'الهيئات القضائية', icon: Scale },
-  { id: 'payments', label: 'المدفوعات', icon: Banknote },
-  { id: 'lawyers', label: 'دفتر المحامين', icon: BookOpen },
-  { id: 'backup', label: 'النسخ الاحتياطي', icon: HardDrive },
-  { id: 'settings', label: 'الإعدادات', icon: Settings },
-];
-
-function cn(...inputs: (string | undefined | false)[]) {
-  return inputs.filter(Boolean).join(' ');
+interface NavItem {
+  id: Section;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
 }
 
-function SidebarContent({ activeSection, onNavigate }: { activeSection: Section; onNavigate: (s: Section) => void }) {
-  const router = useRouter();
+const navItems: NavItem[] = [
+  { id: 'dashboard', label: 'لوحة التحكم', icon: LayoutDashboard },
+  { id: 'cases', label: 'القضايا والملفات', icon: Briefcase },
+  { id: 'clients', label: 'الموكلون والعملاء', icon: Users },
+  { id: 'sessions', label: 'الجلسات والمواعيد', icon: CalendarDays },
+  { id: 'courts', label: 'المحاكم والجهات', icon: Landmark },
+  { id: 'lawyers', label: 'المحامون والمستشارون', icon: UserCheck },
+  { id: 'payments', label: 'المالية والمدفوعات', icon: Banknote },
+  { id: 'tasks', label: 'المهام والتكليفات', icon: ListChecks },
+  { id: 'calendar', label: 'التقويم والروزنامة', icon: Calendar },
+  { id: 'delays', label: 'الآجال والمهل القانونية', icon: Clock },
+  { id: 'archives', label: 'الأرشيف والمستندات', icon: Archive },
+  { id: 'converter', label: 'محول التواريخ والآجال', icon: ArrowLeftRight },
+  { id: 'backup', label: 'النسخ الاحتياطي', icon: HardDrive },
+  { id: 'settings', label: 'إعدادات المنظومة', icon: Settings },
+];
+
+export function AppShell({ children }: { children: React.ReactNode }) {
+  const { activeTab, setActiveTab } = useAppStore();
+  const { theme, setTheme } = useTheme();
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  const handleNavClick = (id: Section) => {
+    setActiveTab(id);
+    setMobileOpen(false);
+  };
 
   const handleLogout = async () => {
     try {
       await fetch('/api/auth/logout', { method: 'POST' });
-      router.push('/login');
-      router.refresh();
+      window.location.href = '/login';
     } catch {
       window.location.href = '/login';
     }
   };
 
   return (
-    <div className="flex flex-col h-full text-right" dir="rtl">
-      {/* شعار التطبيق */}
-      <div className="p-4 flex items-center gap-3">
-        <div className="relative shrink-0">
-          <div className="w-12 h-12 rounded-xl bg-gradient-primary shadow-card flex items-center justify-center">
-            <Gavel className="w-6 h-6 text-white" />
-          </div>
-          <div className="absolute -bottom-0.5 -left-0.5 w-3.5 h-3.5 rounded-full bg-emerald-500 border-2 border-background" />
-        </div>
-        <div className="min-w-0">
-          <h2 className="font-bold text-foreground text-[15px] leading-tight truncate">{APP_NAME}</h2>
-          <p className="text-[12px] text-muted-foreground mt-0.5">{APP_SUBTITLE}</p>
-        </div>
-      </div>
+    <div dir="rtl" className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
+      <header className="sticky top-0 z-40 w-full h-16 bg-slate-900/90 backdrop-blur-md border-b border-slate-800/80 px-4 md:px-6 flex items-center justify-between shadow-sm">
+        <div className="flex items-center gap-3">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setMobileOpen(!mobileOpen)}
+            className="md:hidden text-slate-300 hover:text-white hover:bg-slate-800"
+            aria-label="فتح القائمة الجانبية"
+          >
+            {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          </Button>
 
-      <div className="divider-gradient mx-3" />
-
-      {/* بحث ذكي */}
-      <div className="px-3 pt-3">
-        <GlobalSearch />
-      </div>
-
-      {/* قائمة التنقل */}
-      <ScrollArea className="flex-1 px-3 py-3 smooth-scroll">
-        <nav className="space-y-1.5">
-          <p className="px-2 pb-1.5 text-[12px] font-semibold text-muted-foreground/70 uppercase tracking-wider">
-            القائمة الرئيسية
-          </p>
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = activeSection === item.id;
-            return (
-              <button
-                key={item.id}
-                onClick={() => onNavigate(item.id)}
-                className={cn(
-                  'group w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-[15px] font-medium transition-all duration-200 text-right',
-                  isActive
-                    ? 'bg-gradient-primary text-white shadow-soft'
-                    : 'text-muted-foreground hover:bg-accent/60 hover:text-foreground'
-                )}
-              >
-                <Icon className={cn(
-                  'w-5 h-5 shrink-0 transition-transform duration-200',
-                  isActive
-                    ? 'text-white'
-                    : 'text-muted-foreground/80 group-hover:text-foreground group-hover:scale-110'
-                )} />
-                <span className="flex-1">{item.label}</span>
-                {isActive && (
-                  <span className="w-2 h-2 rounded-full bg-white/80" />
-                )}
-              </button>
-            );
-          })}
-        </nav>
-      </ScrollArea>
-
-      <div className="divider-gradient mx-3" />
-
-      {/* تذييل */}
-      <div className="p-3 flex items-center justify-between gap-2">
-        <Badge
-          variant="outline"
-          className="text-[12px] font-mono px-2 py-0.5"
-        >
-          v3.0
-        </Badge>
-        <button
-          onClick={handleLogout}
-          className="flex items-center gap-1.5 text-[13px] text-muted-foreground hover:text-destructive transition-colors px-2.5 py-1.5 rounded-md hover:bg-destructive/5"
-        >
-          <LogOut className="w-4 h-4" />
-          <span>تسجيل الخروج</span>
-        </button>
-      </div>
-    </div>
-  );
-}
-
-export function AppShell({ children }: { children: React.ReactNode }) {
-  const { activeSection, setActiveSection, sidebarOpen, setSidebarOpen } = useAppStore();
-  const { theme, setTheme } = useTheme();
-  const [mounted, setMounted] = React.useState(false);
-
-  React.useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  const currentNav = navItems.find((n) => n.id === activeSection);
-
-  return (
-    <div className="min-h-screen flex flex-col overflow-x-hidden bg-background">
-      {/* نافذة منبثقة يومية — تظهر مرة واحدة كل يوم */}
-      <DailyTasksDialog />
-
-      {/* الشريط العلوي - الجوال */}
-      <header className="sticky top-0 z-40 bg-background/85 backdrop-blur-xl border-b border-border/60 lg:hidden">
-        <div className="flex items-center justify-between h-16 px-3">
-          <div className="flex items-center gap-2">
-            <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
-              <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="shrink-0 h-10 w-10">
-                  <Menu className="w-5 h-5" />
-                </Button>
-              </SheetTrigger>
-              <SheetContent
-                side="right"
-                className="w-72 p-0 bg-background border-l"
-              >
-                <SheetTitle className="sr-only">القائمة الرئيسية</SheetTitle>
-                <SidebarContent
-                  activeSection={activeSection}
-                  onNavigate={(s) => {
-                    setActiveSection(s);
-                    setSidebarOpen(false);
-                  }}
-                />
-              </SheetContent>
-            </Sheet>
-            <div className="flex items-center gap-2">
-              <div className="w-9 h-9 rounded-lg bg-gradient-primary shadow-soft flex items-center justify-center">
-                <Gavel className="w-5 h-5 text-white" />
-              </div>
-              <div className="min-w-0">
-                <span className="font-bold text-[13px] leading-tight line-clamp-1 block">{APP_NAME}</span>
-                <span className="text-[11px] text-muted-foreground">{APP_SUBTITLE}</span>
-              </div>
+          <div className="flex items-center gap-2.5">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 to-amber-600 flex items-center justify-center text-slate-950 shadow-md shadow-amber-500/20">
+              <Scale className="w-6 h-6" />
+            </div>
+            <div>
+              <h1 className="text-base font-bold text-slate-100 tracking-tight leading-none">
+                مكتب المحاماة والخدمات القانونية
+              </h1>
+              <p className="text-[11px] text-amber-400 font-medium mt-1">
+                منظومة الإدارة المتكاملة
+              </p>
             </div>
           </div>
-          <div className="flex items-center gap-1">
-            <div className="w-32">
-              <GlobalSearch />
-            </div>
-            {mounted && (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-                className="h-10 w-10"
-                aria-label="تبديل السمة"
-              >
-                {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-              </Button>
-            )}
-          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+            className="text-slate-400 hover:text-amber-400 hover:bg-slate-800 rounded-xl transition-colors"
+            title={theme === 'dark' ? 'الوضع المضيء' : 'الوضع الليلي'}
+          >
+            {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+          </Button>
+
+          <Button
+            variant="ghost"
+            onClick={handleLogout}
+            className="text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-xl gap-2 text-xs font-semibold px-3 py-2 transition-colors"
+          >
+            <LogOut className="w-4 h-4" />
+            <span className="hidden sm:inline">خروج</span>
+          </Button>
         </div>
       </header>
 
-      <div className="flex flex-1 overflow-x-hidden">
-        {/* الشريط الجانبي - سطح المكتب */}
-        <aside className="hidden lg:flex lg:w-72 lg:flex-col lg:fixed lg:inset-y-0 lg:right-0 bg-sidebar border-l border-sidebar-border z-30">
-          <div className="flex items-center justify-between h-16 px-4">
-            <div className="flex items-center gap-2 min-w-0">
-              <div className="w-9 h-9 rounded-lg bg-gradient-primary shadow-soft flex items-center justify-center shrink-0">
-                <Gavel className="w-5 h-5 text-white" />
-              </div>
-              <span className="font-bold text-[15px] text-foreground truncate">{APP_NAME}</span>
-            </div>
-            {mounted && (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-                className="text-muted-foreground hover:text-foreground h-10 w-10 shrink-0"
-                aria-label="تبديل السمة"
-              >
-                {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-              </Button>
-            )}
-          </div>
-          <Separator className="bg-sidebar-border" />
-          <SidebarContent activeSection={activeSection} onNavigate={setActiveSection} />
+      <div className="flex flex-1 relative">
+        <aside className="hidden md:flex flex-col w-64 bg-slate-900 border-l border-slate-800/80 shrink-0 sticky top-16 h-[calc(100vh-4rem)]">
+          <ScrollArea className="flex-1 py-4 px-3">
+            <nav className="space-y-1">
+              {navItems.map((item) => {
+                const Icon = item.icon;
+                const isActive = activeTab === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => handleNavClick(item.id)}
+                    className={cn(
+                      'w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium transition-all duration-150 text-right',
+                      isActive
+                        ? 'bg-amber-500/15 text-amber-400 border border-amber-500/30 shadow-sm font-semibold'
+                        : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+                    )}
+                  >
+                    <Icon className={cn('w-4 h-4 shrink-0', isActive ? 'text-amber-400' : 'text-slate-400')} />
+                    <span className="truncate">{item.label}</span>
+                  </button>
+                );
+              })}
+            </nav>
+          </ScrollArea>
         </aside>
 
-        {/* المحتوى الرئيسي */}
-        <main className="flex-1 lg:mr-72 min-w-0 overflow-x-hidden gradient-mesh">
-          <div className="p-5 md:p-8 max-w-6xl mx-auto">
-            {/* رأس القسم */}
-            {currentNav && (
-              <div className="mb-6 flex items-center gap-3.5 animate-fade-in">
-                <div className="w-12 h-12 rounded-xl bg-gradient-primary shadow-soft flex items-center justify-center shrink-0">
-                  <currentNav.icon className="w-6 h-6 text-white" />
+        {mobileOpen && (
+          <div className="fixed inset-0 z-50 md:hidden flex">
+            <div
+              className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm transition-opacity"
+              onClick={() => setMobileOpen(false)}
+            />
+
+            <div className="relative w-72 max-w-[80vw] bg-slate-900 border-l border-slate-800 h-full flex flex-col z-10 shadow-2xl mr-auto">
+              <div className="p-4 border-b border-slate-800 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Scale className="w-5 h-5 text-amber-500" />
+                  <span className="font-bold text-sm text-slate-100">القائمة الرئيسية</span>
                 </div>
-                <div className="min-w-0">
-                  <h1 className="text-2xl md:text-3xl font-extrabold leading-tight text-foreground">
-                    {currentNav.label}
-                  </h1>
-                  {currentNav.hint && (
-                    <p className="text-sm text-muted-foreground mt-1">{currentNav.hint}</p>
-                  )}
-                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setMobileOpen(false)}
+                  className="text-slate-400 hover:text-white"
+                >
+                  <X className="w-5 h-5" />
+                </Button>
               </div>
-            )}
-            {children}
+
+              <ScrollArea className="flex-1 p-3">
+                <nav className="space-y-1">
+                  {navItems.map((item) => {
+                    const Icon = item.icon;
+                    const isActive = activeTab === item.id;
+                    return (
+                      <button
+                        key={item.id}
+                        onClick={() => handleNavClick(item.id)}
+                        className={cn(
+                          'w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-xs font-medium transition-all text-right',
+                          isActive
+                            ? 'bg-amber-500/15 text-amber-400 border border-amber-500/30 font-semibold'
+                            : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+                        )}
+                      >
+                        <Icon className={cn('w-4.5 h-4.5 shrink-0', isActive ? 'text-amber-400' : 'text-slate-400')} />
+                        <span className="truncate">{item.label}</span>
+                      </button>
+                    );
+                  })}
+                </nav>
+              </ScrollArea>
+            </div>
           </div>
+        )}
+
+        <main className="flex-1 min-w-0 bg-slate-950 overflow-y-auto">
+          {children}
         </main>
       </div>
     </div>
