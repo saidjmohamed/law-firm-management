@@ -1,17 +1,23 @@
 import type { Metadata, Viewport } from "next";
+import { Cairo } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "next-themes";
 
+const cairo = Cairo({
+  subsets: ["arabic"],
+  variable: "--font-cairo",
+});
+
 export const metadata: Metadata = {
   title: {
-    default: "مكتب الأستاذ سايج محمد — محام لدى المجلس",
-    template: "%s — مكتب الأستاذ سايج محمد",
+    default: "منظومة إدارة مكتب المحاماة",
+    template: "%s - منظومة إدارة مكتب المحاماة",
   },
-  description: "نظام إدارة مكتب محاماة جزائري متكامل — قضايا، موكلون، جلسات، مدفوعات وهيئات قضائية.",
-  applicationName: "مكتب الأستاذ سايج محمد",
-  authors: [{ name: "سايج محمد" }],
-  keywords: ["محاماة", "الجزائر", "إدارة مكتب", "قضايا", "محكمة", "مجلس قضائي"],
+  description: "منظومة متكاملة لإدارة القضايا والجلسات والعملاء للمحامين – مكتب المحاماة",
+  applicationName: "منظومة إدارة مكتب المحاماة",
+  authors: [{ name: "مكتب المحاماة" }],
+  keywords: ["محاماة", "قضايا", "جلسات", "إدارة مكتب", "محامين", "الجزائر"],
   icons: {
     icon: "/icon-192.svg",
     apple: "/icon-192.svg",
@@ -30,8 +36,6 @@ export const viewport: Viewport = {
   ],
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
   viewportFit: "cover",
 };
 
@@ -42,7 +46,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ar" dir="rtl" suppressHydrationWarning>
-      <body className="antialiased bg-background text-foreground font-sans">
+      <body className={`${cairo.className} ${cairo.variable} antialiased bg-background text-foreground font-sans`}>
         <ThemeProvider
           attribute="class"
           defaultTheme="light"
@@ -50,13 +54,7 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           {children}
-          <Toaster
-            position="top-center"
-            dir="rtl"
-            richColors
-            closeButton
-            duration={4000}
-          />
+          <Toaster position="top-center" richColors />
         </ThemeProvider>
       </body>
     </html>
