@@ -112,7 +112,7 @@ function AppContent() {
       case 'clients':
         return <Clients />;
       case 'sessions':
-        return <SessionsManager />;
+        return <Sessions />;
       case 'courts':
         return <CourtsManager />;
       case 'lawyers':
