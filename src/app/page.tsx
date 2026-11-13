@@ -101,10 +101,10 @@ function LoadingScreen() {
 }
 
 function AppContent() {
-  const { activeTab } = useAppStore();
+  const { activeSection } = useAppStore();
 
-  const renderActiveTab = () => {
-    switch (activeTab) {
+  const renderactiveSection = () => {
+    switch (activeSection) {
       case 'dashboard':
         return <Dashboard />;
       case 'cases':
@@ -141,7 +141,7 @@ function AppContent() {
   return (
     <AppShell>
       <main className="w-full h-full min-h-[calc(100vh-4rem)] bg-slate-900">
-        {renderActiveTab()}
+        {renderactiveSection()}
       </main>
     </AppShell>
   );
