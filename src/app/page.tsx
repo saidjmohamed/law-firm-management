@@ -53,13 +53,13 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
         return this.props.fallback;
       }
       return (
-        <div dir="rtl" className="min-h-screen flex items-center justify-center bg-slate-900 text-slate-100 p-6 font-sans">
-          <div className="bg-slate-800/90 border border-slate-700/80 rounded-2xl shadow-2xl p-8 max-w-lg w-full text-center space-y-6">
+        <div dir="rtl" className="min-h-screen flex items-center justify-center bg-background text-foreground p-6 font-sans">
+          <div className="bg-card border border-border rounded-2xl shadow-2xl p-8 max-w-lg w-full text-center space-y-6">
             <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-500/10 border border-red-500/20 text-red-400 mb-2">
               <AlertTriangle className="w-8 h-8" />
             </div>
-            <h2 className="text-xl font-bold text-slate-100">حدث خطأ غير متوقع في التطبيق</h2>
-            <p className="text-sm text-slate-400 leading-relaxed">
+            <h2 className="text-xl font-bold text-foreground">حدث خطأ غير متوقع في التطبيق</h2>
+            <p className="text-sm text-muted-foreground leading-relaxed">
               {this.state.error?.message || 'تم اعتراض خطأ في واجهة المستخدم. نرجو المحاولة مرة أخرى أو تحديث الصفحة.'}
             </p>
             <div className="flex items-center justify-center gap-3 pt-2">
@@ -72,7 +72,7 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
               </button>
               <button
                 onClick={() => window.location.reload()}
-                className="px-5 py-2.5 bg-slate-700 hover:bg-slate-600 text-slate-200 font-semibold rounded-xl transition-all text-sm"
+                className="px-5 py-2.5 bg-secondary hover:bg-accent text-secondary-foreground font-semibold rounded-xl transition-all text-sm"
               >
                 تحديث الصفحة
               </button>
@@ -87,12 +87,12 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
 
 function LoadingScreen() {
   return (
-    <div dir="rtl" className="min-h-screen flex items-center justify-center bg-slate-900 text-slate-100 font-sans">
+    <div dir="rtl" className="min-h-screen flex items-center justify-center bg-background text-foreground font-sans">
       <div className="flex flex-col items-center space-y-4">
         <div className="relative">
           <Loader2 className="w-12 h-12 text-amber-500 animate-spin" />
         </div>
-        <p className="text-sm font-medium text-slate-400 animate-pulse">
+        <p className="text-sm font-medium text-muted-foreground animate-pulse">
           جاري تحميل منظومة إدارة مكتب المحاماة...
         </p>
       </div>
@@ -140,7 +140,7 @@ function AppContent() {
 
   return (
     <AppShell>
-      <main className="w-full h-full min-h-[calc(100vh-4rem)] bg-slate-900">
+      <main className="w-full h-full min-h-[calc(100vh-4rem)] bg-background">
         {renderactiveSection()}
       </main>
     </AppShell>
