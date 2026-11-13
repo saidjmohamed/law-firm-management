@@ -57,12 +57,21 @@ interface AppShellProps {
 }
 
 export function AppShell({ children }: AppShellProps) {
-  const { currentSection, setCurrentSection, logout } = useAppStore();
+  const { activeSection, setActiveSection } = useAppStore();
   const { theme, setTheme } = useTheme();
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const toggleTheme = () => {
     setTheme(theme === 'dark' ? 'light' : 'dark');
+  };
+
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+    } catch {
+      // نتابع إلى صفحة الدخول حتى عند تعذر الاتصال بالخادم.
+    }
+    window.location.assign('/login');
   };
 
   const SidebarContent = () => (
@@ -79,12 +88,12 @@ export function AppShell({ children }: AppShellProps) {
       <nav className="flex-1 overflow-y-auto p-4 space-y-1">
         {navItems.map((item) => {
           const Icon = item.icon;
-          const isActive = currentSection === item.id;
+          const isActive = activeSection === item.id;
           return (
             <button
               key={item.id}
               onClick={() => {
-                setCurrentSection(item.id);
+                setActiveSection(item.id);
                 setMobileOpen(false);
               }}
               className={cn(
@@ -120,7 +129,7 @@ export function AppShell({ children }: AppShellProps) {
         </Button>
         <Button
           variant="destructive"
-          onClick={logout}
+          onClick={handleLogout}
           className="w-full justify-start gap-3 font-semibold shadow-sm"
         >
           <LogOut className="h-4 w-4" />
@@ -157,7 +166,7 @@ export function AppShell({ children }: AppShellProps) {
               </SheetContent>
             </Sheet>
             <h2 className="text-lg font-bold text-foreground hidden sm:block">
-              {navItems.find((item) => item.id === currentSection)?.label || 'لوحة التحكم'}
+              {navItems.find((item) => item.id === activeSection)?.label || 'لوحة التحكم'}
             </h2>
           </div>
 
@@ -180,7 +189,7 @@ export function AppShell({ children }: AppShellProps) {
             <Button
               variant="outline"
               size="icon"
-              onClick={logout}
+              onClick={handleLogout}
               title="تسجيل الخروج"
               className="border-border text-destructive hover:bg-destructive/10"
             >
