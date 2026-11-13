@@ -21,185 +21,176 @@ import {
   Calendar,
   Clock,
   Archive,
-  ArrowLeftRight,
-  Landmark,
-  UserCheck,
-  X,
+  Calculator,
+  Shield,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { GlobalSearch } from '@/components/global-search';
+import { DailyTasksDialog } from '@/components/daily-tasks-dialog';
 
 interface NavItem {
   id: Section;
   label: string;
-  icon: React.ComponentType<{ className?: string }>;
+  icon: React.ElementType;
 }
 
 const navItems: NavItem[] = [
   { id: 'dashboard', label: 'لوحة التحكم', icon: LayoutDashboard },
-  { id: 'cases', label: 'القضايا والملفات', icon: Briefcase },
-  { id: 'clients', label: 'الموكلون والعملاء', icon: Users },
-  { id: 'sessions', label: 'الجلسات والمواعيد', icon: CalendarDays },
-  { id: 'courts', label: 'المحاكم والجهات', icon: Landmark },
-  { id: 'lawyers', label: 'المحامون والمستشارون', icon: UserCheck },
-  { id: 'payments', label: 'المالية والمدفوعات', icon: Banknote },
-  { id: 'tasks', label: 'المهام والتكليفات', icon: ListChecks },
-  { id: 'calendar', label: 'التقويم والروزنامة', icon: Calendar },
-  { id: 'delays', label: 'الآجال والمهل القانونية', icon: Clock },
-  { id: 'archives', label: 'الأرشيف والمستندات', icon: Archive },
-  { id: 'converter', label: 'محول التواريخ والآجال', icon: ArrowLeftRight },
+  { id: 'clients', label: 'الموكلين', icon: Users },
+  { id: 'cases', label: 'القضايا', icon: Briefcase },
+  { id: 'sessions', label: 'الجلسات', icon: CalendarDays },
+  { id: 'tasks', label: 'المهام', icon: ListChecks },
+  { id: 'calendar', label: 'التقويم', icon: Calendar },
+  { id: 'delays', label: 'الآجال والمهل', icon: Clock },
+  { id: 'courts', label: 'الجهات القضائية', icon: Scale },
+  { id: 'payments', label: 'المستحقات والمدفوعات', icon: Banknote },
+  { id: 'lawyers', label: 'المحامون والمساعدون', icon: Shield },
+  { id: 'archives', label: 'الأرشيف', icon: Archive },
+  { id: 'converter', label: 'محول التاريخ / الحسابات', icon: Calculator },
   { id: 'backup', label: 'النسخ الاحتياطي', icon: HardDrive },
-  { id: 'settings', label: 'إعدادات المنظومة', icon: Settings },
+  { id: 'settings', label: 'الإعدادات', icon: Settings },
 ];
 
-export function AppShell({ children }: { children: React.ReactNode }) {
-  const { activeSection: activeTab, setActiveSection: setActiveTab } = useAppStore();
+interface AppShellProps {
+  children: React.ReactNode;
+}
+
+export function AppShell({ children }: AppShellProps) {
+  const { currentSection, setCurrentSection, logout } = useAppStore();
   const { theme, setTheme } = useTheme();
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  const handleNavClick = (id: Section) => {
-    setActiveTab(id);
-    setMobileOpen(false);
+  const toggleTheme = () => {
+    setTheme(theme === 'dark' ? 'light' : 'dark');
   };
 
-  const handleLogout = async () => {
-    try {
-      await fetch('/api/auth/logout', { method: 'POST' });
-      window.location.href = '/login';
-    } catch {
-      window.location.href = '/login';
-    }
-  };
+  const SidebarContent = () => (
+    <div className="flex h-full flex-col bg-card text-card-foreground border-border">
+      <div className="flex h-16 items-center gap-3 border-b border-border px-6">
+        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold text-xl shadow">
+          م
+        </div>
+        <div>
+          <h1 className="text-base font-bold text-foreground tracking-wide">نظام إدارة مكتب المحاماة</h1>
+          <p className="text-xs text-muted-foreground">الإصدار الاحترافي</p>
+        </div>
+      </div>
+      <nav className="flex-1 overflow-y-auto p-4 space-y-1">
+        {navItems.map((item) => {
+          const Icon = item.icon;
+          const isActive = currentSection === item.id;
+          return (
+            <button
+              key={item.id}
+              onClick={() => {
+                setCurrentSection(item.id);
+                setMobileOpen(false);
+              }}
+              className={cn(
+                'flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold transition-all duration-200',
+                isActive
+                  ? 'bg-primary text-primary-foreground shadow-md'
+                  : 'text-foreground hover:bg-accent hover:text-accent-foreground'
+              )}
+            >
+              <Icon className="h-5 w-5 shrink-0" />
+              <span>{item.label}</span>
+            </button>
+          );
+        })}
+      </nav>
+      <div className="border-t border-border p-4 space-y-2">
+        <Button
+          variant="outline"
+          onClick={toggleTheme}
+          className="w-full justify-start gap-3 border-border bg-background text-foreground hover:bg-accent font-medium"
+        >
+          {theme === 'dark' ? (
+            <>
+              <Sun className="h-4 w-4 text-amber-500" />
+              <span>الوضع الفاتح</span>
+            </>
+          ) : (
+            <>
+              <Moon className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+              <span>الوضع الداكن</span>
+            </>
+          )}
+        </Button>
+        <Button
+          variant="destructive"
+          onClick={logout}
+          className="w-full justify-start gap-3 font-semibold shadow-sm"
+        >
+          <LogOut className="h-4 w-4" />
+          <span>تسجيل الخروج</span>
+        </Button>
+      </div>
+    </div>
+  );
 
   return (
-    <div dir="rtl" className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
-      <header className="sticky top-0 z-40 w-full h-16 bg-slate-900/90 backdrop-blur-md border-b border-slate-800/80 px-4 md:px-6 flex items-center justify-between shadow-sm">
-        <div className="flex items-center gap-3">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setMobileOpen(!mobileOpen)}
-            className="md:hidden text-slate-300 hover:text-white hover:bg-slate-800"
-            aria-label="فتح القائمة الجانبية"
-          >
-            {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-          </Button>
+    <div dir="rtl" className="min-h-screen bg-background text-foreground font-sans antialiased">
+      {/* Desktop Sidebar */}
+      <aside className="hidden lg:fixed lg:top-0 lg:right-0 lg:bottom-0 lg:z-40 lg:flex lg:w-72 lg:flex-col lg:border-l lg:border-border">
+        <SidebarContent />
+      </aside>
 
-          <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 to-amber-600 flex items-center justify-center text-slate-950 shadow-md shadow-amber-500/20">
-              <Scale className="w-6 h-6" />
-            </div>
-            <div>
-              <h1 className="text-base font-bold text-slate-100 tracking-tight leading-none">
-                مكتب المحاماة والخدمات القانونية
-              </h1>
-              <p className="text-[11px] text-amber-400 font-medium mt-1">
-                منظومة الإدارة المتكاملة
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-            className="text-slate-400 hover:text-amber-400 hover:bg-slate-800 rounded-xl transition-colors"
-            title={theme === 'dark' ? 'الوضع المضيء' : 'الوضع الليلي'}
-          >
-            {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-          </Button>
-
-          <Button
-            variant="ghost"
-            onClick={handleLogout}
-            className="text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-xl gap-2 text-xs font-semibold px-3 py-2 transition-colors"
-          >
-            <LogOut className="w-4 h-4" />
-            <span className="hidden sm:inline">خروج</span>
-          </Button>
-        </div>
-      </header>
-
-      <div className="flex flex-1 relative">
-        <aside className="hidden md:flex flex-col w-64 bg-slate-900 border-l border-slate-800/80 shrink-0 sticky top-16 h-[calc(100vh-4rem)]">
-          <ScrollArea className="flex-1 py-4 px-3">
-            <nav className="space-y-1">
-              {navItems.map((item) => {
-                const Icon = item.icon;
-                const isActive = activeTab === item.id;
-                return (
-                  <button
-                    key={item.id}
-                    onClick={() => handleNavClick(item.id)}
-                    className={cn(
-                      'w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium transition-all duration-150 text-right',
-                      isActive
-                        ? 'bg-amber-500/15 text-amber-400 border border-amber-500/30 shadow-sm font-semibold'
-                        : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
-                    )}
-                  >
-                    <Icon className={cn('w-4 h-4 shrink-0', isActive ? 'text-amber-400' : 'text-slate-400')} />
-                    <span className="truncate">{item.label}</span>
-                  </button>
-                );
-              })}
-            </nav>
-          </ScrollArea>
-        </aside>
-
-        {mobileOpen && (
-          <div className="fixed inset-0 z-50 md:hidden flex">
-            <div
-              className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm transition-opacity"
-              onClick={() => setMobileOpen(false)}
-            />
-
-            <div className="relative w-72 max-w-[80vw] bg-slate-900 border-l border-slate-800 h-full flex flex-col z-10 shadow-2xl mr-auto">
-              <div className="p-4 border-b border-slate-800 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Scale className="w-5 h-5 text-amber-500" />
-                  <span className="font-bold text-sm text-slate-100">القائمة الرئيسية</span>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setMobileOpen(false)}
-                  className="text-slate-400 hover:text-white"
-                >
-                  <X className="w-5 h-5" />
+      {/* Main Container */}
+      <div className="flex flex-col min-h-screen lg:mr-72">
+        {/* Top Bar */}
+        <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border bg-card px-4 lg:px-8 shadow-sm">
+          <div className="flex items-center gap-3">
+            <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+              <SheetTrigger asChild>
+                <Button variant="outline" size="icon" className="lg:hidden border-border">
+                  <Menu className="h-5 w-5" />
+                  <span className="sr-only">فتح القائمة</span>
                 </Button>
-              </div>
-
-              <ScrollArea className="flex-1 p-3">
-                <nav className="space-y-1">
-                  {navItems.map((item) => {
-                    const Icon = item.icon;
-                    const isActive = activeTab === item.id;
-                    return (
-                      <button
-                        key={item.id}
-                        onClick={() => handleNavClick(item.id)}
-                        className={cn(
-                          'w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-xs font-medium transition-all text-right',
-                          isActive
-                            ? 'bg-amber-500/15 text-amber-400 border border-amber-500/30 font-semibold'
-                            : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
-                        )}
-                      >
-                        <Icon className={cn('w-4.5 h-4.5 shrink-0', isActive ? 'text-amber-400' : 'text-slate-400')} />
-                        <span className="truncate">{item.label}</span>
-                      </button>
-                    );
-                  })}
-                </nav>
-              </ScrollArea>
-            </div>
+              </SheetTrigger>
+              <SheetContent side="right" className="w-72 p-0 border-l border-border bg-card">
+                <SheetHeader className="sr-only">
+                  <SheetTitle>القائمة الجانبية</SheetTitle>
+                </SheetHeader>
+                <SidebarContent />
+              </SheetContent>
+            </Sheet>
+            <h2 className="text-lg font-bold text-foreground hidden sm:block">
+              {navItems.find((item) => item.id === currentSection)?.label || 'لوحة التحكم'}
+            </h2>
           </div>
-        )}
 
-        <main className="flex-1 min-w-0 bg-slate-950 overflow-y-auto">
+          <div className="flex items-center gap-3">
+            <GlobalSearch />
+            <DailyTasksDialog />
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={toggleTheme}
+              title="تبديل المظهر"
+              className="border-border text-foreground hover:bg-accent"
+            >
+              {theme === 'dark' ? (
+                <Sun className="h-5 w-5 text-amber-500" />
+              ) : (
+                <Moon className="h-5 w-5 text-indigo-600" />
+              )}
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={logout}
+              title="تسجيل الخروج"
+              className="border-border text-destructive hover:bg-destructive/10"
+            >
+              <LogOut className="h-5 w-5" />
+            </Button>
+          </div>
+        </header>
+
+        {/* Main Content */}
+        <main className="flex-1 p-4 lg:p-8 bg-background">
           {children}
         </main>
       </div>
