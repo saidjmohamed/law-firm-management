@@ -53,7 +53,7 @@ const navItems: NavItem[] = [
 ];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
-  const { activeTab, setActiveTab } = useAppStore();
+  const { activeSection: activeTab, setActiveSection: setActiveTab } = useAppStore();
   const { theme, setTheme } = useTheme();
   const [mobileOpen, setMobileOpen] = useState(false);
 
