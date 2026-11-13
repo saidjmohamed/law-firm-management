@@ -128,7 +128,7 @@ function AppContent() {
       case 'archives':
         return <ArchivesManager />;
       case 'converter':
-        return <ConverterManager />;
+        return <Converter />;
       case 'backup':
         return <BackupManager />;
       case 'settings':
