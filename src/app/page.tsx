@@ -12,11 +12,13 @@ import { PaymentsManager } from '@/components/payments';
 import { BackupManager } from '@/components/backup';
 import { SettingsManager } from '@/components/settings';
 import { TasksManager } from '@/components/tasks';
+import { SessionsManager } from '@/components/sessions';
+import { CalendarView } from '@/components/calendar';
+import { DelaysManager } from '@/components/delays';
+import { ArchivesManager } from '@/components/archives';
+import { ConverterManager } from '@/components/converter';
+import { Loader2, AlertTriangle, RefreshCw } from 'lucide-react';
 
-
-// ============================================================================
-// Error Boundary
-// ============================================================================
 interface ErrorBoundaryProps {
   children: React.ReactNode;
   fallback?: React.ReactNode;
@@ -38,10 +40,10 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error('[ErrorBoundary] Caught error:', error, errorInfo);
+    console.error('App ErrorBoundary caught an error:', error, errorInfo);
   }
 
-  handleRetry = () => {
+  handleReset = () => {
     this.setState({ hasError: false, error: null });
   };
 
@@ -51,27 +53,26 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
         return this.props.fallback;
       }
       return (
-        <div className="min-h-screen flex items-center justify-center bg-background p-4" dir="rtl">
-          <div className="max-w-md w-full text-center space-y-4">
-            <div className="w-16 h-16 mx-auto rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
-              <svg className="w-8 h-8 text-red-600 dark:text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
-              </svg>
+        <div dir="rtl" className="min-h-screen flex items-center justify-center bg-slate-900 text-slate-100 p-6 font-sans">
+          <div className="bg-slate-800/90 border border-slate-700/80 rounded-2xl shadow-2xl p-8 max-w-lg w-full text-center space-y-6">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-500/10 border border-red-500/20 text-red-400 mb-2">
+              <AlertTriangle className="w-8 h-8" />
             </div>
-            <h2 className="text-xl font-bold text-foreground">حدث خطأ غير متوقع</h2>
-            <p className="text-sm text-muted-foreground">
-              {this.state.error?.message || 'يرجى تحديث الصفحة والمحاولة مرة أخرى'}
+            <h2 className="text-xl font-bold text-slate-100">حدث خطأ غير متوقع في التطبيق</h2>
+            <p className="text-sm text-slate-400 leading-relaxed">
+              {this.state.error?.message || 'تم اعتراض خطأ في واجهة المستخدم. نرجو المحاولة مرة أخرى أو تحديث الصفحة.'}
             </p>
-            <div className="flex gap-3 justify-center">
+            <div className="flex items-center justify-center gap-3 pt-2">
               <button
-                onClick={this.handleRetry}
-                className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors text-sm font-medium"
+                onClick={this.handleReset}
+                className="px-5 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-semibold rounded-xl transition-all shadow-md flex items-center gap-2 text-sm"
               >
-                إعادة المحاولة
+                <RefreshCw className="w-4 h-4" />
+                <span>إعادة المحاولة</span>
               </button>
               <button
                 onClick={() => window.location.reload()}
-                className="px-4 py-2 border border-border rounded-lg hover:bg-muted transition-colors text-sm font-medium"
+                className="px-5 py-2.5 bg-slate-700 hover:bg-slate-600 text-slate-200 font-semibold rounded-xl transition-all text-sm"
               >
                 تحديث الصفحة
               </button>
@@ -80,40 +81,78 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
         </div>
       );
     }
-
     return this.props.children;
   }
 }
 
-// ============================================================================
-// Main App
-// ============================================================================
-function AppContent() {
-  const activeSection = useAppStore((s) => s.activeSection);
-
-  const sections: Record<string, React.ReactNode> = {
-    dashboard: <Dashboard />,
-    clients: <Clients />,
-    cases: <Cases />,
-    tasks: <TasksManager />,
-    courts: <CourtsManager />,
-    lawyers: <Lawyers />,
-    payments: <PaymentsManager />,
-    backup: <BackupManager />,
-    settings: <SettingsManager />,
-  };
-
+function LoadingScreen() {
   return (
-    <AppShell>{sections[activeSection] ?? <Dashboard />}</AppShell>
+    <div dir="rtl" className="min-h-screen flex items-center justify-center bg-slate-900 text-slate-100 font-sans">
+      <div className="flex flex-col items-center space-y-4">
+        <div className="relative">
+          <Loader2 className="w-12 h-12 text-amber-500 animate-spin" />
+        </div>
+        <p className="text-sm font-medium text-slate-400 animate-pulse">
+          جاري تحميل منظومة إدارة مكتب المحاماة...
+        </p>
+      </div>
+    </div>
   );
 }
 
-export default function Home() {
+function AppContent() {
+  const { activeTab } = useAppStore();
+
+  const renderActiveTab = () => {
+    switch (activeTab) {
+      case 'dashboard':
+        return <Dashboard />;
+      case 'cases':
+        return <Cases />;
+      case 'clients':
+        return <Clients />;
+      case 'sessions':
+        return <SessionsManager />;
+      case 'courts':
+        return <CourtsManager />;
+      case 'lawyers':
+        return <Lawyers />;
+      case 'payments':
+        return <PaymentsManager />;
+      case 'tasks':
+        return <TasksManager />;
+      case 'calendar':
+        return <CalendarView />;
+      case 'delays':
+        return <DelaysManager />;
+      case 'archives':
+        return <ArchivesManager />;
+      case 'converter':
+        return <ConverterManager />;
+      case 'backup':
+        return <BackupManager />;
+      case 'settings':
+        return <SettingsManager />;
+      default:
+        return <Dashboard />;
+    }
+  };
+
+  return (
+    <AppShell>
+      <main className="w-full h-full min-h-[calc(100vh-4rem)] bg-slate-900">
+        {renderActiveTab()}
+      </main>
+    </AppShell>
+  );
+}
+
+export default function MainPage() {
   return (
     <ErrorBoundary>
-      <ErrorBoundary>
+      <React.Suspense fallback={<LoadingScreen />}>
         <AppContent />
-      </ErrorBoundary>
+      </React.Suspense>
     </ErrorBoundary>
   );
 }
