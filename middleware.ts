@@ -3,28 +3,29 @@ import type { NextRequest } from "next/server";
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  const hasAuth = request.cookies.has("lawfirm-auth");
 
-  // السماح بالوصول لصفحة تسجيل الدخول و API المصادقة و MCP Server
+  if (pathname === "/login") {
+    if (hasAuth) {
+      return NextResponse.redirect(new URL("/", request.url));
+    }
+    return NextResponse.next();
+  }
+
   if (
-    pathname === "/login" ||
-    pathname.startsWith("/api/auth/") ||
-    pathname === "/api/auth" ||
+    pathname.startsWith("/api/auth") ||
     pathname.startsWith("/api/mcp")
   ) {
     return NextResponse.next();
   }
 
-  // السماح بالملفات الثابتة
   if (
     pathname.startsWith("/_next") ||
     pathname.startsWith("/favicon") ||
-    pathname.includes(".")
+    /\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js|woff|woff2|ttf|json)$/i.test(pathname)
   ) {
     return NextResponse.next();
   }
-
-  // التحقق من وجود كوكي المصادقة فقط
-  const hasAuth = request.cookies.has("lawfirm-auth");
 
   if (!hasAuth) {
     return NextResponse.redirect(new URL("/login", request.url));
