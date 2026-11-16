@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { Calendar as CalendarIcon } from 'lucide-react';
+import { Calendar as CalendarIcon, FileDown } from 'lucide-react';
 import { useCases, useClients, useParties, useDelays, useSessions, useJudicialBodies, useLawyers, useTasks, createCase, updateCase, deleteCase as apiDeleteCase, createParty, updateParty as apiUpdateParty, deleteParty as apiDeleteParty, createDelay, updateDelay as apiUpdateDelay, deleteDelay as apiDeleteDelay, createClient, createJudicialBody, createArchive, syncPartiesToClients } from '@/lib/api';
 import { mutate } from 'swr';
 import { formatCurrency, STATUS_COLORS, CASE_NATURES, CASE_STATUSES, LITIGATION_STAGES, PARTY_ROLES, JUDICIAL_CHAMBERS, WILAYAS, JUDICIARY_TYPES, ORDINARY_COURT_LEVELS, ADMIN_COURT_LEVELS, CHAMBER_NUMBERS, formatDate } from '@/lib/constants';
@@ -955,6 +955,76 @@ export function Cases() {
                   sessions={caseSessions || []}
                   courtPhones={judicialBodies?.find(b => b.id === selectedCase.courtId)?.phones}
                 />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="touch-target"
+                  onClick={() => {
+                    const date = (value: unknown) => {
+                      if (!value) return '—';
+                      const parsed = new Date(String(value));
+                      return Number.isNaN(parsed.getTime()) ? String(value) : parsed.toLocaleString('ar-DZ');
+                    };
+                    const lines = [
+                      `# ملف القضية ${selectedCase.caseNumber || selectedCase.id}`,
+                      '',
+                      `- **رقم القضية:** ${selectedCase.caseNumber || '—'}`,
+                      `- **الموضوع:** ${selectedCase.subject || '—'}`,
+                      `- **الموكل:** ${selectedCase.client?.name || clientMap[selectedCase.clientId || 0]?.name || '—'}`,
+                      `- **الحالة:** ${selectedCase.status || '—'}`,
+                      `- **طبيعة القضية:** ${selectedCase.caseNature || '—'}`,
+                      `- **مرحلة التقاضي:** ${selectedCase.litigationStage || '—'}`,
+                      `- **الجهة القضائية:** ${selectedCase.courtName || selectedCase.councilName || '—'}`,
+                      `- **الغرفة:** ${selectedCase.chamber || '—'}`,
+                      `- **تاريخ التسجيل:** ${date(selectedCase.registrationDate)}`,
+                      `- **الجلسة الأولى:** ${date(selectedCase.firstSessionDate)}`,
+                      `- **تاريخ المداولة:** ${date(selectedCase.delibDate)}`,
+                      `- **آخر تحديث في التطبيق:** ${date(selectedCase.updatedAt)}`,
+                      '',
+                      '## الملاحظات',
+                      selectedCase.notes || 'لا توجد ملاحظات.',
+                      '',
+                      '## الحكم',
+                      selectedCase.judgment || 'لا توجد بيانات حكم.',
+                      '',
+                      '## الأطراف',
+                      ...(caseParties || []).flatMap((party: any) => [
+                        `### ${party.name || 'طرف'}`,
+                        `- الصفة: ${party.role || '—'}`,
+                        `- الجهة: ${party.side === 'against' ? 'ضده' : 'في حقه'}`,
+                        `- الهاتف: ${party.phone || '—'}`,
+                        `- المحامي: ${party.lawyerName || '—'}`,
+                        ''
+                      ]),
+                      '## التأجيلات',
+                      ...(caseDelays || []).flatMap((delay: any) => [
+                        `- ${date(delay.delayDate)} — ${delay.reason || 'دون سبب محدد'}${delay.notes ? ` — ${delay.notes}` : ''}`
+                      ]),
+                      '',
+                      '## الجلسات',
+                      ...(caseSessions || []).flatMap((session: any) => [
+                        `- ${date(session.date)} ${session.time || ''} — ${session.court || selectedCase.courtName || ''} — ${session.result || session.status || ''}${session.notes ? ` — ${session.notes}` : ''}`
+                      ]),
+                      '',
+                      '---',
+                      `تم إنشاء هذه النسخة بتاريخ: ${new Date().toLocaleString('ar-DZ')}`,
+                      ''
+                    ];
+                    const blob = new Blob(['\\uFEFF' + lines.join('\\n')], { type: 'text/markdown;charset=utf-8' });
+                    const url = URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = `case-${selectedCase.id}-latest.md`;
+                    document.body.appendChild(link);
+                    link.click();
+                    link.remove();
+                    URL.revokeObjectURL(url);
+                    toast.success('تم إنشاء ملف Markdown بآخر بيانات القضية');
+                  }}
+                >
+                  <FileDown className="w-3 h-3 ml-1" />
+                  تصدير MD
+                </Button>
                 <CaseAnnouncementButton
                   caseData={selectedCase}
                   parties={caseParties || []}
