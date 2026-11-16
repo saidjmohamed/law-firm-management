@@ -965,12 +965,26 @@ export function Cases() {
                       const parsed = new Date(String(value));
                       return Number.isNaN(parsed.getTime()) ? String(value) : parsed.toLocaleString('ar-DZ');
                     };
+                    const clientName = selectedCase.client?.name || clientMap[selectedCase.clientId || 0]?.name || 'موكل غير محدد';
+                    const caseNumber = selectedCase.caseNumber || `بدون-رقم-${selectedCase.id}`;
+                    const safeFilePart = (value: string) => value.trim().replace(/[\\\\/:*?"<>|]/g, '-').replace(/\\s+/g, '-').replace(/-+/g, '-').slice(0, 90) || 'غير-محدد';
+                    const fileName = `${safeFilePart(clientName)} - ${safeFilePart(caseNumber)}.md`;
                     const lines = [
-                      `# ملف القضية ${selectedCase.caseNumber || selectedCase.id}`,
+                      `# ملف القضية: ${caseNumber}`,
                       '',
-                      `- **رقم القضية:** ${selectedCase.caseNumber || '—'}`,
+                      '## بيانات الفهرسة والبحث في Google Drive',
+                      `- اسم الموكل: ${clientName}`,
+                      `- رقم القضية: ${caseNumber}`,
+                      `- رقم القضية الأصلية: ${selectedCase.origCaseNumber || '—'}`,
+                      `- موضوع القضية: ${selectedCase.subject || '—'}`,
+                      `- الجهة القضائية: ${selectedCase.courtName || selectedCase.councilName || '—'}`,
+                      `- الغرفة: ${selectedCase.chamber || '—'}`,
+                      `- الحالة: ${selectedCase.status || '—'}`,
+                      `- المعرّف الداخلي للقضية: ${selectedCase.id}`,
+                      '',
+                      `- **رقم القضية:** ${caseNumber}`,
                       `- **الموضوع:** ${selectedCase.subject || '—'}`,
-                      `- **الموكل:** ${selectedCase.client?.name || clientMap[selectedCase.clientId || 0]?.name || '—'}`,
+                      `- **الموكل:** ${clientName}`,
                       `- **الحالة:** ${selectedCase.status || '—'}`,
                       `- **طبيعة القضية:** ${selectedCase.caseNature || '—'}`,
                       `- **مرحلة التقاضي:** ${selectedCase.litigationStage || '—'}`,
@@ -1014,12 +1028,12 @@ export function Cases() {
                     const url = URL.createObjectURL(blob);
                     const link = document.createElement('a');
                     link.href = url;
-                    link.download = `case-${selectedCase.id}-latest.md`;
+                    link.download = fileName;
                     document.body.appendChild(link);
                     link.click();
                     link.remove();
                     URL.revokeObjectURL(url);
-                    toast.success('تم إنشاء ملف Markdown بآخر بيانات القضية');
+                    toast.success(`تم تصدير ملف القضية: ${fileName}`);
                   }}
                 >
                   <FileDown className="w-3 h-3 ml-1" />
