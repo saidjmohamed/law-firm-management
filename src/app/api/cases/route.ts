@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    return NextResponse.json(newCase, { status: 201 });
+    if (newCase.clientId) { try { const { queueDriveSync, processDriveSyncQueue } = await import('@/lib/google-drive'); await queueDriveSync('client', newCase.clientId, 'case-created'); await queueDriveSync('case', newCase.id, 'created'); await processDriveSyncQueue(); } catch (e) { console.error('Drive sync queued after case creation:', e); } }\n    else { try { const { queueDriveSync, processDriveSyncQueue } = await import('@/lib/google-drive'); await queueDriveSync('case', newCase.id, 'created'); await processDriveSyncQueue(); } catch (e) { console.error('Drive sync queued after case creation:', e); } }\n\n    return NextResponse.json(newCase, { status: 201 });
   } catch {
     return NextResponse.json(
       { error: 'حدث خطأ في الخادم' },
