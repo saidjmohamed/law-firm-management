@@ -145,7 +145,7 @@ interface CaseType {
   caseResult?: string | null; // 'won' | 'lost' | null
   createdAt: string;
   updatedAt: string;
-  client?: { id: number; name?: string };
+  client?: { id: number; name?: string; googleDriveFolderId?: string | null };
   parties?: PartyType[];
   delays?: DelayType[];
   sessions?: SessionType[];
@@ -155,6 +155,7 @@ interface ClientType {
   id: number;
   name?: string;
   phone?: string;
+  googleDriveFolderId?: string | null;
 }
 
 interface JudicialBodyType {
