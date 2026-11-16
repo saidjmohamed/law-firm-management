@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    return NextResponse.json(delay, { status: 201 });
+    try { const { queueDriveSync, processDriveSyncQueue } = await import('@/lib/google-drive'); await queueDriveSync('case', delay.caseId, 'delay-created'); await processDriveSyncQueue(); } catch (e) { console.error('Drive sync after delay creation:', e); }\n    return NextResponse.json(delay, { status: 201 });
   } catch (error) {
     console.error('Error creating delay:', error);
     return NextResponse.json({ error: 'Failed to create delay' }, { status: 500 });
