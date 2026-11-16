@@ -1,6 +1,8 @@
+import { requireDriveAuth } from '@/lib/drive-auth';
 import { NextRequest, NextResponse } from 'next/server';
 import { driveApi, setDriveRootFolder } from '@/lib/google-drive';
 export async function GET(request: NextRequest) {
+  const denied = await requireDriveAuth(); if (denied) return denied;
   try {
     const parent = request.nextUrl.searchParams.get('parent') || 'root';
     const q = `'${parent}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`;
@@ -11,6 +13,7 @@ export async function GET(request: NextRequest) {
   }
 }
 export async function POST(request: NextRequest) {
+  const denied = await requireDriveAuth(); if (denied) return denied;
   try {
     const { folderId } = await request.json();
     if (typeof folderId !== 'string' || !folderId) return NextResponse.json({ error: 'معرّف المجلد مطلوب' }, { status: 400 });
