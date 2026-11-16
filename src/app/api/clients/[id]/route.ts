@@ -19,7 +19,7 @@ export async function GET(
       );
     }
 
-    return NextResponse.json(client);
+    try { const { queueDriveSync, processDriveSyncQueue } = await import('@/lib/google-drive'); await queueDriveSync('client', client.id, 'updated'); await processDriveSyncQueue(); } catch (e) { console.error('Drive sync after client update:', e); }\n    return NextResponse.json(client);
   } catch {
     return NextResponse.json(
       { error: 'حدث خطأ في الخادم' },
