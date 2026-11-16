@@ -1,7 +1,9 @@
+import { requireDriveAuth } from '@/lib/drive-auth';
 import { NextRequest, NextResponse } from 'next/server';
 import { googleDriveConfig, saveDriveConnection } from '@/lib/google-drive';
 export const runtime = 'nodejs';
 export async function GET(request: NextRequest) {
+  const denied = await requireDriveAuth(); if (denied) return NextResponse.redirect(new URL('/login', request.url));
   try {
     googleDriveConfig();
     const code = request.nextUrl.searchParams.get('code');
