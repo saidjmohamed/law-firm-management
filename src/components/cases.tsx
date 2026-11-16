@@ -967,7 +967,7 @@ export function Cases() {
                     };
                     const clientName = selectedCase.client?.name || clientMap[selectedCase.clientId || 0]?.name || 'موكل غير محدد';
                     const caseNumber = selectedCase.caseNumber || `بدون-رقم-${selectedCase.id}`;
-                    const safeFilePart = (value: string) => value.trim().replace(/[\\\\/:*?"<>|]/g, '-').replace(/\\s+/g, '-').replace(/-+/g, '-').slice(0, 90) || 'غير-محدد';
+                    const safeFilePart = (value: string) => value.trim().replace(/[\\/:*?"<>|]/g, '-').replace(/\s+/g, '-').replace(/-+/g, '-').slice(0, 90) || 'غير-محدد';
                     const fileName = `${safeFilePart(clientName)} - ${safeFilePart(caseNumber)}.md`;
                     const lines = [
                       `# ملف القضية: ${caseNumber}`,
