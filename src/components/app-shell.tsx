@@ -153,11 +153,11 @@ export function AppShell({ children }: AppShellProps) {
 
   return (
     <div dir="rtl" className="min-h-screen bg-background text-foreground antialiased">
-      <aside className="fixed inset-y-0 right-0 z-40 hidden w-[272px] flex-col border-l border-sidebar-border bg-sidebar lg:flex">
+      <aside className="fixed inset-y-0 start-0 z-40 hidden w-[272px] flex-col border-e border-sidebar-border bg-sidebar lg:flex">
         <SidebarContent />
       </aside>
 
-      <div className="flex min-h-screen flex-col lg:mr-[272px]">
+      <div className="flex min-h-screen flex-col lg:ms-[272px]">
         <header className="sticky top-0 z-30 flex h-[68px] items-center justify-between border-b border-border/80 bg-background/95 px-4 backdrop-blur-sm sm:px-6 lg:px-8">
           <div className="flex min-w-0 items-center gap-3">
             <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
