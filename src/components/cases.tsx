@@ -970,7 +970,7 @@ export function Cases() {
                     const clientName = clientRecord?.name || 'موكل غير محدد';
                     const driveFolderId = clientRecord?.googleDriveFolderId || '';
                     const caseNumber = selectedCase.caseNumber || `بدون-رقم-${selectedCase.id}`;
-                    const safeFilePart = (value: string) => value.trim().replace(/[\\\\/:*?"<>|]/g, '-').replace(/\\s+/g, '-').replace(/-+/g, '-').slice(0, 90) || 'غير-محدد';
+                    const safeFilePart = (value: string) => value.trim().replaceAll(String.fromCharCode(92), '-').replace(/[/:*?"<>|]/g, '-').replace(/\s+/g, '-').replace(/-+/g, '-').slice(0, 90) || 'غير-محدد';
                     const fileName = `${safeFilePart(clientName)} - ${safeFilePart(caseNumber)}.md`;
                     const caseTasks = (allTasks || []).filter((task: any) => task.relatedCaseId === selectedCase.id);
                     const parties = caseParties || [];
@@ -1077,7 +1077,7 @@ export function Cases() {
                       `> تاريخ التصدير: ${new Date().toLocaleString('ar-DZ')}`,
                       ''
                     ];
-                    const blob = new Blob(['\\uFEFF' + lines.join('\\n')], { type: 'text/markdown;charset=utf-8' });
+                    const blob = new Blob([String.fromCharCode(0xFEFF) + lines.join(String.fromCharCode(10))], { type: 'text/markdown;charset=utf-8' });
                     const url = URL.createObjectURL(blob);
                     const link = document.createElement('a');
                     link.href = url;
