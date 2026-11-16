@@ -295,8 +295,7 @@ export function Dashboard() {
       </div>
 
       {/* ملخص مالي */}
-      <Card className="border-primary/20 dark:border-primary/30 bg-gradient-to-l from-teal-50/80 via-emerald-50/50 to-cyan-50/30 dark:from-teal-950/40 dark:via-emerald-950/30 dark:to-cyan-950/20 shadow-card overflow-hidden relative">
-        <div className="absolute top-0 left-0 w-32 h-32 bg-primary/5 rounded-full -translate-y-1/2 -translate-x-1/2 blur-2xl" />
+      <Card className="border-primary/20 bg-card shadow-sm overflow-hidden">
         <CardContent className="p-5 relative">
           <div className="flex items-center gap-2.5 mb-5">
             <div className="w-9 h-9 rounded-lg bg-primary/15 flex items-center justify-center">
@@ -561,10 +560,10 @@ export function Dashboard() {
                     key={`${item.source}-${item.id}`}
                     className={`p-5 rounded-xl border-2 cursor-pointer transition-all duration-200 hover:shadow-lg hover:scale-[1.02] ${
                       isToday
-                        ? 'bg-red-50 dark:bg-red-900/20 border-red-400 dark:border-red-600 hover:border-red-500 shadow-sm'
+                        ? 'bg-destructive/5 border-destructive/35 hover:border-destructive/60'
                         : isTomorrow
-                          ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-400 dark:border-amber-600 hover:border-amber-500 shadow-sm'
-                          : 'bg-teal-50/80 dark:bg-teal-900/20 border-teal-300 dark:border-teal-700 hover:border-teal-400'
+                          ? 'bg-secondary border-border hover:border-primary/40'
+                          : 'bg-card border-border hover:border-primary/40'
                     }`}
                     onClick={() => {
                       if (item.caseId) {
@@ -575,14 +574,14 @@ export function Dashboard() {
                   >
                     {/* شريط الأيام المتبقية */}
                     <div className="flex items-center justify-between mb-3">
-                      <Badge className={`text-sm font-bold px-3 py-1 ${
+                      <Badge className={`text-xs font-medium px-3 py-1 ${
                         isToday
-                          ? 'bg-red-500 text-white'
+                          ? 'bg-destructive text-destructive-foreground'
                           : isTomorrow
-                            ? 'bg-amber-500 text-white'
-                            : 'bg-teal-600 text-white'
+                            ? 'bg-secondary text-secondary-foreground'
+                            : 'bg-primary text-primary-foreground'
                       }`}>  
-                        {isToday ? '🔔 اليوم' : isTomorrow ? '⏰ غداً' : `بعد ${days.toLocaleString('en-US')} أيام`}
+                        {isToday ? 'اليوم' : isTomorrow ? 'غداً' : `بعد ${days.toLocaleString('en-US')} أيام`}
                       </Badge>
                       <span className="text-sm font-bold tabular-nums text-muted-foreground">
                         <DateDisplay value={dateStr} />
@@ -742,15 +741,15 @@ function StatCard({
   color: string;
 }) {
   const iconClasses: Record<string, string> = {
-    teal: 'bg-teal-100 dark:bg-teal-900/30 text-teal-600 dark:text-teal-400',
-    emerald: 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400',
-    amber: 'bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400',
-    gray: 'bg-gray-100 dark:bg-gray-800/30 text-gray-600 dark:text-gray-400',
-    blue: 'bg-sky-100 dark:bg-sky-900/30 text-sky-600 dark:text-sky-400',
+    teal: 'bg-secondary text-secondary-foreground',
+    emerald: 'bg-secondary text-secondary-foreground',
+    amber: 'bg-secondary text-secondary-foreground',
+    gray: 'bg-secondary text-secondary-foreground',
+    blue: 'bg-secondary text-secondary-foreground',
   };
 
   return (
-    <Card className="stat-card-hover border-border/60 shadow-soft hover:shadow-elevated hover:border-primary/30">
+    <Card className="stat-card-hover border-border shadow-sm hover:border-primary/40">
       <CardContent className="p-5">
         <div className="flex items-start gap-3.5">
           <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 transition-transform duration-200 group-hover:scale-105 ${iconClasses[color]}`}>
