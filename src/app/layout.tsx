@@ -1,12 +1,13 @@
 import type { Metadata, Viewport } from "next";
-import { Cairo } from "next/font/google";
+import { IBM_Plex_Sans_Arabic } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "next-themes";
 
-const cairo = Cairo({
+const ibmPlex = IBM_Plex_Sans_Arabic({
   subsets: ["arabic"],
-  variable: "--font-cairo",
+  variable: "--font-ibm-plex-arabic",
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -31,8 +32,8 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#0d9488" },
-    { media: "(prefers-color-scheme: dark)", color: "#0f172a" },
+    { media: "(prefers-color-scheme: light)", color: "#355c50" },
+    { media: "(prefers-color-scheme: dark)", color: "#171c19" },
   ],
   width: "device-width",
   initialScale: 1,
@@ -46,7 +47,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ar" dir="rtl" suppressHydrationWarning>
-      <body className={`${cairo.className} ${cairo.variable} antialiased bg-background text-foreground font-sans`}>
+      <body className={`${ibmPlex.className} ${ibmPlex.variable} antialiased bg-background text-foreground font-sans`}>
         <ThemeProvider
           attribute="class"
           defaultTheme="light"
