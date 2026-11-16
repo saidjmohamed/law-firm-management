@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    return NextResponse.json(session, { status: 201 });
+    if (session.caseId) { try { const { queueDriveSync, processDriveSyncQueue } = await import('@/lib/google-drive'); await queueDriveSync('case', session.caseId, 'session-created'); await processDriveSyncQueue(); } catch (e) { console.error('Drive sync after session creation:', e); } }\n    return NextResponse.json(session, { status: 201 });
   } catch (error) {
     console.error('Error creating session:', error);
     return NextResponse.json({ error: 'Failed to create session' }, { status: 500 });
