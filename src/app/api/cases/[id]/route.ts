@@ -115,7 +115,7 @@ export async function PUT(
       );
     }
 
-    return NextResponse.json(updatedCase);
+    try { const { queueDriveSync, processDriveSyncQueue } = await import('@/lib/google-drive'); await queueDriveSync('case', updatedCase.id, 'updated'); await processDriveSyncQueue(); } catch (e) { console.error('Drive sync queued after case update:', e); }\n    return NextResponse.json(updatedCase);
   } catch (error: any) {
     console.error('PUT /api/cases/[id] error:', error);
     return NextResponse.json(
@@ -166,7 +166,7 @@ export async function PATCH(
       );
     }
 
-    return NextResponse.json(updatedCase);
+    try { const { queueDriveSync, processDriveSyncQueue } = await import('@/lib/google-drive'); await queueDriveSync('case', updatedCase.id, 'updated'); await processDriveSyncQueue(); } catch (e) { console.error('Drive sync queued after case update:', e); }\n    return NextResponse.json(updatedCase);
   } catch (error: any) {
     console.error('PATCH /api/cases/[id] error:', error);
     return NextResponse.json(
