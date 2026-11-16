@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    return NextResponse.json(client, { status: 201 });
+    try { const { queueDriveSync, processDriveSyncQueue } = await import('@/lib/google-drive'); await queueDriveSync('client', client.id, 'created'); await processDriveSyncQueue(); } catch (e) { console.error('Drive sync after client creation:', e); }\n    return NextResponse.json(client, { status: 201 });
   } catch {
     return NextResponse.json(
       { error: 'حدث خطأ في الخادم' },
