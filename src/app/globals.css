@@ -6,8 +6,8 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: "Segoe UI", Tahoma, "Noto Sans Arabic", "Arial", sans-serif;
-  --font-mono: "Courier New", monospace;
+  --font-sans: "IBM Plex Sans Arabic", "Noto Sans Arabic", sans-serif;
+  --font-mono: "IBM Plex Mono", "Courier New", monospace;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -45,84 +45,111 @@
 }
 
 :root {
-  --background: #f8fafc;
-  --foreground: #0f172a;
-  --card: #ffffff;
-  --card-foreground: #0f172a;
-  --popover: #ffffff;
-  --popover-foreground: #0f172a;
-  --primary: #1e3a8a;
+  color-scheme: light;
+  --background: #f4f4f0;
+  --foreground: #202722;
+  --card: #fffefa;
+  --card-foreground: #202722;
+  --popover: #fffefa;
+  --popover-foreground: #202722;
+  --primary: #355c50;
   --primary-foreground: #ffffff;
-  --secondary: #f1f5f9;
-  --secondary-foreground: #0f172a;
-  --muted: #f1f5f9;
-  --muted-foreground: #475569;
-  --accent: #e2e8f0;
-  --accent-foreground: #0f172a;
-  --destructive: #dc2626;
+  --secondary: #eceee9;
+  --secondary-foreground: #28332d;
+  --muted: #eeefeb;
+  --muted-foreground: #626c65;
+  --accent: #e7ece7;
+  --accent-foreground: #29483e;
+  --destructive: #b54742;
   --destructive-foreground: #ffffff;
-  --border: #cbd5e1;
-  --input: #cbd5e1;
-  --ring: #1e3a8a;
-  --chart-1: #1e3a8a;
-  --chart-2: #0284c7;
-  --chart-3: #0d9488;
-  --chart-4: #d97706;
-  --chart-5: #dc2626;
-  --radius: 0.5rem;
-  --sidebar: #ffffff;
-  --sidebar-foreground: #0f172a;
-  --sidebar-primary: #1e3a8a;
+  --border: #dfe3dc;
+  --input: #d5dbd3;
+  --ring: #527c6d;
+  --chart-1: #355c50;
+  --chart-2: #758b7e;
+  --chart-3: #a58a61;
+  --chart-4: #7d8982;
+  --chart-5: #a65b54;
+  --radius: 0.75rem;
+  --sidebar: #fafaf7;
+  --sidebar-foreground: #202722;
+  --sidebar-primary: #355c50;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #f1f5f9;
-  --sidebar-accent-foreground: #0f172a;
-  --sidebar-border: #cbd5e1;
-  --sidebar-ring: #1e3a8a;
+  --sidebar-accent: #e9eee9;
+  --sidebar-accent-foreground: #29483e;
+  --sidebar-border: #e1e5de;
+  --sidebar-ring: #527c6d;
 }
 
 .dark {
-  --background: #090d16;
-  --foreground: #f8fafc;
-  --card: #111827;
-  --card-foreground: #f8fafc;
-  --popover: #111827;
-  --popover-foreground: #f8fafc;
-  --primary: #3b82f6;
-  --primary-foreground: #ffffff;
-  --secondary: #1f2937;
-  --secondary-foreground: #f8fafc;
-  --muted: #1f2937;
-  --muted-foreground: #cbd5e1;
-  --accent: #374151;
-  --accent-foreground: #f8fafc;
-  --destructive: #ef4444;
-  --destructive-foreground: #ffffff;
-  --border: #334155;
-  --input: #334155;
-  --ring: #3b82f6;
-  --chart-1: #3b82f6;
-  --chart-2: #38bdf8;
-  --chart-3: #2dd4bf;
-  --chart-4: #fbbf24;
-  --chart-5: #f87171;
-  --sidebar: #111827;
-  --sidebar-foreground: #f8fafc;
-  --sidebar-primary: #3b82f6;
-  --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #1f2937;
-  --sidebar-accent-foreground: #f8fafc;
-  --sidebar-border: #334155;
-  --sidebar-ring: #3b82f6;
+  color-scheme: dark;
+  --background: #171c19;
+  --foreground: #e9eee9;
+  --card: #202722;
+  --card-foreground: #e9eee9;
+  --popover: #202722;
+  --popover-foreground: #e9eee9;
+  --primary: #a8c0b2;
+  --primary-foreground: #18231d;
+  --secondary: #29322d;
+  --secondary-foreground: #e5ebe6;
+  --muted: #29322d;
+  --muted-foreground: #a4afa7;
+  --accent: #303d35;
+  --accent-foreground: #e6eee8;
+  --destructive: #d87970;
+  --destructive-foreground: #211817;
+  --border: #354139;
+  --input: #3b4940;
+  --ring: #9ab6a6;
+  --chart-1: #a8c0b2;
+  --chart-2: #819e8d;
+  --chart-3: #c5a77a;
+  --chart-4: #9ba69e;
+  --chart-5: #d28b82;
+  --sidebar: #1c231f;
+  --sidebar-foreground: #e9eee9;
+  --sidebar-primary: #a8c0b2;
+  --sidebar-primary-foreground: #18231d;
+  --sidebar-accent: #29352e;
+  --sidebar-accent-foreground: #e6eee8;
+  --sidebar-border: #354139;
+  --sidebar-ring: #9ab6a6;
 }
 
 @layer base {
   * {
     border-color: var(--border);
   }
+  html {
+    direction: rtl;
+    text-rendering: optimizeLegibility;
+  }
   body {
-    background-color: var(--background);
+    min-height: 100vh;
+    background: var(--background);
     color: var(--foreground);
-    font-feature-settings: "rlig" 1, "calt" 1;
+    font-family: "IBM Plex Sans Arabic", "Noto Sans Arabic", sans-serif;
+    font-size: 15px;
+    line-height: 1.7;
+    letter-spacing: 0;
+    font-feature-settings: "rlig" 1, "calt" 1, "tnum" 1;
+  }
+  button, input, textarea, select {
+    font: inherit;
+    letter-spacing: 0;
+  }
+  button {
+    transition-property: color, background-color, border-color, opacity, box-shadow;
+    transition-duration: 150ms;
+    transition-timing-function: ease-out;
+  }
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+  ::selection {
+    background: color-mix(in srgb, var(--primary) 22%, transparent);
   }
 }
 
@@ -137,23 +164,67 @@
 input,
 textarea,
 select {
-  background-color: var(--background) !important;
+  background-color: var(--card) !important;
   color: var(--foreground) !important;
-  border-color: var(--border) !important;
+  border-color: var(--input) !important;
+}
+
+[data-slot="card"] {
+  border-color: var(--border);
+  border-radius: 12px;
+  box-shadow: 0 1px 2px rgb(24 35 29 / 4%);
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+[data-slot="card"]:hover {
+  box-shadow: 0 3px 10px rgb(24 35 29 / 5%);
+}
+
+[data-slot="card-header"] {
+  gap: 6px;
+}
+
+[data-slot="button"] {
+  border-radius: 9px;
+  box-shadow: none;
+  font-weight: 500;
+}
+
+[data-slot="button"]:active {
+  transform: none;
+}
+
+table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+th {
+  color: var(--muted-foreground);
+  font-weight: 500;
 }
 
 .dark [role="dialog"],
 .dark [role="listbox"],
 .dark [data-radix-popper-content-wrapper] {
-  background-color: #111827 !important;
-  color: #f8fafc !important;
-  border-color: #334155 !important;
+  background-color: #202722 !important;
+  color: #e9eee9 !important;
+  border-color: #354139 !important;
 }
 
 .dark input,
 .dark textarea,
 .dark select {
-  background-color: #111827 !important;
-  color: #f8fafc !important;
-  border-color: #334155 !important;
+  background-color: #202722 !important;
+  color: #e9eee9 !important;
+  border-color: #3b4940 !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
