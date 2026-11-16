@@ -30,48 +30,55 @@ export default function LoginPage() {
         const data = await res.json().catch(() => ({}));
         setError(data.error || 'كلمة المرور غير صحيحة');
       }
-    } catch (err) {
-      setError('حدث خطأ في الاتصال بالخادم');
+    } catch {
+      setError('تعذر الاتصال بالخادم، يرجى المحاولة مجدداً');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div dir="rtl" className="min-h-screen flex items-center justify-center bg-slate-900 text-slate-100 p-4 relative overflow-hidden font-sans">
-      <div className="absolute top-0 right-0 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl -z-0 pointer-events-none" />
-      <div className="absolute bottom-0 left-0 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl -z-0 pointer-events-none" />
+    <main dir="rtl" className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background px-4 py-10 text-foreground">
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-primary" aria-hidden="true" />
+      <div className="relative z-10 w-full max-w-[420px]">
+        <div className="mb-8 text-center">
+          <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-xl bg-primary text-primary-foreground">
+            <Scale className="h-7 w-7" strokeWidth={1.6} />
+          </div>
+          <p className="mb-2 text-xs font-medium text-muted-foreground">مكتب المحاماة</p>
+          <h1 className="text-[22px] font-semibold leading-[1.5] text-foreground">
+            منظومة إدارة مكتب المحاماة
+          </h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            أدخل كلمة المرور للمتابعة إلى النظام
+          </p>
+        </div>
 
-      <div className="w-full max-w-md z-10">
-        <div className="bg-slate-800/80 backdrop-blur-md border border-slate-700/60 rounded-2xl shadow-2xl p-8 space-y-6">
-          <div className="text-center space-y-3">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-500 to-amber-700 text-slate-950 shadow-lg shadow-amber-500/20 mb-2">
-              <Scale className="w-8 h-8" />
+        <section className="rounded-xl border border-border bg-card p-6 shadow-sm sm:p-8">
+          <div className="mb-6 flex items-center gap-3 border-b border-border pb-4">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-secondary text-secondary-foreground">
+              <Lock className="h-[17px] w-[17px]" />
             </div>
-            <h1 className="text-xl font-bold tracking-wide text-amber-400">
-              منظومة إدارة مكتب المحاماة والاستشارات القانونية
-            </h1>
-            <p className="text-sm text-slate-400">
-              يرجى إدخال كلمة المرور للوصول إلى النظام
-            </p>
+            <div>
+              <h2 className="text-sm font-semibold text-foreground">تسجيل الدخول</h2>
+              <p className="text-xs text-muted-foreground">الوصول محمي بكلمة مرور</p>
+            </div>
           </div>
 
           {error && (
-            <div className="p-3.5 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-sm flex items-center gap-2">
-              <ShieldCheck className="w-4 h-4 shrink-0 text-red-400" />
+            <div role="alert" className="mb-5 flex items-center gap-2 rounded-lg border border-destructive/25 bg-destructive/5 p-3 text-sm text-destructive">
+              <ShieldCheck className="h-4 w-4 shrink-0" />
               <span>{error}</span>
             </div>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div className="space-y-2">
-              <label htmlFor="password" className="block text-xs font-semibold text-slate-300">
+              <label htmlFor="password" className="block text-sm font-medium text-foreground">
                 كلمة المرور
               </label>
               <div className="relative">
-                <div className="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none text-slate-400">
-                  <Lock className="w-5 h-5" />
-                </div>
+                <Lock className="pointer-events-none absolute inset-y-0 right-3.5 my-auto h-[18px] w-[18px] text-muted-foreground" />
                 <input
                   id="password"
                   type={showPassword ? 'text' : 'password'}
@@ -80,15 +87,15 @@ export default function LoginPage() {
                   autoComplete="current-password"
                   required
                   placeholder="أدخل كلمة المرور"
-                  className="w-full pr-11 pl-11 py-3 bg-slate-900/90 border border-slate-700 rounded-xl text-slate-100 placeholder-slate-500 text-sm focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all text-right"
+                  className="h-12 w-full rounded-lg border border-input bg-background pe-11 ps-11 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground/70 focus:border-primary focus:ring-2 focus:ring-ring/15"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400 hover:text-slate-200 transition-colors"
+                  className="absolute inset-y-0 left-0 flex items-center px-3.5 text-muted-foreground hover:text-foreground"
                   aria-label={showPassword ? 'إخفاء كلمة المرور' : 'إظهار كلمة المرور'}
                 >
-                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  {showPassword ? <EyeOff className="h-[18px] w-[18px]" /> : <Eye className="h-[18px] w-[18px]" />}
                 </button>
               </div>
             </div>
@@ -96,23 +103,27 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3.5 px-4 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold rounded-xl shadow-lg shadow-amber-500/20 transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {loading ? (
                 <>
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                  <span>جاري تسجيل الدخول...</span>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span>جارٍ التحقق</span>
                 </>
               ) : (
                 <>
-                  <Gavel className="w-5 h-5" />
-                  <span>تسجيل الدخول</span>
+                  <Gavel className="h-4 w-4" />
+                  <span>دخول إلى النظام</span>
                 </>
               )}
             </button>
           </form>
-        </div>
+        </section>
+
+        <p className="mt-6 text-center text-xs text-muted-foreground">
+          نظام داخلي لتنظيم أعمال المكتب ومتابعة الملفات القضائية
+        </p>
       </div>
-    </div>
+    </main>
   );
 }
