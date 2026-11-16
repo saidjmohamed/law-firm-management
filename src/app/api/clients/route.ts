@@ -18,7 +18,7 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { name, phone, phone2, address, wilaya, nationalId, notes } = body;
+    const { name, phone, phone2, address, wilaya, nationalId, googleDriveFolderId, notes } = body;
 
     // كشف التكرارات - البحث عن موكل بنفس الاسم (غير حساس لحالة الأحرف)
     if (name?.trim()) {
@@ -58,6 +58,7 @@ export async function POST(request: NextRequest) {
         address: address || '',
         wilaya: wilaya ?? 16,
         nationalId: nationalId || '',
+        googleDriveFolderId: googleDriveFolderId?.trim() || null,
         notes: notes || '',
       },
     });

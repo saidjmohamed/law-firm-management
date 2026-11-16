@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { Calendar as CalendarIcon } from 'lucide-react';
+import { Calendar as CalendarIcon, FileDown } from 'lucide-react';
 import { useCases, useClients, useParties, useDelays, useSessions, useJudicialBodies, useLawyers, useTasks, createCase, updateCase, deleteCase as apiDeleteCase, createParty, updateParty as apiUpdateParty, deleteParty as apiDeleteParty, createDelay, updateDelay as apiUpdateDelay, deleteDelay as apiDeleteDelay, createClient, createJudicialBody, createArchive, syncPartiesToClients } from '@/lib/api';
 import { mutate } from 'swr';
 import { formatCurrency, STATUS_COLORS, CASE_NATURES, CASE_STATUSES, LITIGATION_STAGES, PARTY_ROLES, JUDICIAL_CHAMBERS, WILAYAS, JUDICIARY_TYPES, ORDINARY_COURT_LEVELS, ADMIN_COURT_LEVELS, CHAMBER_NUMBERS, formatDate } from '@/lib/constants';
@@ -145,7 +145,7 @@ interface CaseType {
   caseResult?: string | null; // 'won' | 'lost' | null
   createdAt: string;
   updatedAt: string;
-  client?: { id: number; name?: string };
+  client?: { id: number; name?: string; googleDriveFolderId?: string | null };
   parties?: PartyType[];
   delays?: DelayType[];
   sessions?: SessionType[];
@@ -155,6 +155,7 @@ interface ClientType {
   id: number;
   name?: string;
   phone?: string;
+  googleDriveFolderId?: string | null;
 }
 
 interface JudicialBodyType {
@@ -955,6 +956,142 @@ export function Cases() {
                   sessions={caseSessions || []}
                   courtPhones={judicialBodies?.find(b => b.id === selectedCase.courtId)?.phones}
                 />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="touch-target"
+                  onClick={() => {
+                    const date = (value: unknown) => {
+                      if (!value) return '—';
+                      const parsed = new Date(String(value));
+                      return Number.isNaN(parsed.getTime()) ? String(value) : parsed.toLocaleDateString('ar-DZ');
+                    };
+                    const clientRecord = selectedCase.client || clientMap[selectedCase.clientId || 0];
+                    const clientName = clientRecord?.name || 'موكل غير محدد';
+                    const driveFolderId = clientRecord?.googleDriveFolderId || '';
+                    const caseNumber = selectedCase.caseNumber || `بدون-رقم-${selectedCase.id}`;
+                    const safeFilePart = (value: string) => value.trim().replaceAll(String.fromCharCode(92), '-').replace(/[/:*?"<>|]/g, '-').replace(/\s+/g, '-').replace(/-+/g, '-').slice(0, 90) || 'غير-محدد';
+                    const fileName = `${safeFilePart(clientName)} - ${safeFilePart(caseNumber)}.md`;
+                    const caseTasks = (allTasks || []).filter((task: any) => task.relatedCaseId === selectedCase.id);
+                    const parties = caseParties || [];
+                    const delays = caseDelays || [];
+                    const sessions = caseSessions || [];
+                    const payments = (selectedCase as any).payments || [];
+                    const lines = [
+                      '---',
+                      'document_type: algerian_law_office_case',
+                      'document_version: 2',
+                      `case_id: ${selectedCase.id}`,
+                      `case_number: "${caseNumber.replace(/"/g, '\\"')}"`,
+                      `client_id: ${selectedCase.clientId ?? ''}`,
+                      `client_name: "${clientName.replace(/"/g, '\\"')}"`,
+                      `google_drive_folder_id: "${driveFolderId}"`,
+                      `exported_at: "${new Date().toISOString()}"`,
+                      '---',
+                      '',
+                      `# ملف القضية: ${caseNumber}`,
+                      '',
+                      '## 1. الفهرسة والتعريف',
+                      `- **اسم الموكل:** ${clientName}`,
+                      `- **معرّف الموكل:** ${selectedCase.clientId ?? '—'}`,
+                      `- **معرّف مجلد Google Drive:** ${driveFolderId || 'غير محدد'}`,
+                      `- **رقم القضية:** ${caseNumber}`,
+                      `- **رقم القضية الأصلية:** ${selectedCase.origCaseNumber || '—'}`,
+                      `- **المعرّف الداخلي للقضية:** ${selectedCase.id}`,
+                      '',
+                      '## 2. البيانات القضائية والإدارية',
+                      `- **الموضوع:** ${selectedCase.subject || '—'}`,
+                      `- **الحالة:** ${selectedCase.status || '—'}`,
+                      `- **طبيعة القضية:** ${selectedCase.caseNature || '—'}`,
+                      `- **مرحلة التقاضي:** ${selectedCase.litigationStage || '—'}`,
+                      `- **المرحلة المخصصة:** ${selectedCase.customStage || '—'}`,
+                      `- **نوع الجهة القضائية:** ${selectedCase.judiciaryType || '—'}`,
+                      `- **مستوى المحكمة:** ${selectedCase.courtLevel || '—'}`,
+                      `- **المجلس:** ${selectedCase.councilName || '—'}`,
+                      `- **المحكمة/الجهة القضائية:** ${selectedCase.courtName || '—'}`,
+                      `- **معرّف الهيئة القضائية:** ${selectedCase.courtId ?? '—'}`,
+                      `- **الغرفة:** ${selectedCase.chamber || '—'}`,
+                      `- **رقم الغرفة:** ${selectedCase.chamberNumber ?? '—'}`,
+                      `- **الولاية القضائية:** ${selectedCase.wilayaId ?? '—'}`,
+                      `- **المحامي المكلف:** ${selectedCase.lawyer || '—'}`,
+                      `- **هاتف قاعة المحامين:** ${selectedCase.barPhone || '—'}`,
+                      '',
+                      '## 3. التواريخ',
+                      `- **تاريخ التسجيل:** ${date(selectedCase.registrationDate)}`,
+                      `- **تاريخ أول جلسة:** ${date(selectedCase.firstSessionDate)}`,
+                      `- **تاريخ المداولة:** ${date(selectedCase.delibDate)}`,
+                      `- **تاريخ الحكم:** ${date((selectedCase as any).judgmentDate)}`,
+                      `- **تاريخ الإنشاء:** ${date(selectedCase.createdAt)}`,
+                      `- **آخر تحديث:** ${date(selectedCase.updatedAt)}`,
+                      '',
+                      '## 4. الأطراف',
+                      ...(parties.length ? parties.flatMap((party: any, index: number) => [
+                        `### 4.${index + 1} — ${party.name || 'طرف غير مسمى'}`,
+                        `- **معرّف الطرف:** ${party.id ?? '—'}`,
+                        `- **الصفة:** ${party.role || '—'}`,
+                        `- **الجهة:** ${party.side === 'against' ? 'ضده' : 'في حقه'}`,
+                        `- **الهاتف:** ${party.phone || '—'}`,
+                        `- **المحامي:** ${party.lawyerName || '—'}`,
+                        `- **هاتف المحامي:** ${party.lawyerPhone || '—'}`,
+                        `- **الأتعاب:** ${party.totalFees ?? 0}`,
+                        `- **المبلغ المدفوع:** ${party.paidAmount ?? 0}`,
+                        ''
+                      ]) : ['لا توجد أطراف مسجلة.', '']),
+                      '## 5. الوقائع والملاحظات',
+                      selectedCase.notes || 'لا توجد ملاحظات مسجلة.',
+                      '',
+                      '## 6. الأحكام والقرارات',
+                      `- **منطوق/بيانات الحكم:** ${selectedCase.judgment || 'لا توجد بيانات حكم.'}`,
+                      `- **تاريخ الحكم:** ${date((selectedCase as any).judgmentDate)}`,
+                      `- **نتيجة القضية:** ${selectedCase.caseResult || 'غير محددة'}`,
+                      '',
+                      '## 7. الجلسات',
+                      ...(sessions.length ? sessions.map((session: any, index: number) =>
+                        `### الجلسة ${index + 1} — ${date(session.date)}\n- الوقت: ${session.time || '—'}\n- المحكمة: ${session.court || '—'}\n- الغرفة: ${session.chamber || '—'}\n- القاعة: ${session.roomNumber || '—'}\n- الحالة: ${session.status || '—'}\n- النتيجة: ${session.result || '—'}\n- الملاحظات: ${session.notes || '—'}`
+                      ) : ['لا توجد جلسات مسجلة.']),
+                      '',
+                      '## 8. التأجيلات والآجال',
+                      ...(delays.length ? delays.map((delay: any, index: number) =>
+                        `### التأجيل ${index + 1}\n- التاريخ: ${date(delay.delayDate)}\n- السبب: ${delay.reason || '—'}\n- الملاحظات: ${delay.notes || '—'}`
+                      ) : ['لا توجد تأجيلات مسجلة.']),
+                      '',
+                      '## 9. المدفوعات والحسابات',
+                      ...(payments.length ? payments.map((payment: any, index: number) =>
+                        `### العملية ${index + 1}\n- التاريخ: ${date(payment.date)}\n- النوع: ${payment.type || '—'}\n- التصنيف: ${payment.category || '—'}\n- المبلغ: ${payment.amount ?? 0}\n- الملاحظات: ${payment.notes || '—'}`
+                      ) : ['لا توجد مدفوعات مسجلة أو غير متاحة في بيانات التصدير.']),
+                      `- **إجمالي الأتعاب:** ${selectedCase.totalFees ?? 0}`,
+                      `- **المبلغ المدفوع:** ${selectedCase.paidAmount ?? 0}`,
+                      `- **المتبقي:** ${(selectedCase.totalFees || 0) - (selectedCase.paidAmount || 0)}`,
+                      '',
+                      '## 10. المهام والإجراءات المرتبطة',
+                      ...(caseTasks.length ? caseTasks.map((task: any, index: number) =>
+                        `### المهمة ${index + 1} — ${task.title || 'دون عنوان'}\n- النوع: ${task.taskType || '—'}\n- الحالة: ${task.status || '—'}\n- الأولوية: ${task.priority || '—'}\n- تاريخ الاستحقاق: ${date(task.dueDate)}\n- بداية الإجراء: ${date(task.startDate)}\n- الأجل القانوني: ${date(task.legalDeadline)}\n- الوصف: ${task.description || '—'}\n- الملاحظات: ${task.notes || '—'}`
+                      ) : ['لا توجد مهام مرتبطة بالقضية.']),
+                      '',
+                      '## 11. بيانات النظام',
+                      `- **تاريخ الإنشاء في النظام:** ${date(selectedCase.createdAt)}`,
+                      `- **آخر تحديث في النظام:** ${date(selectedCase.updatedAt)}`,
+                      '',
+                      '---',
+                      '> ملف مولّد آلياً من تطبيق إدارة مكتب المحاماة. البيانات تعكس ما هو مسجل ومتاح في التطبيق وقت التصدير.',
+                      `> تاريخ التصدير: ${new Date().toLocaleString('ar-DZ')}`,
+                      ''
+                    ];
+                    const blob = new Blob([String.fromCharCode(0xFEFF) + lines.join(String.fromCharCode(10))], { type: 'text/markdown;charset=utf-8' });
+                    const url = URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = fileName;
+                    document.body.appendChild(link);
+                    link.click();
+                    link.remove();
+                    URL.revokeObjectURL(url);
+                    toast.success(`تم تصدير ملف القضية: ${fileName}`);
+                  }}
+                >
+                  <FileDown className="w-3 h-3 ml-1" />
+                  تصدير MD
+                </Button>
                 <CaseAnnouncementButton
                   caseData={selectedCase}
                   parties={caseParties || []}
