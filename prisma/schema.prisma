@@ -330,3 +330,45 @@ model Task {
   @@index([taskType])
   @@index([sourceType, sourceId])
 }
+ 
+// تكامل Google Drive — جداول إضافية فقط دون المساس بالبيانات الحالية
+model DriveConnection {
+  id                    String   @id @default("default")
+  encryptedRefreshToken String   @db.Text
+  email                 String?
+  rootFolderId          String?
+  rootFolderName        String?
+  connectedAt           DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+}
+
+model DriveEntityLink {
+  id          Int      @id @default(autoincrement())
+  entityType  String   // client | case
+  entityId    Int
+  folderId    String
+  folderName  String?
+  markdownId  String?
+  updatedAt   DateTime @updatedAt
+
+  @@unique([entityType, entityId])
+  @@index([folderId])
+}
+
+model DriveSyncJob {
+  id          Int      @id @default(autoincrement())
+  entityType  String
+  entityId    Int
+  eventType   String
+  status      String   @default("pending") // pending | processing | done | failed
+  attempts    Int      @default(0)
+  lastError   String?  @db.Text
+  runAfter    DateTime @default(now())
+  dedupeKey   String   @unique
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([status, runAfter])
+  @@index([entityType, entityId])
+}
+
