@@ -57,6 +57,7 @@ interface Client {
   address?: string;
   wilaya?: number | null;
   nationalId?: string;
+  googleDriveFolderId?: string;
   notes?: string;
   createdAt?: Date;
   updatedAt?: Date;
@@ -296,6 +297,17 @@ export function Clients() {
                 placeholder="رقم بطاقة الهوية"
                 className="h-11"
               />
+            </div>
+            <div>
+              <Label className="text-xs">معرّف مجلد Google Drive</Label>
+              <Input
+                value={formData.googleDriveFolderId || ''}
+                onChange={(e) => setFormData({ ...formData, googleDriveFolderId: e.target.value.trim() })}
+                placeholder="ألصق Folder ID هنا"
+                dir="ltr"
+                className="text-left"
+              />
+              <p className="text-xs text-muted-foreground mt-1">يُحفظ مرة واحدة للموكل ويُدرج تلقائياً في ملفات قضاياه المصدّرة.</p>
             </div>
             <div>
               <Label className="text-xs">ملاحظات</Label>
@@ -604,6 +616,17 @@ export function Clients() {
                 placeholder="رقم بطاقة الهوية"
                 className="h-11"
               />
+            </div>
+            <div>
+              <Label className="text-xs">معرّف مجلد Google Drive</Label>
+              <Input
+                value={formData.googleDriveFolderId || ''}
+                onChange={(e) => setFormData({ ...formData, googleDriveFolderId: e.target.value.trim() })}
+                placeholder="ألصق Folder ID هنا"
+                dir="ltr"
+                className="text-left"
+              />
+              <p className="text-xs text-muted-foreground mt-1">يُحفظ مرة واحدة للموكل ويُدرج تلقائياً في ملفات قضاياه المصدّرة.</p>
             </div>
             <div>
               <Label className="text-xs">ملاحظات</Label>
