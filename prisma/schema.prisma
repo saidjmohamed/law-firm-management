@@ -23,8 +23,9 @@ model Client {
   phone2     String?  @default("") @db.VarChar(40)
   address    String?
   wilaya     Int?     @default(16)
-  nationalId String?
-  notes      String?
+  nationalId          String?
+  googleDriveFolderId String?  @db.VarChar(255)
+  notes               String?
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
