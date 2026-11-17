@@ -16,7 +16,6 @@ interface Case {
   origCaseNumber?: string;
   customStage?: string;
   status?: string;
-  clientId?: number;
   wilayaId?: number;
   judiciaryType?: string;
   courtLevel?: string;
@@ -91,8 +90,8 @@ export function CaseAnnouncementButton({ caseData, parties }: CaseAnnouncementPr
 
       const wilayaName = WILAYAS.find(w => w.code === caseData.wilayaId)?.name || '';
 
-      // في إعلان التأسيس، الموكل هو الطرف المسجل في حقه فقط.
-      const represented = parties.filter(p => p.side === 'for' || (!p.side && p.role === 'موكل'));
+      // الطرف الذي نمثله هو الطرف المسجل في مركز «في حقه».
+      const represented = parties.filter(p => p.side === 'for');
       const opposing = parties.filter(p => p.side === 'against');
       const otherParties = parties.filter(p => !represented.includes(p) && !opposing.includes(p));
       const formatParty = (p: Party) => {
@@ -258,7 +257,7 @@ export function CaseAnnouncementButton({ caseData, parties }: CaseAnnouncementPr
     </p>
 
     <p>
-      يشرفني أنا الأستاذ <span class="highlight">${escapeHtml(lawyerName)}</span>، ${escapeHtml(lawyerTitle)}، أن أعلمكم بموجب هذا الإعلان بتأسيسي نائباً عن الموكل(ين) المذكور(ين) أدناه في القضية المبينة بياناتها:
+      يشرفني أنا الأستاذ <span class="highlight">${escapeHtml(lawyerName)}</span>، ${escapeHtml(lawyerTitle)}، أن أعلمكم بموجب هذا الإعلان بتأسيسي نائباً عن الطرف/الأطراف المحددين أدناه في القضية المبينة بياناتها:
     </p>
 
     <p>
@@ -286,7 +285,7 @@ export function CaseAnnouncementButton({ caseData, parties }: CaseAnnouncementPr
     </p>
 
     <p style="margin-top:12px;">
-      <span class="label">الموكل(ون):</span> ${representedText}
+      <span class="label">الطرف/الأطراف الذين أمثلهم:</span> ${representedText}
     </p>
 
     <p>
@@ -296,7 +295,7 @@ export function CaseAnnouncementButton({ caseData, parties }: CaseAnnouncementPr
     ${otherText ? `<p><span class="label">أطراف أخرى:</span> ${otherText}</p>` : ''}
 
     <p style="margin-top:14px;">
-      ألتمس من هيئتكم الموقرة تسجيل تأسيسي وإثبات نيابتي عن الموكل(ين) المذكور(ين) أعلاه، واعتماد نيابتي في إجراءات الخصومة والتبليغ وفقاً للقانون، مع حفظ كافة حقوق موكليّ ودفوعهم.
+      ألتمس من هيئتكم الموقرة تسجيل تأسيسي وإثبات نيابتي عن الطرف/الأطراف المذكورين أعلاه، واعتماد نيابتي في إجراءات الخصومة والتبليغ وفقاً للقانون، مع حفظ حقوقهم ودفوعهم.
     </p>
 
     <p>
