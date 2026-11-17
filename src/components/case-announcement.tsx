@@ -42,6 +42,7 @@ interface Party {
   id?: number;
   caseId: number;
   role?: string;
+  side?: string;
   name?: string;
   phone?: string;
   lawyerName?: string;
@@ -90,43 +91,28 @@ export function CaseAnnouncementButton({ caseData, parties }: CaseAnnouncementPr
 
       const wilayaName = WILAYAS.find(w => w.code === caseData.wilayaId)?.name || '';
 
-      // الأطراف
-      const plaintiffs = parties.filter(p =>
-        p.role === 'مدعي' || p.role === 'مستأنف' || p.role === 'طالب' || p.role === 'ضحية' || p.role === 'مشتكي'
-      );
-      const defendants = parties.filter(p =>
-        p.role === 'مدعى عليه' || p.role === 'مستأنف ضده' || p.role === 'مستأنف عليه' || p.role === 'مطلوب' || p.role === 'متهم' || p.role === 'مشتكى منه' || p.role === 'معارض ضده'
-      );
-      const others = parties.filter(p =>
-        !plaintiffs.includes(p) && !defendants.includes(p)
-      );
-
-      // بناء نص المدعين
-      const plaintiffText = plaintiffs.length > 0
-        ? plaintiffs.map((p, i) => {
-            let text = p.name || '—';
-            if (p.lawyerName) text += `، بواسطة محاميه الأستاذ ${escapeHtml(p.lawyerName)}`;
-            return text;
-          }).join(' و ')
+      // في إعلان التأسيس، الموكل هو الطرف المسجل في حقه فقط.
+      const represented = parties.filter(p => p.side === 'for' || (!p.side && p.role === 'موكل'));
+      const opposing = parties.filter(p => p.side === 'against');
+      const otherParties = parties.filter(p => !represented.includes(p) && !opposing.includes(p));
+      const formatParty = (p: Party) => {
+        const name = escapeHtml(p.name || '—');
+        const role = p.role ? '، بصفته ' + escapeHtml(p.role) : '';
+        return name + role;
+      };
+      const representedText = represented.length
+        ? represented.map(formatParty).join(' و ')
         : '___________________________________';
-
-      // بناء نص المدعى عليهم
-      const defendantText = defendants.length > 0
-        ? defendants.map((p, i) => {
-            let text = p.name || '—';
-            if (p.lawyerName) text += `، بواسطة محاميه الأستاذ ${escapeHtml(p.lawyerName)}`;
-            return text;
-          }).join(' و ')
+      const opposingText = opposing.length
+        ? opposing.map(formatParty).join(' و ')
         : '___________________________________';
-
-      // أطراف أخرى
-      const otherText = others.length > 0
-        ? others.map(p => `${escapeHtml(p.name || '—')} (${escapeHtml(p.role || '—')})`).join('، ')
+      const otherText = otherParties.length
+        ? otherParties.map(formatParty).join('، ')
         : '';
 
       // المحكمة
-      const courtName = caseData.councilName || caseData.courtName || '___________________________________';
-      const chamberText = caseData.chamber ? ` - ${caseData.chamber}` : '';
+      const courtName = escapeHtml(caseData.councilName || caseData.courtName || '___________________________________');
+      const chamberText = caseData.chamber ? ' - ' + escapeHtml(caseData.chamber) : '';
       const fullCourt = courtName + chamberText;
 
       // تاريخ اليوم
@@ -300,14 +286,14 @@ export function CaseAnnouncementButton({ caseData, parties }: CaseAnnouncementPr
     </p>
 
     <p style="margin-top:12px;">
-      <span class="label">المدعي(ون):</span> ${plaintiffText}
+      <span class="label">الموكل(ون):</span> ${representedText}
     </p>
 
     <p>
-      <span class="label">المدعى عليه(ون):</span> ${defendantText}
+      <span class="label">الخصوم:</span> ${opposingText}
     </p>
 
-    ${otherText ? `<p><span class="label">أطراف أخرى:</span> ${escapeHtml(otherText)}</p>` : ''}
+    ${otherText ? `<p><span class="label">أطراف أخرى:</span> ${otherText}</p>` : ''}
 
     <p style="margin-top:14px;">
       ألتمس من هيئتكم الموقرة تسجيل تأسيسي وإثبات نيابتي عن الموكل(ين) المذكور(ين) أعلاه، واعتماد نيابتي في إجراءات الخصومة والتبليغ وفقاً للقانون، مع حفظ كافة حقوق موكليّ ودفوعهم.
