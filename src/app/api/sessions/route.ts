@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
     // مع reminder_offsets [7, 1, 0] (قبل 7 أيام + قبل يوم + يوم الجلسة)
     // التذكيرات تُحسب ديناميكياً عند العرض، فلا حاجة لتحديثها عند التأجيل
     // ========================================================================
-    if (sessionDate) {
+    if (sessionDate && body.skipAutoTask !== true) {
       try {
         const relatedCase = caseId
           ? await prisma.case.findUnique({ where: { id: caseId }, select: { caseNumber: true, subject: true } })
