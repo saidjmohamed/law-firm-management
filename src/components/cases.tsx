@@ -1499,7 +1499,7 @@ export function Cases() {
               return (
                 <Card
                   key={c.id}
-                  className={`cursor-pointer transition-all duration-200 border-r-4 ${borderColor} ${index % 2 === 0 ? "bg-white dark:bg-slate-900" : "bg-slate-50 dark:bg-slate-800/70"} hover:shadow-md hover:brightness-[0.99]`}
+                  className={`cursor-pointer transition-all duration-200 border-r-4 ${borderColor} ${index % 2 === 0 ? "bg-[#e8f2fb] dark:bg-slate-800" : "bg-[#f5eee3] dark:bg-slate-700"} hover:shadow-md hover:brightness-[0.99]`}
                   onClick={() => {
                     setSelectedCaseId(c.id ?? null);
                     setView('detail');
