@@ -6,6 +6,7 @@ import { ThemeProvider } from "next-themes";
 
 const ibmPlex = IBM_Plex_Sans_Arabic({
   subsets: ["arabic"],
+  weight: ["400", "500", "600"],
   variable: "--font-ibm-plex-arabic",
   display: "swap",
 });

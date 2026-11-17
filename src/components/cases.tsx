@@ -138,6 +138,7 @@ interface CaseType {
   registrationDate?: string;
   firstSessionDate?: string;
   delibDate?: string;
+  judgmentDate?: string;
   barPhone?: string;
   lawyer?: string;
   notes?: string;
@@ -1492,124 +1493,120 @@ export function Cases() {
         {filteredCases.length > 0 ? (
           filteredCases
             .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-            .map((c) => {
+            .map((c, index) => {
               const remaining = (c.totalFees || 0) - (c.paidAmount || 0);
               const borderColor = STATUS_BORDER_COLORS[c.status || ''] || 'border-r-gray-300';
               return (
                 <Card
                   key={c.id}
-                  className={`cursor-pointer hover:shadow-md transition-all duration-200 border-r-4 ${borderColor}`}
+                  className={`cursor-pointer transition-all duration-200 border-r-4 ${borderColor} ${index % 2 === 0 ? "bg-[#e8f2fb] dark:bg-slate-800" : "bg-[#f5eee3] dark:bg-slate-700"} hover:shadow-md hover:brightness-[0.99]`}
                   onClick={() => {
                     setSelectedCaseId(c.id ?? null);
                     setView('detail');
                   }}
                 >
-                  <CardContent className="p-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-sm font-extrabold">{c.caseNumber || '—'}</span>
-                          <Badge className={`${STATUS_COLORS[c.status || ''] || ''} text-xs`}>
-                            {c.status}
-                          </Badge>
-                          {c.caseResult === 'won' && (
-                            <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400 text-xs">
-                              <Trophy className="w-3 h-3 ml-0.5" /> ربحت
-                            </Badge>
-                          )}
-                          {c.caseResult === 'lost' && (
-                            <Badge className="bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400 text-xs">
-                              <XCircle className="w-3 h-3 ml-0.5" /> خسرت
-                            </Badge>
-                          )}
-                          {c.caseNature && (
-                            <Badge variant="outline" className="text-xs">{c.caseNature}</Badge>
-                          )}
-                        </div>
-                        <p className="text-sm text-muted-foreground mt-1 truncate">{c.subject || '—'}</p>
-                        <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground flex-wrap">
-                          {c.clientId && clientMap[c.clientId] && <span className="text-teal-600 dark:text-teal-400 font-semibold">{clientMap[c.clientId].name}</span>}
-                          {c.courtName && <span>{c.courtName}</span>}
-                          {(() => {
-                            const courtBody = judicialBodies?.find(b => b.id === c.courtId);
-                            const courtPhones = courtBody?.phones ? (() => { try { const p = JSON.parse(courtBody.phones); return Array.isArray(p) ? p.filter((x: string) => x.trim()) : []; } catch { return []; } })() : [];
-                            return courtPhones.length > 0 ? <span className="text-teal-600 dark:text-teal-400 font-mono dir-ltr"><Phone className="w-3 h-3 inline ml-0.5" />{courtPhones[0]}{courtPhones.length > 1 ? ` +${courtPhones.length - 1}` : ''}</span> : null;
-                          })()}
-                          {c.chamber && <span>• {c.chamber}</span>}
-                          {c.registrationDate && <span>• <DateDisplay value={c.registrationDate as any} /></span>}
-                        </div>
-                        {/* آخر تاريخ مهم */}
-                        {(() => {
-                          // جمع كل التواريخ المهمة للقضية
-                          const dateEvents: { date: Date; label: string; icon: string; color: string }[] = [];
-
-                          // التأجيلات
-                          const cDelays = allDelays?.filter((d: any) => d.caseId === c.id && d.delayDate) || [];
-                          cDelays.forEach((d: any) => {
-                            if (!d.delayDate) return;
-                            dateEvents.push({ date: new Date(d.delayDate), label: d.reason || 'تأجيل', icon: 'clock', color: 'amber' });
-                          });
-
-                          // الجلسات
-                          const cSessions = allSessions?.filter((s: any) => s.caseId === c.id && s.date) || [];
-                          cSessions.forEach((s: any) => {
-                            if (!s.date) return;
-                            dateEvents.push({ date: new Date(s.date), label: s.result || 'جلسة', icon: 'calendar', color: 'blue' });
-                          });
-
-                          // تاريخ المداولة
-                          if (c.delibDate) {
-                            dateEvents.push({ date: new Date(c.delibDate as any), label: 'مداولة', icon: 'gavel', color: 'purple' });
-                          }
-
-                          // منطوق الحكم (إذا كانت القضية مفصول فيها)
-                          if (c.judgment && c.status === 'مفصول فيها') {
-                            const judgDate = c.delibDate || c.firstSessionDate;
-                            if (judgDate) {
-                              dateEvents.push({ date: new Date(judgDate as any), label: `حكم: ${c.judgment.length > 40 ? c.judgment.substring(0, 40) + '...' : c.judgment}`, icon: 'gavel', color: c.caseResult === 'won' ? 'emerald' : c.caseResult === 'lost' ? 'red' : 'purple' });
-                            }
-                          }
-
-                          if (dateEvents.length === 0) return null;
-
-                          // إيجاد آخر تاريخ (الأبعد)
-                          const latest = dateEvents.sort((a, b) => b.date.getTime() - a.date.getTime())[0];
-                          const colorClass = latest.color === 'amber' ? 'text-amber-600 dark:text-amber-400'
-                            : latest.color === 'blue' ? 'text-blue-600 dark:text-blue-400'
-                            : latest.color === 'emerald' ? 'text-emerald-600 dark:text-emerald-400'
-                            : latest.color === 'red' ? 'text-red-600 dark:text-red-400'
-                            : 'text-purple-600 dark:text-purple-400';
-                          const iconClass = latest.color === 'amber' ? 'text-amber-500'
-                            : latest.color === 'blue' ? 'text-blue-500'
-                            : latest.color === 'emerald' ? 'text-emerald-500'
-                            : latest.color === 'red' ? 'text-red-500'
-                            : 'text-purple-500';
-
-                          return (
-                            <div className="flex items-center gap-1 mt-1">
-                              <Clock className={`w-3 h-3 ${iconClass}`} />
-                              <span className={`text-xs font-medium ${colorClass}`}>
-                                <DateDisplay value={latest.date} /> — {latest.label}
-                              </span>
-                            </div>
-                          );
-                        })()}
-                      </div>
-                      <div className="text-left shrink-0 space-y-1">
-                        {c.totalFees ? (
-                          <>
-                            <p className="text-xs text-muted-foreground">الأتعاب</p>
-                            <p className="text-sm font-extrabold tabular-nums">{formatCurrency(c.totalFees)}</p>
-                            {remaining > 0 && (
-                              <div className="flex items-center gap-1 bg-amber-50 dark:bg-amber-900/20 px-2 py-1 rounded-md">
-                                <Wallet className="w-3 h-3 text-amber-600 dark:text-amber-400" />
-                                <p className="text-xs font-bold text-amber-700 dark:text-amber-400 tabular-nums">{formatCurrency(remaining)}</p>
+                  <CardContent className="p-4 space-y-3">
+                    {(() => {
+                      const casePartiesForCard = c.parties || allParties?.filter((p: any) => p.caseId === c.id) || [];
+                      const clientsForCard = casePartiesForCard.filter((p: any) => (p.side || 'for') === 'for');
+                      const opponentsForCard = casePartiesForCard.filter((p: any) => p.side === 'against');
+                      const caseSessionsForCard = c.sessions || allSessions?.filter((s: any) => s.caseId === c.id) || [];
+                      const caseDelaysForCard = c.delays || allDelays?.filter((d: any) => d.caseId === c.id) || [];
+                      const dateRows: { label: string; value: any; detail?: string; kind: string }[] = [];
+                      if (c.registrationDate) dateRows.push({ label: 'التسجيل', value: c.registrationDate, kind: 'base' });
+                      if (c.firstSessionDate) dateRows.push({ label: 'أول جلسة', value: c.firstSessionDate, kind: 'base' });
+                      caseSessionsForCard.filter((x: any) => x.date).forEach((x: any) => dateRows.push({
+                        label: 'جلسة', value: x.date,
+                        detail: [x.time, x.court, x.chamber, x.result, x.status].filter(Boolean).join(' • '), kind: 'session'
+                      }));
+                      caseDelaysForCard.filter((x: any) => x.delayDate).forEach((x: any) => dateRows.push({
+                        label: 'تأجيل', value: x.delayDate,
+                        detail: [x.reason, x.notes].filter(Boolean).join(' — '), kind: 'delay'
+                      }));
+                      if (c.delibDate) dateRows.push({ label: 'المداولة', value: c.delibDate, kind: 'base' });
+                      if (c.judgmentDate) dateRows.push({ label: 'صدور الحكم', value: c.judgmentDate, detail: c.caseResult === 'won' ? 'حكم لصالح الموكل' : c.caseResult === 'lost' ? 'حكم ضد الموكل' : undefined, kind: 'judgment' });
+                      dateRows.sort((a, b) => new Date(a.value).getTime() - new Date(b.value).getTime());
+                      const totalFeesCard = clientsForCard.length
+                        ? clientsForCard.reduce((sum: number, p: any) => sum + Number(p.totalFees || 0), 0)
+                        : Number(c.totalFees || 0);
+                      const paidCard = clientsForCard.length
+                        ? clientsForCard.reduce((sum: number, p: any) => sum + Number(p.paidAmount || 0), 0)
+                        : Number(c.paidAmount || 0);
+                      const remainingCard = totalFeesCard - paidCard;
+                      const judiciaryLabel = [c.litigationStage, c.courtLevel, c.judiciaryType].filter(Boolean).join(' • ');
+                      return (
+                        <>
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0 flex-1 space-y-1">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="text-sm font-extrabold">{c.caseNumber || '—'}</span>
+                                <Badge className={`${STATUS_COLORS[c.status || ''] || ''} text-xs`}>{c.status || '—'}</Badge>
+                                {c.caseResult === 'won' && <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400 text-xs">ربحت</Badge>}
+                                {c.caseResult === 'lost' && <Badge className="bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400 text-xs">خسرت</Badge>}
+                                {c.caseNature && <Badge variant="outline" className="text-xs">{c.caseNature}</Badge>}
                               </div>
-                            )}
-                          </>
-                        ) : null}
-                      </div>
-                    </div>
+                              <p className="text-sm text-muted-foreground">{c.subject || '—'}</p>
+                              <div className="text-xs text-muted-foreground flex flex-wrap gap-x-3 gap-y-1">
+                                <span className="font-semibold text-foreground">الجهة القضائية: {c.courtName || c.councilName || 'غير محددة'}</span>
+                                {judiciaryLabel && <span>درجة/نوع التقاضي: {judiciaryLabel}</span>}
+                                {c.chamber && <span>القسم/الغرفة: {c.chamber}</span>}
+                              </div>
+                            </div>
+                            <div className="text-left shrink-0 space-y-1 min-w-[112px]">
+                              <p className="text-[11px] text-muted-foreground">مجموع الأتعاب</p>
+                              <p className="text-sm font-extrabold tabular-nums">{formatCurrency(totalFeesCard)}</p>
+                              <p className="text-[11px] text-muted-foreground">المتبقي</p>
+                              <p className={`text-sm font-bold tabular-nums ${remainingCard > 0 ? 'text-amber-700 dark:text-amber-400' : 'text-emerald-700 dark:text-emerald-400'}`}>{formatCurrency(remainingCard)}</p>
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                            <div className="rounded-lg border p-2.5 space-y-1.5">
+                              <p className="text-xs font-bold text-teal-700 dark:text-teal-400">الموكلون ومحاموهم</p>
+                              {clientsForCard.length ? clientsForCard.map((p: any) => (
+                                <div key={p.id} className="text-xs flex flex-wrap gap-x-2 gap-y-0.5">
+                                  <span className="font-semibold">{p.name || 'اسم غير محدد'}</span>
+                                  <span className="text-muted-foreground">المحامي: {p.lawyerName || 'غير محدد'}</span>
+                                </div>
+                              )) : <p className="text-xs text-muted-foreground">لا توجد بيانات موكل مسجلة</p>}
+                            </div>
+                            <div className="rounded-lg border p-2.5 space-y-1.5">
+                              <p className="text-xs font-bold text-rose-700 dark:text-rose-400">الخصوم ومحاموهم</p>
+                              {opponentsForCard.length ? opponentsForCard.map((p: any) => (
+                                <div key={p.id} className="text-xs flex flex-wrap gap-x-2 gap-y-0.5">
+                                  <span className="font-semibold">{p.name || 'اسم غير محدد'}</span>
+                                  <span className="text-muted-foreground">المحامي: {p.lawyerName || 'غير محدد'}</span>
+                                </div>
+                              )) : <p className="text-xs text-muted-foreground">لا توجد بيانات خصم مسجلة</p>}
+                            </div>
+                          </div>
+
+                          <div className="rounded-lg border p-2.5 space-y-2">
+                            <div className="flex items-center justify-between gap-2">
+                              <p className="text-xs font-bold">التواريخ والإجراءات الزمنية</p>
+                              <span className="text-[11px] text-muted-foreground">{dateRows.length} تاريخ/إجراء</span>
+                            </div>
+                            {dateRows.length ? (
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2">
+                                {dateRows.map((item, index) => (
+                                  <div key={`${item.kind}-${index}`} className="min-w-0 flex items-start gap-2 text-xs">
+                                    <span className="shrink-0 font-semibold text-foreground">{item.label}:</span>
+                                    <span className="min-w-0">
+                                      <DateDisplay value={item.value as any} />
+                                      {item.detail && <span className="block text-muted-foreground mt-0.5 break-words">{item.detail}</span>}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : <p className="text-xs text-muted-foreground">لا توجد تواريخ أو جلسات أو تأجيلات مسجلة</p>}
+                          </div>
+                          <div className="flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-muted-foreground">
+                            <span>المدفوع: {formatCurrency(paidCard)}</span>
+                            <span>المتبقي من الأتعاب: {formatCurrency(remainingCard)}</span>
+                          </div>
+                        </>
+                      );
+                    })()}
                   </CardContent>
                 </Card>
               );
@@ -1955,6 +1952,62 @@ export function Cases() {
                   />
                 </div>
               </div>
+            </div>
+
+            {/* كشف أتعاب كل موكل - مرتبط مباشرة بالملخص المالي */}
+            <div className="rounded-xl border border-border bg-card p-3 sm:p-4 space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <div>
+                  <h3 className="text-sm font-bold text-foreground">كشف أتعاب كل موكل</h3>
+                  <p className="text-xs text-muted-foreground mt-1">تفصيل مستقل للمبالغ المسجلة لكل موكل في حقه</p>
+                </div>
+                <Badge variant="secondary">
+                  {parties.filter(p => (p.side || 'for') === 'for').length} موكل
+                </Badge>
+              </div>
+              {parties.filter(p => (p.side || 'for') === 'for').length > 0 ? (
+                <div className="overflow-x-auto rounded-lg border">
+                  <table className="w-full min-w-[620px] text-sm text-right">
+                    <thead className="bg-muted/60 text-muted-foreground">
+                      <tr>
+                        <th className="px-3 py-2.5 font-semibold">الموكل</th>
+                        <th className="px-3 py-2.5 font-semibold">الأتعاب</th>
+                        <th className="px-3 py-2.5 font-semibold">المدفوع</th>
+                        <th className="px-3 py-2.5 font-semibold">المتبقي</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {parties.filter(p => (p.side || 'for') === 'for').map((party, index) => {
+                        const fees = Number(party.totalFees || 0);
+                        const paid = Number(party.paidAmount || 0);
+                        const remaining = fees - paid;
+                        return (
+                          <tr key={party.id} className={index % 2 === 0 ? 'bg-background' : 'bg-muted/20'}>
+                            <td className="px-3 py-2.5 font-medium">{party.name?.trim() || 'موكل دون اسم'}</td>
+                            <td className="px-3 py-2.5 tabular-nums">{formatCurrency(fees)}</td>
+                            <td className="px-3 py-2.5 tabular-nums text-emerald-700 dark:text-emerald-400">{formatCurrency(paid)}</td>
+                            <td className={`px-3 py-2.5 tabular-nums font-semibold ${remaining > 0 ? 'text-amber-700 dark:text-amber-400' : 'text-emerald-700 dark:text-emerald-400'}`}>
+                              {formatCurrency(remaining)}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                    <tfoot className="border-t bg-muted/50 font-bold">
+                      <tr>
+                        <td className="px-3 py-2.5">إجمالي القضية</td>
+                        <td className="px-3 py-2.5 tabular-nums">{formatCurrency(parties.filter(p => (p.side || 'for') === 'for').reduce((sum, p) => sum + Number(p.totalFees || 0), 0))}</td>
+                        <td className="px-3 py-2.5 tabular-nums">{formatCurrency(parties.filter(p => (p.side || 'for') === 'for').reduce((sum, p) => sum + Number(p.paidAmount || 0), 0))}</td>
+                        <td className="px-3 py-2.5 tabular-nums">{formatCurrency(parties.filter(p => (p.side || 'for') === 'for').reduce((sum, p) => sum + Number(p.totalFees || 0) - Number(p.paidAmount || 0), 0))}</td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              ) : (
+                <p className="rounded-lg bg-muted/40 px-3 py-4 text-center text-sm text-muted-foreground">
+                  أضف موكلاً بصفة «في حقه» لإظهار كشف أتعابه هنا.
+                </p>
+              )}
             </div>
 
             {/* التواريخ */}
