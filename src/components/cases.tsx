@@ -815,8 +815,9 @@ export function Cases() {
                 {caseParties.map((p) => (
                   <div key={p.id} className="flex items-center justify-between p-2.5 rounded-lg border">
                     <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <Badge variant="outline" className="text-xs">{p.role || '—'}</Badge>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-sm font-bold">{p.name || '—'}</span>
+                        <Badge variant="outline" className="text-xs">{p.role || 'الصفة غير محددة'}</Badge>
                         {p.side && (
                           <Badge className={`text-xs ${
                             p.side === 'for'
@@ -826,7 +827,6 @@ export function Cases() {
                             {p.side === 'for' ? 'في حقه' : 'ضده'}
                           </Badge>
                         )}
-                        <span className="text-sm font-medium">{p.name || '—'}</span>
                       </div>
                       <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
                         {p.phone && <span>هاتف: {p.phone}</span>}
