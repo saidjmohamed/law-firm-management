@@ -14,29 +14,6 @@ datasource db {
 }
 
 // ============================================================================
-// الموكلون
-// ============================================================================
-model Client {
-  id         Int      @id @default(autoincrement())
-  name       String   @default("")
-  phone      String   @default("") @db.VarChar(40)
-  phone2     String?  @default("") @db.VarChar(40)
-  address    String?
-  wilaya     Int?     @default(16)
-  nationalId          String?
-  googleDriveFolderId String?  @db.VarChar(255)
-  notes               String?
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-
-  cases Case[]
-  tasks Task[]
-
-  @@index([name])
-  @@index([phone])
-}
-
-// ============================================================================
 // القضايا
 // ============================================================================
 model Case {
@@ -48,9 +25,6 @@ model Case {
   origCaseNumber   String?
   customStage      String?
   status           String    @default("جارية")
-
-  clientId         Int?
-  client           Client?   @relation(fields: [clientId], references: [id], onDelete: SetNull)
 
   // الهيئة القضائية
   wilayaId         Int?      @default(16)
@@ -94,7 +68,6 @@ model Case {
   @@index([status])
   @@index([delibDate])
   @@index([firstSessionDate])
-  @@index([clientId])
 }
 
 // ============================================================================
@@ -116,6 +89,12 @@ model Party {
   // الأتعاب الخاصة بهذا الطرف (فقط للأطراف "في حقه")
   totalFees   Int?     @default(0)
   paidAmount  Int?     @default(0)
+
+  phone2      String?  @default("") @db.VarChar(40)
+  address     String?
+  wilaya      Int?     @default(16)
+  nationalId  String?
+  contactNotes String?
 
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -305,11 +284,9 @@ model Task {
   sourceType      String?   @default("manual")       // 'manual' | 'session' | 'judgment' | 'delay'
   sourceId        Int?                                 // ID الجلسة/الحكم/التأجيل الأصلي
 
-  // الربط بالقضايا والموكلين (اختياري)
+  // الربط بالقضايا فقط (اختياري)
   relatedCaseId   Int?
   relatedCase     Case?     @relation(fields: [relatedCaseId], references: [id], onDelete: SetNull)
-  relatedClientId Int?
-  relatedClient   Client?   @relation(fields: [relatedClientId], references: [id], onDelete: SetNull)
 
   // إضافة مستقبلية: ربط بقواعد الآجال القانونية
   // deadlineRuleId String?                              // مرجع لقاعدة آجال في جدول مستقبلي
@@ -323,7 +300,6 @@ model Task {
   updatedAt       DateTime  @updatedAt
 
   @@index([relatedCaseId])
-  @@index([relatedClientId])
   @@index([status])
   @@index([priority])
   @@index([dueDate])
