@@ -5,14 +5,14 @@
 ## المميزات
 
 - ⚖️ **إدارة القضايا** — تسجيل وتتبع كل القضايا مع تفاصيل كاملة (الأطراف، الآجال، الجلسات، الأتعاب، النتيجة)
-- 👥 **إدارة الموكلين** — قاعدة بيانات شاملة للموكلين مع كشف التكرار التلقائي
+- 👥 **الأطراف الذين نمثلهم** — عرض الأطراف المسجلين في القضايا بصفة «في حقه» مباشرة من سجلات القضايا، دون سجل أشخاص مستقل
 - 📅 **الجلسات والتقويم** — تتبع الجلسات القادمة والتأجيلات مع تنبيه 7 أيام
 - 💰 **المدفوعات** — تتبع الأتعاب لكل طرف على حدة + إيرادات/مصاريف المكتب
 - 🏛️ **الهيئات القضائية** — التسلسل الهرمي للقضاء الجزائري (المحكمة العليا، المجالس القضائية، المحاكم، القضاء الإداري، التجاري)
 - 👨‍⚖️ **دفتر المحامين** — قاعدة بيانات للمحامين مع رقم القيد في النقابة والتخصص
-- 📄 **ملف القضية** — توليد صفحة HTML قابلة للطباعة/PDF بتفاصيل القضية الكاملة
+- 🗂️ **بطاقة المجلد الورقي** — توليد ورقة تعريف شاملة للقضية قابلة للطباعة على A4
 - 📢 **إعلان تأسيس الدعوى** — توليد إعلان جاهز للنشر
-- 🔍 **البحث الشامل** — بحث ذكي عبر القضايا والموكلين
+- 🔍 **البحث الشامل** — بحث ذكي عبر القضايا والأطراف
 - 💾 **النسخ الاحتياطي** — تصدير واستيراد البيانات بتنسيق JSON
 - 🌙 **الوضع الداكن** — دعم السمة الفاتحة والداكنة
 - 📱 **متجاوب** — تصميم متجاوب يعمل بشكل مثالي على الهواتف
@@ -68,10 +68,11 @@ npm run dev
    - `AUTH_SECRET` — مفتاح JWT
    - `APP_PASSWORD` — كلمة مرور الدخول
    - `MCP_API_KEY` — مفتاح MCP server
-3. Build command (مُعد مسبقاً في `package.json`):
+3. Build command:
    ```
-   prisma generate && prisma migrate deploy && next build && cp -r .next/static .next/standalone/.next/ && cp -r public .next/standalone/
+   npm run build
    ```
+   يتضمن البناء توليد Prisma Client وتجميع Next.js فقط، ولا يطبق migrations على قاعدة البيانات تلقائياً. يجب مراجعة migration الخاصة بإزالة جدول الأشخاص القديم وأخذ نسخة احتياطية قبل تنفيذها يدوياً على قاعدة البيانات.
 
 ## هيكل المشروع
 
@@ -81,7 +82,7 @@ src/
 │   ├── api/                  # 27 مسار API (REST + MCP)
 │   │   ├── auth/             # login, logout, check
 │   │   ├── cases/            # CRUD قضايا + أطراف + آجال
-│   │   ├── clients/          # CRUD موكلين
+│   │   ├── parties/           # CRUD أطراف
 │   │   ├── sessions/         # CRUD جلسات
 │   │   ├── delays/           # CRUD تأجيلات
 │   │   ├── payments/         # CRUD مدفوعات
@@ -102,7 +103,7 @@ src/
 │   ├── app-shell.tsx         # الهيكل (شريط جانبي + محتوى)
 │   ├── dashboard.tsx         # لوحة التحكم
 │   ├── cases.tsx             # إدارة القضايا
-│   ├── clients.tsx           # إدارة الموكلين
+│   ├── represented-parties.tsx # الأطراف الذين نمثلهم
 │   ├── sessions.tsx          # إدارة الجلسات
 │   ├── courts.tsx            # الهيئات القضائية
 │   ├── lawyers.tsx           # دفتر المحامين
@@ -145,8 +146,8 @@ src/
 البروتوكول: JSON-RPC 2.0 (StreamableHTTP) — إصدار 2024-11-05
 
 الأدوات المتوفرة:
-- **قراءة**: `search_cases`, `get_case`, `get_upcoming`, `search_clients`, `get_client`, `get_parties`, `get_payments`, `get_delays`, `search_lawyers`, `list_courts`
-- **كتابة آمنة**: `add_delay`, `add_session`, `add_payment`, `add_client`, `add_party`, `add_case`
+- **قراءة**: `search_cases`, `get_case`, `get_upcoming`, `get_parties`, `get_payments`, `get_delays`, `search_lawyers`, `list_courts`
+- **كتابة آمنة**: `add_delay`, `add_session`, `add_payment`, `add_party`, `add_case`
 - **تحديث آمن**: `update_case_status`, `update_delib_date`, `update_bar_phone`, `update_case_result`, `update_phone`, `update_note`
 
 ## الأمان

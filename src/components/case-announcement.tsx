@@ -16,7 +16,6 @@ interface Case {
   origCaseNumber?: string;
   customStage?: string;
   status?: string;
-  clientId?: number;
   wilayaId?: number;
   judiciaryType?: string;
   courtLevel?: string;
@@ -42,6 +41,7 @@ interface Party {
   id?: number;
   caseId: number;
   role?: string;
+  side?: string;
   name?: string;
   phone?: string;
   lawyerName?: string;
@@ -53,6 +53,12 @@ interface Party {
 interface CaseAnnouncementProps {
   caseData: Case;
   parties: Party[];
+}
+
+function escapeHtml(value: unknown): string {
+  return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+  })[char] || char);
 }
 
 function formatArabicDate(dateStr: string | undefined): string {
@@ -84,43 +90,28 @@ export function CaseAnnouncementButton({ caseData, parties }: CaseAnnouncementPr
 
       const wilayaName = WILAYAS.find(w => w.code === caseData.wilayaId)?.name || '';
 
-      // الأطراف
-      const plaintiffs = parties.filter(p =>
-        p.role === 'مدعي' || p.role === 'مستأنف' || p.role === 'طالب' || p.role === 'ضحية' || p.role === 'مشتكي'
-      );
-      const defendants = parties.filter(p =>
-        p.role === 'مدعى عليه' || p.role === 'مستأنف ضده' || p.role === 'مستأنف عليه' || p.role === 'مطلوب' || p.role === 'متهم' || p.role === 'مشتكى منه' || p.role === 'معارض ضده'
-      );
-      const others = parties.filter(p =>
-        !plaintiffs.includes(p) && !defendants.includes(p)
-      );
-
-      // بناء نص المدعين
-      const plaintiffText = plaintiffs.length > 0
-        ? plaintiffs.map((p, i) => {
-            let text = p.name || '—';
-            if (p.lawyerName) text += `، بواسطة محاميه الأستاذ ${p.lawyerName}`;
-            return text;
-          }).join(' و ')
+      // الطرف الذي نمثله هو الطرف المسجل في مركز «في حقه».
+      const represented = parties.filter(p => p.side === 'for');
+      const opposing = parties.filter(p => p.side === 'against');
+      const otherParties = parties.filter(p => !represented.includes(p) && !opposing.includes(p));
+      const formatParty = (p: Party) => {
+        const name = escapeHtml(p.name || '—');
+        const role = p.role ? '، بصفته ' + escapeHtml(p.role) : '';
+        return name + role;
+      };
+      const representedText = represented.length
+        ? represented.map(formatParty).join(' و ')
         : '___________________________________';
-
-      // بناء نص المدعى عليهم
-      const defendantText = defendants.length > 0
-        ? defendants.map((p, i) => {
-            let text = p.name || '—';
-            if (p.lawyerName) text += `، بواسطة محاميه الأستاذ ${p.lawyerName}`;
-            return text;
-          }).join(' و ')
+      const opposingText = opposing.length
+        ? opposing.map(formatParty).join(' و ')
         : '___________________________________';
-
-      // أطراف أخرى
-      const otherText = others.length > 0
-        ? others.map(p => `${p.name || '—'} (${p.role || '—'})`).join('، ')
+      const otherText = otherParties.length
+        ? otherParties.map(formatParty).join('، ')
         : '';
 
       // المحكمة
-      const courtName = caseData.councilName || caseData.courtName || '___________________________________';
-      const chamberText = caseData.chamber ? ` - ${caseData.chamber}` : '';
+      const courtName = escapeHtml(caseData.councilName || caseData.courtName || '___________________________________');
+      const chamberText = caseData.chamber ? ' - ' + escapeHtml(caseData.chamber) : '';
       const fullCourt = courtName + chamberText;
 
       // تاريخ اليوم
@@ -131,7 +122,7 @@ export function CaseAnnouncementButton({ caseData, parties }: CaseAnnouncementPr
 <html dir="rtl" lang="ar">
 <head>
   <meta charset="UTF-8">
-  <title>إعلان تأسيس الدعوى - ${caseData.caseNumber || ''}</title>
+  <title>إعلان تأسيس الدعوى - ${escapeHtml(caseData.caseNumber || '')}</title>
   <style>
     @page {
       size: A4;
@@ -246,12 +237,12 @@ export function CaseAnnouncementButton({ caseData, parties }: CaseAnnouncementPr
 
   <!-- الديباجة -->
   <div class="letterhead">
-    <h1>${lawyerName}</h1>
-    <h2>${lawyerTitle}</h2>
+    <h1>${escapeHtml(lawyerName)}</h1>
+    <h2>${escapeHtml(lawyerTitle)}</h2>
     <div class="contact">
-      ${lawyerAddress ? `<span>${lawyerAddress}</span>` : ''}
-      ${lawyerPhone ? `<span>الهاتف: ${lawyerPhone}</span>` : ''}
-      ${lawyerEmail ? `<span>${lawyerEmail}</span>` : ''}
+      ${lawyerAddress ? `<span>${escapeHtml(lawyerAddress)}</span>` : ''}
+      ${lawyerPhone ? `<span>الهاتف: ${escapeHtml(lawyerPhone)}</span>` : ''}
+      ${lawyerEmail ? `<span>${escapeHtml(lawyerEmail)}</span>` : ''}
     </div>
   </div>
 
@@ -266,26 +257,26 @@ export function CaseAnnouncementButton({ caseData, parties }: CaseAnnouncementPr
     </p>
 
     <p>
-      يشرف الأستاذ <span class="highlight">${lawyerName}</span>، ${lawyerTitle}، أن يتقدم أمامكم بهذا الإعلان لتأسيس الدعوى التالية:
+      يشرفني أنا الأستاذ <span class="highlight">${escapeHtml(lawyerName)}</span>، ${escapeHtml(lawyerTitle)}، أن أعلمكم بموجب هذا الإعلان بتأسيسي نائباً عن الطرف/الأطراف المحددين أدناه في القضية المبينة بياناتها:
     </p>
 
     <p>
-      <span class="label">رقم القضية:</span> <span class="highlight">${caseData.caseNumber || '__________________'}</span>
-      ${caseData.origCaseNumber ? `&nbsp;&nbsp;&nbsp;<span class="label">رقم القضية الأصلية:</span> ${caseData.origCaseNumber}` : ''}
+      <span class="label">رقم القضية:</span> <span class="highlight">${escapeHtml(caseData.caseNumber || '__________________')}</span>
+      ${caseData.origCaseNumber ? `&nbsp;&nbsp;&nbsp;<span class="label">رقم القضية الأصلية:</span> ${escapeHtml(caseData.origCaseNumber)}` : ''}
     </p>
 
     <p>
-      <span class="label">الموضوع:</span> <span class="highlight">${caseData.subject || '__________________'}</span>
+      <span class="label">الموضوع:</span> <span class="highlight">${escapeHtml(caseData.subject || '__________________')}</span>
     </p>
 
     <p>
-      <span class="label">طبيعة الدعوى:</span> ${caseData.caseNature || '__________________'} &nbsp;&nbsp;&nbsp;
-      <span class="label">مرحلة التقاضي:</span> ${caseData.litigationStage || '__________________'}
+      <span class="label">طبيعة الدعوى:</span> ${escapeHtml(caseData.caseNature || '__________________')} &nbsp;&nbsp;&nbsp;
+      <span class="label">مرحلة التقاضي:</span> ${escapeHtml(caseData.litigationStage || '__________________')}
     </p>
 
     <p>
-      <span class="label">الهيئة القضائية:</span> <span class="highlight">${fullCourt}</span>
-      ${wilayaName ? `&nbsp;&nbsp;&nbsp;<span class="label">الولاية:</span> ${wilayaName}` : ''}
+      <span class="label">الهيئة القضائية:</span> <span class="highlight">${escapeHtml(fullCourt)}</span>
+      ${wilayaName ? `&nbsp;&nbsp;&nbsp;<span class="label">الولاية:</span> ${escapeHtml(wilayaName)}` : ''}
     </p>
 
     <p>
@@ -294,21 +285,17 @@ export function CaseAnnouncementButton({ caseData, parties }: CaseAnnouncementPr
     </p>
 
     <p style="margin-top:12px;">
-      <span class="label">المدعي(ون):</span> ${plaintiffText}
+      <span class="label">الطرف/الأطراف الذين أمثلهم:</span> ${representedText}
     </p>
 
     <p>
-      <span class="label">المدعى عليه(ون):</span> ${defendantText}
+      <span class="label">الخصوم:</span> ${opposingText}
     </p>
 
     ${otherText ? `<p><span class="label">أطراف أخرى:</span> ${otherText}</p>` : ''}
 
     <p style="margin-top:14px;">
-      حيث أن المدعي(ين) المذكور(ين) أعلاه قد طلب(وا) تمثيلهم في هذه الدعوى، و بناء على ذلك تم تأسيس الدعوى و تسجيلها لدى المحكمة الموقرة أعلاه.
-    </p>
-
-    <p>
-      و لذلك يلتمس المدعي(ون) من المحكمة الموقرة الحكم لصالحهم وفقا للقانون.
+      ألتمس من هيئتكم الموقرة تسجيل تأسيسي وإثبات نيابتي عن الطرف/الأطراف المذكورين أعلاه، واعتماد نيابتي في إجراءات الخصومة والتبليغ وفقاً للقانون، مع حفظ حقوقهم ودفوعهم.
     </p>
 
     <p>
@@ -321,7 +308,7 @@ export function CaseAnnouncementButton({ caseData, parties }: CaseAnnouncementPr
   <div class="signature-area">
     <div class="signature-box">
       <div class="signature-line">توقيع المحامي</div>
-      <div style="font-size:11px;margin-top:2px;">الأستاذ ${lawyerName}</div>
+      <div style="font-size:11px;margin-top:2px;">الأستاذ ${escapeHtml(lawyerName)}</div>
     </div>
     <div class="signature-box">
       <div class="signature-line">ختم المحامي</div>
@@ -330,7 +317,7 @@ export function CaseAnnouncementButton({ caseData, parties }: CaseAnnouncementPr
 
   <!-- تذييل -->
   <div class="footer-seal">
-    مكتب الأستاذ ${lawyerName} - ${lawyerTitle} - ${lawyerAddress}
+    مكتب الأستاذ ${escapeHtml(lawyerName)} - ${escapeHtml(lawyerTitle)} - ${escapeHtml(lawyerAddress)}
   </div>
 
 </body>

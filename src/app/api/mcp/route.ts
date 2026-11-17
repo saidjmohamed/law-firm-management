@@ -19,7 +19,7 @@ const TOOLS = [
   // ── قراءة ──
   {
     name: 'search_cases',
-    description: 'Search cases by number, subject, client, or court. Returns top 10.',
+    description: 'Search cases by number, subject, parties, or court. Returns top 10.',
     inputSchema: {
       type: 'object' as const,
       properties: {
@@ -44,28 +44,6 @@ const TOOLS = [
     name: 'get_upcoming',
     description: 'Cases with upcoming dates in next 7 days.',
     inputSchema: { type: 'object' as const, properties: {} },
-  },
-  {
-    name: 'search_clients',
-    description: 'Search clients by name or phone. Top 10.',
-    inputSchema: {
-      type: 'object' as const,
-      properties: {
-        query: { type: 'string' as const, description: 'Name or phone' },
-      },
-      required: ['query'],
-    },
-  },
-  {
-    name: 'get_client',
-    description: 'Get client details with all their cases.',
-    inputSchema: {
-      type: 'object' as const,
-      properties: {
-        id: { type: 'number' as const, description: 'Client ID' },
-      },
-      required: ['id'],
-    },
   },
   {
     name: 'get_court_phones',
@@ -156,20 +134,6 @@ const TOOLS = [
     },
   },
   {
-    name: 'add_client',
-    description: 'Add a new client.',
-    inputSchema: {
-      type: 'object' as const,
-      properties: {
-        name: { type: 'string' as const, description: 'Client name' },
-        phone: { type: 'string' as const, description: 'Phone number' },
-        phone2: { type: 'string' as const, description: 'Second phone (optional)' },
-        address: { type: 'string' as const, description: 'Address (optional)' },
-      },
-      required: ['name'],
-    },
-  },
-  {
     name: 'add_party',
     description: 'Add a party (opponent/lawyer) to a case.',
     inputSchema: {
@@ -194,7 +158,6 @@ const TOOLS = [
       properties: {
         caseNumber: { type: 'string' as const, description: 'Case number' },
         subject: { type: 'string' as const, description: 'Case subject' },
-        clientId: { type: 'number' as const, description: 'Client ID' },
         courtName: { type: 'string' as const, description: 'Court name (optional)' },
         caseNature: { type: 'string' as const, description: 'Case nature (optional)' },
         totalFees: { type: 'number' as const, description: 'Total fees amount (optional)' },
@@ -253,18 +216,6 @@ const TOOLS = [
     },
   },
   {
-    name: 'update_client_phone',
-    description: 'Update client phone number.',
-    inputSchema: {
-      type: 'object' as const,
-      properties: {
-        clientId: { type: 'number' as const, description: 'Client ID' },
-        phone: { type: 'string' as const, description: 'New phone number' },
-      },
-      required: ['clientId', 'phone'],
-    },
-  },
-  {
     name: 'add_note',
     description: 'Add or update notes on a case.',
     inputSchema: {
@@ -288,8 +239,6 @@ async function handleToolCall(name: string, args: Record<string, unknown>): Prom
     case 'search_cases': return await searchCases(args.query as string, args.status as string | undefined);
     case 'get_case': return await getCase(args.id as number);
     case 'get_upcoming': return await getUpcoming();
-    case 'search_clients': return await searchClients(args.query as string);
-    case 'get_client': return await getClient(args.id as number);
     case 'get_court_phones': return await getCourtPhones(args.name as string | undefined);
     case 'financial_summary': return await financialSummary();
     case 'search_parties': return await searchParties(args.query as string);
@@ -299,7 +248,6 @@ async function handleToolCall(name: string, args: Record<string, unknown>): Prom
     case 'add_delay': return await addDelay(args.caseId as number, args.delayDate as string, args.reason as string | undefined);
     case 'add_session': return await addSession(args.caseId as number, args.date as string, args.time as string | undefined);
     case 'add_payment': return await addPayment(args.caseId as number, args.amount as number, args.note as string | undefined);
-    case 'add_client': return await addClient(args.name as string, args.phone as string | undefined, args.phone2 as string | undefined, args.address as string | undefined);
     case 'add_party': return await addParty(args.caseId as number, args.name as string, args.side as string, args.role as string | undefined, args.phone as string | undefined, args.lawyerName as string | undefined, args.lawyerPhone as string | undefined);
     case 'add_case': return await addCase(args as Record<string, unknown>);
     // ── تحديث ──
@@ -307,7 +255,6 @@ async function handleToolCall(name: string, args: Record<string, unknown>): Prom
     case 'update_delib_date': return await updateDelibDate(args.caseId as number, args.delibDate as string);
     case 'update_bar_phone': return await updateBarPhone(args.caseId as number, args.barPhone as string);
     case 'update_case_result': return await updateCaseResult(args.caseId as number, args.result as string, args.judgment as string | undefined);
-    case 'update_client_phone': return await updateClientPhone(args.clientId as number, args.phone as string);
     case 'add_note': return await addNote(args.caseId as number, args.notes as string);
     default: return `Unknown tool: ${name}`;
   }
@@ -326,27 +273,26 @@ async function searchCases(query: string, status?: string): Promise<string> {
       { subject: { contains: q, mode: 'insensitive' } },
       { courtName: { contains: q, mode: 'insensitive' } },
       { councilName: { contains: q, mode: 'insensitive' } },
-      { client: { name: { contains: q, mode: 'insensitive' } } },
+      { parties: { some: { name: { contains: q, mode: 'insensitive' } } } },
       { notes: { contains: q, mode: 'insensitive' } },
     ],
   };
   if (status) where.status = status;
-  const cases = await prisma.case.findMany({ where, include: { client: true }, take: 10, orderBy: { updatedAt: 'desc' } });
+  const cases = await prisma.case.findMany({ where, include: { parties: true }, take: 10, orderBy: { updatedAt: 'desc' } });
   if (cases.length === 0) return 'No cases found.';
-  return cases.map((c: any) => `ID:${c.id} | ${c.caseNumber} | ${c.subject} | ${c.status} | ${c.courtName||'-'} | Client: ${c.client?.name||'-'} | Fees: ${c.totalFees||0} | Paid: ${c.paidAmount||0}`).join('\n');
+  return cases.map((c: any) => `ID:${c.id} | ${c.caseNumber} | ${c.subject} | ${c.status} | ${c.courtName||'-'} | Fees: ${c.totalFees||0} | Paid: ${c.paidAmount||0}`).join('\n');
 }
 
 async function getCase(id: number): Promise<string> {
   const c = await prisma.case.findUnique({
     where: { id },
-    include: { client: true, parties: true, delays: { orderBy: { delayDate: 'desc' } }, sessions: { orderBy: { date: 'desc' } }, payments: { orderBy: { createdAt: 'desc' } } },
+    include: { parties: true, delays: { orderBy: { delayDate: 'desc' } }, sessions: { orderBy: { date: 'desc' } }, payments: { orderBy: { createdAt: 'desc' } } },
   });
   if (!c) return `Case ID ${id} not found.`;
   const l: string[] = [
     `=== Case ${c.caseNumber} (ID:${c.id}) ===`,
     `Subject: ${c.subject}`,
     `Nature: ${c.caseNature||'-'} | Stage: ${c.litigationStage||'-'} | Status: ${c.status}`,
-    `Client: ${c.client?.name||'-'} | Phone: ${c.client?.phone||'-'}`,
     `Court: ${c.courtName||'-'} | Council: ${c.councilName||'-'} | Chamber: ${c.chamber||'-'}`,
     `Bar Phone: ${c.barPhone||'-'}`,
     `Registration: ${formatDate(c.registrationDate as any)} | First Session: ${formatDate(c.firstSessionDate as any)} | Deliberation: ${formatDate(c.delibDate as any)}`,
@@ -367,7 +313,7 @@ async function getUpcoming(): Promise<string> {
   const now = new Date();
   const todayStart = new Date(now); todayStart.setHours(0,0,0,0);
   const nextWeek = new Date(now.getTime()+7*24*60*60*1000); nextWeek.setHours(23,59,59,999);
-  const cases = await prisma.case.findMany({ where: { status: { not: 'مؤرشفة' } }, include: { client: true, delays: true, sessions: true } });
+  const cases = await prisma.case.findMany({ where: { status: { not: 'مؤرشفة' } }, include: { delays: true, sessions: true } });
   const result: string[] = [];
   for (const c of cases) {
     const allDates: {date:Date;label:string}[] = [];
@@ -379,44 +325,11 @@ async function getUpcoming(): Promise<string> {
     if(latest.date>=todayStart && latest.date<=nextWeek){
       const days=Math.round((latest.date.getTime()-now.getTime())/(1000*60*60*24));
       const dateStr = latest.date.toISOString().slice(0,10);
-      result.push(`${c.caseNumber} | ${c.subject} | ${dateStr} (${latest.label}) | ${days===0?'TODAY':days===1?'TOMORROW':`In ${days} days`} | ${c.courtName||'-'} | Client: ${c.client?.name||'-'}`);
+      result.push(`${c.caseNumber} | ${c.subject} | ${dateStr} (${latest.label}) | ${days===0?'TODAY':days===1?'TOMORROW':`In ${days} days`} | ${c.courtName||'-'}`);
     }
   }
   if(result.length===0) return 'No upcoming cases in 7 days.';
   return `Upcoming (${result.length}):\n`+result.join('\n');
-}
-
-async function searchClients(query: string): Promise<string> {
-  const q = query.trim();
-  if(!q) return 'Provide a search term.';
-  const clients = await prisma.client.findMany({
-    where: { OR: [{ name: { contains: q, mode: 'insensitive' } }, { phone: { contains: q } }, { phone2: { contains: q } }] },
-    include: { cases: { select: { id:true, caseNumber:true, status:true, subject:true } } },
-    take: 10,
-  });
-  if(clients.length===0) return 'No clients found.';
-  return clients.map((cl:any)=>`ID:${cl.id} | ${cl.name} | Ph: ${cl.phone}${cl.phone2?` / ${cl.phone2}`:''} | Cases: ${cl.cases.length}`).join('\n');
-}
-
-async function getClient(id: number): Promise<string> {
-  const cl = await prisma.client.findUnique({
-    where: { id },
-    include: { cases: { orderBy: { updatedAt: 'desc' } } },
-  });
-  if(!cl) return `Client ID ${id} not found.`;
-  const l: string[] = [
-    `=== Client: ${cl.name} (ID:${cl.id}) ===`,
-    `Phone: ${cl.phone}${cl.phone2?` / ${cl.phone2}`:''}`,
-    `Address: ${cl.address||'-'}`,
-    `Cases: ${cl.cases.length}`,
-  ];
-  if(cl.cases.length>0){
-    cl.cases.forEach((c:any)=>{
-      const rem = (c.totalFees||0)-(c.paidAmount||0);
-      l.push(`  ID:${c.id} | ${c.caseNumber} | ${c.subject} | ${c.status} | ${c.courtName||'-'} | Remaining: ${rem}`);
-    });
-  }
-  return l.join('\n');
 }
 
 async function getCourtPhones(name?: string): Promise<string> {
@@ -504,11 +417,6 @@ async function addPayment(caseId: number, amount: number, note?: string): Promis
   return `Payment recorded: ${amount.toLocaleString()} for Case ${c.caseNumber} | Total paid: ${newPaid.toLocaleString()} | Remaining: ${remaining.toLocaleString()} | Payment ID:${p.id}`;
 }
 
-async function addClient(name: string, phone?: string, phone2?: string, address?: string): Promise<string> {
-  const cl = await prisma.client.create({ data: { name, phone: phone||'', phone2: phone2||'', address: address||'' } });
-  return `Client added: ${name} (ID:${cl.id})${phone?` | Phone: ${phone}`:''}`;
-}
-
 async function addParty(caseId: number, name: string, side: string, role?: string, phone?: string, lawyerName?: string, lawyerPhone?: string): Promise<string> {
   const c = await prisma.case.findUnique({ where: { id: caseId } });
   if(!c) return `Case ID ${caseId} not found.`;
@@ -522,7 +430,6 @@ async function addCase(args: Record<string, unknown>): Promise<string> {
   const subject = args.subject as string;
   if(!caseNumber||!subject) return 'Case number and subject are required.';
   const data: any = { caseNumber, subject, status: 'جارية' };
-  if(args.clientId) data.clientId = args.clientId as number;
   if(args.courtName) data.courtName = args.courtName as string;
   if(args.caseNature) data.caseNature = args.caseNature as string;
   if(args.totalFees) data.totalFees = args.totalFees as number;
@@ -567,13 +474,6 @@ async function updateCaseResult(caseId: number, result: string, judgment?: strin
   if(result==='won'||result==='lost') data.status = 'مفصول فيها';
   await prisma.case.update({ where: { id: caseId }, data });
   return `Result updated: Case ${c.caseNumber} → ${result==='won'?'Won':'Lost'}${judgment?` | Judgment: ${judgment}`:''}`;
-}
-
-async function updateClientPhone(clientId: number, phone: string): Promise<string> {
-  const cl = await prisma.client.findUnique({ where: { id: clientId } });
-  if(!cl) return `Client ID ${clientId} not found.`;
-  await prisma.client.update({ where: { id: clientId }, data: { phone } });
-  return `Phone updated: ${cl.name} → ${phone}`;
 }
 
 async function addNote(caseId: number, notes: string): Promise<string> {

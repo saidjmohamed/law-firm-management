@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { useCases, useClients, useSessions, useJudicialBodies, useLawyers } from '@/lib/api';
+import { useCases, useSessions, useJudicialBodies, useLawyers } from '@/lib/api';
 import { useAppStore, type Section } from '@/lib/store';
 import { formatDate } from '@/lib/constants';
 import {
@@ -26,10 +26,9 @@ import {
 
 export function GlobalSearch() {
   const [open, setOpen] = useState(false);
-  const { setActiveSection, setSelectedCaseId, setSelectedClientId, setSelectedLawyerId } = useAppStore();
+  const { setActiveSection, setSelectedCaseId, setSelectedLawyerId } = useAppStore();
 
   const { cases, isLoading: casesLoading } = useCases();
-  const { clients, isLoading: clientsLoading } = useClients();
   const { sessions } = useSessions();
   const { judicialBodies: courts } = useJudicialBodies();
   const { lawyers } = useLawyers();
@@ -51,9 +50,6 @@ export function GlobalSearch() {
     if (type === 'case' && id) {
       setSelectedCaseId(id);
       setActiveSection('cases');
-    } else if (type === 'client' && id) {
-      setSelectedClientId(id);
-      setActiveSection('clients');
     } else if (type === 'session') {
       // الجلسات مدمجة في القضايا — التنقل للقضية المرتبطة
       if (id) {
@@ -66,13 +62,12 @@ export function GlobalSearch() {
       setSelectedLawyerId(id);
       setActiveSection('lawyers');
     }
-  }, [setActiveSection, setSelectedCaseId, setSelectedClientId, setSelectedLawyerId]);
+  }, [setActiveSection, setSelectedCaseId, setSelectedLawyerId]);
 
-  // بناء عناصر القضايا للبحث — يشمل: رقم القضية، الموضوع، المحكمة، الموكل، الأطراف، الملاحظات، الحكم
+  // بناء عناصر القضايا للبحث — يشمل بيانات القضية والأطراف والجلسات والتأجيلات
   const caseItems = useMemo(() => {
-    if (casesLoading || clientsLoading) return [];
+    if (casesLoading) return [];
     return cases.map((c: any) => {
-      const clientName = c.clientId ? clients.find((cl: any) => cl.id === c.clientId)?.name : '';
       // تجميع أسماء الأطراف وأرقام هواتفهم ومحاميهم
       const partyText = (c.parties || [])
         .map((p: any) => `${p.name || ''} ${p.phone || ''} ${p.lawyerName || ''} ${p.lawyerPhone || ''} ${p.role || ''}`)
@@ -83,26 +78,12 @@ export function GlobalSearch() {
         .join(' ');
       return {
         id: c.id!,
-        value: `${c.caseNumber || ''} ${c.subject || ''} ${c.courtName || ''} ${c.councilName || ''} ${c.caseNature || ''} ${clientName || ''} ${c.status || ''} ${c.notes || ''} ${c.judgment || ''} ${c.lawyer || ''} ${c.chamber || ''} ${partyText} ${delayText}`,
+        value: `${c.caseNumber || ''} ${c.subject || ''} ${c.courtName || ''} ${c.councilName || ''} ${c.caseNature || ''} ${c.status || ''} ${c.notes || ''} ${c.judgment || ''} ${c.lawyer || ''} ${c.chamber || ''} ${partyText} ${delayText}`,
         title: `${c.caseNumber || '—'} — ${c.subject || '—'}`,
-        subtitle: `${c.courtName || c.councilName || ''}${clientName ? ` | ${clientName}` : ''}`,
+        subtitle: `${c.courtName || c.councilName || ''}`,
       };
     });
-  }, [cases, clients, casesLoading, clientsLoading]);
-
-  // بناء عناصر الموكلين للبحث
-  const clientItems = useMemo(() => {
-    if (clientsLoading || casesLoading) return [];
-    return clients.map((cl: any) => {
-      const caseCount = cases.filter((c: any) => c.clientId === cl.id).length;
-      return {
-        id: cl.id!,
-        value: `${cl.name || ''} ${cl.phone || ''} ${cl.phone2 || ''} ${cl.nationalId || ''} ${cl.address || ''} ${cl.notes || ''}`,
-        title: cl.name || '—',
-        subtitle: `${cl.phone || ''}${caseCount > 0 ? ` | ${caseCount} قضية` : ''}`,
-      };
-    });
-  }, [clients, cases, clientsLoading, casesLoading]);
+  }, [cases, casesLoading]);
 
   // بناء عناصر الجلسات للبحث
   const sessionItems = useMemo(() => {
@@ -137,7 +118,7 @@ export function GlobalSearch() {
   // وصول سريع
   const quickItems: { label: string; section: Section; icon: React.ElementType; keywords: string }[] = [
     { label: 'القضايا', section: 'cases', icon: Briefcase, keywords: 'قضية قضايا' },
-    { label: 'الموكلون', section: 'clients', icon: Users, keywords: 'موكل موكلون عملاء' },
+    { label: 'الأطراف الذين نمثلهم', section: 'represented-parties', icon: Users, keywords: 'أطراف نمثلهم' },
     { label: 'الجلسات', section: 'cases', icon: Calendar, keywords: 'جلسة جلسات محكمة' },
     { label: 'الهيئات القضائية', section: 'courts', icon: Scale, keywords: 'محكمة مجلس هيئة' },
     { label: 'المدفوعات', section: 'payments', icon: Banknote, keywords: 'دفع مدفوعات أتعاب' },
@@ -159,7 +140,7 @@ export function GlobalSearch() {
       </button>
 
       <CommandDialog open={open} onOpenChange={setOpen}>
-        <CommandInput placeholder="ابحث في القضايا، الموكلين، الجلسات، الهيئات القضائية..." />
+        <CommandInput placeholder="ابحث في القضايا والأطراف والجلسات والهيئات القضائية..." />
         <CommandList>
           <CommandEmpty>لا توجد نتائج مطابقة</CommandEmpty>
 
@@ -180,28 +161,6 @@ export function GlobalSearch() {
                     )}
                   </div>
                   <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded shrink-0">قضية</span>
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          )}
-
-          {/* الموكلون */}
-          {clientItems.length > 0 && (
-            <CommandGroup heading="الموكلون">
-              {clientItems.slice(0, 10).map(item => (
-                <CommandItem
-                  key={`client-${item.id}`}
-                  value={item.value}
-                  onSelect={() => handleSelect('client', item.id)}
-                >
-                  <Users className="w-4 h-4 ml-2 shrink-0 text-blue-600" />
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium truncate">{item.title}</p>
-                    {item.subtitle && (
-                      <p className="text-xs text-muted-foreground truncate">{item.subtitle}</p>
-                    )}
-                  </div>
-                  <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded shrink-0">موكل</span>
                 </CommandItem>
               ))}
             </CommandGroup>

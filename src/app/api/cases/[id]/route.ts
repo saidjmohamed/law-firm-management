@@ -10,7 +10,7 @@ function normalizeUpdateData(data: Record<string, any>): Record<string, any> {
   const out: Record<string, any> = { ...data };
 
   // تحويل الأرقام
-  for (const f of ['clientId', 'wilayaId', 'totalFees', 'paidAmount', 'chamberNumber', 'courtId']) {
+  for (const f of ['wilayaId', 'totalFees', 'paidAmount', 'chamberNumber', 'courtId']) {
     if (out[f] !== undefined && out[f] !== null && out[f] !== '') {
       out[f] = parseInt(String(out[f]));
       if (isNaN(out[f])) delete out[f];
@@ -41,7 +41,6 @@ export async function GET(
     const caseData = await prisma.case.findUnique({
       where: { id: parseInt(id) },
       include: {
-        client: true,
         parties: true,
         delays: true,
         sessions: {
@@ -83,7 +82,6 @@ export async function PUT(
       id: _id,
       createdAt,
       updatedAt,
-      client,
       parties,
       delays,
       sessions,
@@ -111,7 +109,6 @@ export async function PUT(
         parseInt(id),
         normalized.caseResult,
         updatedCase.caseNumber || undefined,
-        updatedCase.clientId
       );
     }
 
@@ -138,7 +135,6 @@ export async function PATCH(
       id: _id,
       createdAt,
       updatedAt,
-      client,
       parties,
       delays,
       sessions,
@@ -161,8 +157,7 @@ export async function PATCH(
       await createJudgmentFollowUpTasks(
         parseInt(id),
         normalized.caseResult,
-        updatedCase.caseNumber || undefined,
-        updatedCase.clientId
+        updatedCase.caseNumber || undefined
       );
     }
 

@@ -78,8 +78,7 @@ const JUDGMENT_TASK_RULES: Record<string, AutoTaskDefinition[]> = {
 export async function createJudgmentFollowUpTasks(
   caseId: number,
   caseResult: string,
-  caseNumber?: string,
-  clientId?: number | null
+  caseNumber?: string
 ): Promise<{ created: number; skipped: boolean }> {
   const rules = JUDGMENT_TASK_RULES[caseResult];
   if (!rules) return { created: 0, skipped: false };
@@ -113,7 +112,6 @@ export async function createJudgmentFollowUpTasks(
           sourceType: rule.sourceType,
           sourceId: caseId,
           relatedCaseId: caseId,
-          relatedClientId: clientId ?? null,
           // الأجل يُترك null — المستخدم يملؤه بعد معرفة القانون
         },
       });
@@ -133,8 +131,7 @@ export async function createJudgmentFollowUpTasks(
 export async function createJudgmentExtractTask(
   caseId: number,
   caseResult: string,
-  caseNumber?: string,
-  clientId?: number | null
+  caseNumber?: string
 ): Promise<{ created: boolean; taskId?: number }> {
   try {
     // التحقق من عدم وجود مهمة سحب حكم سابقة
@@ -163,7 +160,6 @@ export async function createJudgmentExtractTask(
         sourceType: 'judgment',
         sourceId: caseId,
         relatedCaseId: caseId,
-        relatedClientId: clientId ?? null,
       },
     });
 

@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import {
-  useTasks, useCases, useClients, createTask, updateTask, deleteTask,
+  useTasks, useCases, createTask, updateTask, deleteTask,
 } from '@/lib/api';
 import {
   TASK_TYPES, TASK_PRIORITIES, TASK_STATUSES,
@@ -74,14 +74,12 @@ interface TaskType {
   sourceType?: string | null;
   sourceId?: number | null;
   relatedCaseId?: number | null;
-  relatedClientId?: number | null;
   assignedTo?: string | null;
   notes?: string | null;
   completedAt?: string | null;
   createdAt: string;
   updatedAt: string;
   relatedCase?: { id: number; caseNumber: string; subject: string; status?: string } | null;
-  relatedClient?: { id: number; name: string; phone?: string } | null;
 }
 
 // ============================================================================
@@ -99,7 +97,6 @@ function emptyForm(): Record<string, unknown> {
     legalDeadline: '',
     reminderOffsets: [7, 1, 0],
     relatedCaseId: null,
-    relatedClientId: null,
     notes: '',
   };
 }
@@ -110,7 +107,6 @@ function emptyForm(): Record<string, unknown> {
 export function TasksManager() {
   const { tasks, isLoading } = useTasks();
   const { cases } = useCases();
-  const { clients } = useClients();
   const { selectedTaskId, setSelectedTaskId, selectedCaseId } = useAppStore();
 
   const [view, setView] = useState<'list' | 'table' | 'kanban'>('list');
@@ -119,7 +115,6 @@ export function TasksManager() {
   const [filterPriority, setFilterPriority] = useState<string>('all');
   const [filterType, setFilterType] = useState<string>('all');
   const [filterCaseId, setFilterCaseId] = useState<string>('all');
-  const [filterClientId, setFilterClientId] = useState<string>('all');
   const [showForm, setShowForm] = useState(false);
   const [editingTask, setEditingTask] = useState<TaskType | null>(null);
   const [formData, setFormData] = useState<Record<string, unknown>>(emptyForm());
@@ -144,8 +139,7 @@ export function TasksManager() {
         (t.title || '').toLowerCase().includes(q) ||
         (t.description || '').toLowerCase().includes(q) ||
         (t.notes || '').toLowerCase().includes(q) ||
-        (t.relatedCase?.caseNumber || '').toLowerCase().includes(q) ||
-        (t.relatedClient?.name || '').toLowerCase().includes(q)
+        (t.relatedCase?.caseNumber || '').toLowerCase().includes(q)
       );
     }
 
@@ -153,10 +147,9 @@ export function TasksManager() {
     if (filterPriority !== 'all') result = result.filter((t: TaskType) => t.priority === filterPriority);
     if (filterType !== 'all') result = result.filter((t: TaskType) => t.taskType === filterType);
     if (filterCaseId !== 'all') result = result.filter((t: TaskType) => String(t.relatedCaseId) === filterCaseId);
-    if (filterClientId !== 'all') result = result.filter((t: TaskType) => String(t.relatedClientId) === filterClientId);
 
     return result;
-  }, [tasks, search, filterStatus, filterPriority, filterType, filterCaseId, filterClientId]);
+  }, [tasks, search, filterStatus, filterPriority, filterType, filterCaseId]);
 
   // ========================================================================
   // إحصائيات
@@ -188,7 +181,6 @@ export function TasksManager() {
       legalDeadline: toDateInputValue(task.legalDeadline),
       reminderOffsets: parseReminderOffsets(task.reminderOffsets),
       relatedCaseId: task.relatedCaseId,
-      relatedClientId: task.relatedClientId,
       notes: task.notes || '',
     });
     setShowForm(true);
@@ -263,7 +255,7 @@ export function TasksManager() {
   return (
     <div className="space-y-5">
       {/* بطاقات الإحصائيات */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <StatBox label="متأخرة" value={stats.overdue} icon={AlertCircle} color="red" />
         <StatBox label="اليوم" value={stats.today} icon={Clock} color="orange" />
         <StatBox label="هذا الأسبوع" value={stats.thisWeek} icon={CalendarIcon} color="amber" />
@@ -348,18 +340,6 @@ export function TasksManager() {
                     <SelectItem key={c.id} value={String(c.id)}>
                       {c.caseNumber || `قضية ${c.id}`}
                     </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label className="text-xs">الموكل</Label>
-              <Select value={filterClientId} onValueChange={setFilterClientId}>
-                <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">كل الموكلين</SelectItem>
-                  {clients.map((c: any) => (
-                    <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -579,15 +559,10 @@ function TaskCard({ task, onEdit, onDelete, onStatusChange }: {
               )}
             </div>
 
-            {/* الارتباطات */}
-            {(task.relatedCase || task.relatedClient) && (
+            {/* الارتباط بالقضية */}
+            {task.relatedCase && (
               <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-sm text-muted-foreground">
-                {task.relatedCase && (
-                  <span>📁 {task.relatedCase.caseNumber || '—'} — {task.relatedCase.subject || ''}</span>
-                )}
-                {task.relatedClient && (
-                  <span>👤 {task.relatedClient.name}{task.relatedClient.phone ? ` (${task.relatedClient.phone})` : ''}</span>
-                )}
+                <span>📁 {task.relatedCase.caseNumber || '—'} — {task.relatedCase.subject || ''}</span>
               </div>
             )}
 
@@ -654,12 +629,7 @@ function TaskTableView({ tasks, onEdit, onDelete, onStatusChange }: {
               const days = daysRemaining(task.dueDate, task.legalDeadline);
               return (
                 <tr key={task.id} className={`border-b hover:bg-muted/30 ${URGENCY_COLORS[urgency]}`}>
-                  <td className="p-3">
-                    <div className="font-medium">{task.title}</div>
-                    {task.relatedClient && (
-                      <div className="text-[12px] text-muted-foreground">{task.relatedClient.name}</div>
-                    )}
-                  </td>
+                  <td className="p-3"><div className="font-medium">{task.title}</div></td>
                   <td className="p-3">
                     <Badge variant="outline" className={TASK_TYPE_COLORS[task.taskType] || TASK_TYPE_COLORS.other}>
                       {TASK_TYPE_LABELS[task.taskType] || task.taskType}
@@ -827,7 +797,6 @@ function TaskFormDialog({
   onClose: () => void;
 }) {
   const { cases } = useCases();
-  const { clients } = useClients();
   const isLegal = formData.taskType === 'legal_procedure';
 
   function update(field: string, value: unknown) {
@@ -989,21 +958,6 @@ function TaskFormDialog({
                     <SelectItem key={c.id} value={String(c.id)}>
                       {c.caseNumber || `قضية ${c.id}`} — {c.subject?.substring(0, 30)}
                     </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label>الموكل المرتبط (اختياري)</Label>
-              <Select
-                value={formData.relatedClientId ? String(formData.relatedClientId) : 'none'}
-                onValueChange={(v) => update('relatedClientId', v === 'none' ? null : parseInt(v))}
-              >
-                <SelectTrigger className="w-full"><SelectValue placeholder="بدون موكل" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">بدون موكل</SelectItem>
-                  {clients.map((c: any) => (
-                    <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>

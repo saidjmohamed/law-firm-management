@@ -7,7 +7,6 @@ export async function GET() {
     const cases = await prisma.case.findMany({
       orderBy: { createdAt: 'desc' },
       include: {
-        client: true,
         parties: true,
         delays: true,
         sessions: true,
@@ -51,7 +50,6 @@ export async function POST(request: NextRequest) {
         origCaseNumber: body.origCaseNumber || '',
         customStage: body.customStage || '',
         status: body.status || 'جارية',
-        clientId: body.clientId ?? null,
         wilayaId: body.wilayaId ?? 16,
         judiciaryType: body.judiciaryType || null,
         courtLevel: body.courtLevel || null,
@@ -65,6 +63,7 @@ export async function POST(request: NextRequest) {
         registrationDate: toDateOrNull(body.registrationDate),
         firstSessionDate: toDateOrNull(body.firstSessionDate),
         delibDate: toDateOrNull(body.delibDate),
+        judgmentDate: toDateOrNull(body.judgmentDate),
         barPhone: body.barPhone || '',
         lawyer: body.lawyer || '',
         notes: body.notes || '',

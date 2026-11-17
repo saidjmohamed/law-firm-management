@@ -6,19 +6,11 @@ import { toDateOrNull } from '@/lib/date-utils';
 // بذرة بيانات تجريبية (وهمية بالكامل) — لعرض ميزات النظام فقط
 // ============================================================================
 // تنبيه هام: هذه البيانات وهمية ولا تمثل أي شخص حقيقي. لا يجوز أبداً وضع بيانات
-// حقيقية لموكلين أو أطراف قضايا في كود المصدر (خصوصاً في مستودع Git)، لأن ذلك
+// حقيقية لأطراف قضايا في كود المصدر (خصوصاً في مستودع Git)، لأن ذلك
 // يُعد خرقاً للسر المهني ويبقى بشكل دائم في تاريخ الإصدارات حتى بعد حذفه لاحقاً.
 // لاستيراد بيانات حقيقية، استخدم واجهة الاستيراد (النسخ الاحتياطي JSON) بعد
 // تسجيل الدخول، وليس عبر هذا المسار.
 // ============================================================================
-
-const SEED_CLIENTS: { name: string; phone?: string }[] = [
-  { name: 'موكل تجريبي 1', phone: '0550000001' },
-  { name: 'موكل تجريبي 2', phone: '0550000002' },
-  { name: 'موكل تجريبي 3', phone: '0550000003' },
-  { name: 'موكل تجريبي 4', phone: '0550000004' },
-  { name: 'موكل تجريبي 5', phone: '0550000005' },
-];
 
 const SEED_COURTS: {
   name: string;
@@ -58,7 +50,6 @@ interface SeedCase {
   litigationStage: string;
   origCaseNumber?: string;
   status: string;
-  clientName?: string;
   councilName?: string;
   courtName?: string;
   courtLevel?: string;
@@ -76,6 +67,7 @@ interface SeedCase {
   parties?: {
     role: string;
     name: string;
+    side?: string;
     phone?: string;
     lawyerName?: string;
     lawyerPhone?: string;
@@ -90,7 +82,6 @@ const DEMO_CASES: SeedCase[] = [
     caseNature: 'مدني',
     litigationStage: 'افتتاحية (ابتدائي)',
     status: 'جارية',
-    clientName: 'موكل تجريبي 1',
     councilName: 'مجلس قضاء الجزائر',
     courtName: 'محكمة بئرمرادراريس',
     courtLevel: 'court',
@@ -102,7 +93,7 @@ const DEMO_CASES: SeedCase[] = [
     firstSessionDate: '2026-03-01',
     delays: [{ delayDate: '2026-04-01', reason: 'لجواب المدعى عليه' }],
     parties: [
-      { role: 'مدعي', name: 'موكل تجريبي 1', phone: '0550000001', lawyerName: 'اسم المحامي' },
+      { role: 'مدعي', name: 'طرف تجريبي 1', phone: '0550000001', lawyerName: 'اسم المحامي' },
       { role: 'مدعى عليه', name: 'طرف تجريبي أ' },
     ],
   },
@@ -113,7 +104,6 @@ const DEMO_CASES: SeedCase[] = [
     litigationStage: 'استئنافية',
     origCaseNumber: 'تجريبي-2025-010',
     status: 'مؤرشفة',
-    clientName: 'موكل تجريبي 2',
     councilName: 'مجلس قضاء الجزائر',
     courtName: 'مجلس قضاء الجزائر',
     courtLevel: 'council',
@@ -126,7 +116,7 @@ const DEMO_CASES: SeedCase[] = [
     delibDate: '2026-01-10',
     judgment: 'مثال توضيحي لنص الحكم — بيانات وهمية',
     parties: [
-      { role: 'متهم', name: 'موكل تجريبي 2', phone: '0550000002', lawyerName: 'اسم المحامي' },
+      { role: 'متهم', name: 'طرف تجريبي 2', phone: '0550000002', lawyerName: 'اسم المحامي' },
       { role: 'طرف مدني', name: 'طرف تجريبي ب' },
     ],
   },
@@ -136,7 +126,6 @@ const DEMO_CASES: SeedCase[] = [
     caseNature: 'جنحة',
     litigationStage: 'افتتاحية (ابتدائي)',
     status: 'جارية',
-    clientName: 'موكل تجريبي 3',
     councilName: 'المحكمة العليا',
     courtName: 'المحكمة العليا',
     courtLevel: 'supreme',
@@ -145,7 +134,7 @@ const DEMO_CASES: SeedCase[] = [
     paidAmount: 100000,
     delays: [{ delayDate: '2026-05-01', reason: 'تسجيل مذكرة الطعن' }],
     parties: [
-      { role: 'طاعن', name: 'موكل تجريبي 3', phone: '0550000003', lawyerName: 'اسم المحامي' },
+      { role: 'طاعن', name: 'طرف تجريبي 3', phone: '0550000003', lawyerName: 'اسم المحامي' },
       { role: 'مطعون ضده', name: 'طرف تجريبي ج' },
     ],
   },
@@ -155,7 +144,6 @@ const DEMO_CASES: SeedCase[] = [
     caseNature: 'اداري استئنافي',
     litigationStage: 'افتتاحية (ابتدائي)',
     status: 'جارية',
-    clientName: 'موكل تجريبي 4',
     councilName: 'مجلس قضاء الجزائر',
     courtName: 'المحكمة الإدارية الاستئنافية بالجزائر',
     courtLevel: 'admin_appeal',
@@ -165,7 +153,7 @@ const DEMO_CASES: SeedCase[] = [
     paidAmount: 40000,
     registrationDate: '2026-03-01',
     parties: [
-      { role: 'مدعي', name: 'موكل تجريبي 4', phone: '0550000004', lawyerName: 'اسم المحامي' },
+      { role: 'مدعي', name: 'طرف تجريبي 4', phone: '0550000004', lawyerName: 'اسم المحامي' },
       { role: 'مدعى عليه', name: 'جهة إدارية تجريبية' },
     ],
   },
@@ -175,7 +163,6 @@ const DEMO_CASES: SeedCase[] = [
     caseNature: 'مدني',
     litigationStage: 'استئنافية',
     status: 'مؤرشفة',
-    clientName: 'موكل تجريبي 5',
     councilName: 'مجلس قضاء المدية',
     courtName: 'مجلس قضاء المدية',
     courtLevel: 'council',
@@ -187,7 +174,7 @@ const DEMO_CASES: SeedCase[] = [
     delibDate: '2026-02-01',
     judgment: 'مثال توضيحي لنص الحكم — بيانات وهمية',
     parties: [
-      { role: 'مستأنف', name: 'موكل تجريبي 5', phone: '0550000005', lawyerName: 'اسم المحامي' },
+      { role: 'مستأنف', name: 'طرف تجريبي 5', phone: '0550000005', lawyerName: 'اسم المحامي' },
       { role: 'مستأنف عليه', name: 'طرف تجريبي د' },
     ],
   },
@@ -206,9 +193,8 @@ export async function POST() {
 
     // فحص إضافي: حتى لو لم يكن seedVersion، تحقق من وجود بيانات
     const existingCases = await prisma.case.count();
-    const existingClients = await prisma.client.count();
 
-    if (existingCases > 0 || existingClients > 0) {
+    if (existingCases > 0) {
       return NextResponse.json(
         { message: 'البيانات موجودة مسبقاً — لا يمكن إعادة البذرة' },
         { status: 200 }
@@ -249,23 +235,8 @@ export async function POST() {
         courtIdMap[seedCourt.name] = court.id;
       }
 
-      // 3. إدراج الموكلين (وهميون بالكامل)
-      const clientIdMap: Record<string, number> = {};
-      for (const seedClient of SEED_CLIENTS) {
-        const client = await tx.client.create({
-          data: {
-            name: seedClient.name,
-            phone: seedClient.phone ?? '',
-          },
-        });
-        clientIdMap[seedClient.name] = client.id;
-      }
-
-      // 4. إدراج القضايا مع الأطراف والآجال والأرشيف (وهمية بالكامل)
+      // 3. إدراج القضايا مع الأطراف والآجال والأرشيف (وهمية بالكامل)
       for (const seedCase of DEMO_CASES) {
-        const clientId = seedCase.clientName
-          ? clientIdMap[seedCase.clientName]
-          : undefined;
 
         const courtId = seedCase.courtName
           ? courtIdMap[seedCase.courtName]
@@ -279,7 +250,6 @@ export async function POST() {
             litigationStage: seedCase.litigationStage,
             origCaseNumber: seedCase.origCaseNumber ?? '',
             status: seedCase.status,
-            clientId: clientId,
             wilayaId: seedCase.wilayaId ?? 16,
             courtLevel: seedCase.courtLevel ?? '',
             courtId: courtId,
@@ -296,8 +266,11 @@ export async function POST() {
             judgment: seedCase.judgment ?? '',
             parties: {
               createMany: {
-                data: (seedCase.parties ?? []).map((p) => ({
+                data: [
+                  ...(seedCase.parties ?? []),
+                ].map((p) => ({
                   role: p.role ?? '',
+                  side: p.side ?? (['مدعى عليه', 'مستأنف ضده', 'مستأنف عليه', 'مطلوب', 'متهم', 'مشتكى منه', 'معارض ضده'].includes(p.role ?? '') ? 'against' : 'for'),
                   name: p.name ?? '',
                   phone: p.phone ?? '',
                   lawyerName: p.lawyerName ?? '',
@@ -346,7 +319,6 @@ export async function POST() {
       }
 
       return {
-        clients: SEED_CLIENTS.length,
         cases: DEMO_CASES.length,
         courts: SEED_COURTS.length,
       };

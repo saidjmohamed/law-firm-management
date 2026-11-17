@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { Calendar as CalendarIcon, FileDown } from 'lucide-react';
-import { useCases, useClients, useParties, useDelays, useSessions, useJudicialBodies, useLawyers, useTasks, createCase, updateCase, deleteCase as apiDeleteCase, createParty, updateParty as apiUpdateParty, deleteParty as apiDeleteParty, createDelay, updateDelay as apiUpdateDelay, deleteDelay as apiDeleteDelay, createClient, createJudicialBody, createArchive, syncPartiesToClients } from '@/lib/api';
+import { Calendar as CalendarIcon } from 'lucide-react';
+import { useCases, useParties, useDelays, useSessions, useJudicialBodies, useLawyers, useTasks, createCase, updateCase, deleteCase as apiDeleteCase, createParty, updateParty as apiUpdateParty, deleteParty as apiDeleteParty, createDelay, updateDelay as apiUpdateDelay, deleteDelay as apiDeleteDelay, createJudicialBody, createArchive } from '@/lib/api';
 import { mutate } from 'swr';
 import { formatCurrency, STATUS_COLORS, CASE_NATURES, CASE_STATUSES, LITIGATION_STAGES, PARTY_ROLES, JUDICIAL_CHAMBERS, WILAYAS, JUDICIARY_TYPES, ORDINARY_COURT_LEVELS, ADMIN_COURT_LEVELS, CHAMBER_NUMBERS, formatDate } from '@/lib/constants';
 import { CasePrintButton } from '@/components/case-print';
@@ -81,6 +81,11 @@ interface PartyType {
   side?: string;
   name?: string;
   phone?: string;
+  phone2?: string;
+  address?: string;
+  wilaya?: number;
+  nationalId?: string;
+  contactNotes?: string;
   lawyerName?: string;
   lawyerPhone?: string;
   totalFees?: number;
@@ -124,7 +129,6 @@ interface CaseType {
   origCaseNumber?: string;
   customStage?: string;
   status?: string;
-  clientId?: number;
   wilayaId?: number;
   judiciaryType?: string;
   courtLevel?: string;
@@ -146,17 +150,9 @@ interface CaseType {
   caseResult?: string | null; // 'won' | 'lost' | null
   createdAt: string;
   updatedAt: string;
-  client?: { id: number; name?: string; googleDriveFolderId?: string | null };
   parties?: PartyType[];
   delays?: DelayType[];
   sessions?: SessionType[];
-}
-
-interface ClientType {
-  id: number;
-  name?: string;
-  phone?: string;
-  googleDriveFolderId?: string | null;
 }
 
 interface JudicialBodyType {
@@ -252,10 +248,6 @@ export function Cases() {
   const [archiveConfirm, setArchiveConfirm] = useState<number | null>(null);
   const [deletePartyConfirm, setDeletePartyConfirm] = useState<number | null>(null);
 
-  // حوار إنشاء موكل جديد
-  const [showNewClientDialog, setShowNewClientDialog] = useState(false);
-  const [newClientData, setNewClientData] = useState<Partial<ClientType>>({});
-
   // حوار إنشاء هيئة قضائية جديدة
   const [showNewCourtDialog, setShowNewCourtDialog] = useState(false);
   const [newCourtData, setNewCourtData] = useState<Partial<JudicialBodyType>>({});
@@ -274,25 +266,12 @@ export function Cases() {
   const [forceSaveCase, setForceSaveCase] = useState(false);
 
   const { cases, isLoading: casesLoading } = useCases();
-  const { clients, isLoading: clientsLoading } = useClients();
   const { parties: allParties } = useParties();
   const { delays: allDelays } = useDelays();
   const { judicialBodies, isLoading: bodiesLoading } = useJudicialBodies();
   const { sessions: allSessions } = useSessions();
   const { lawyers } = useLawyers();
   const { tasks: allTasks } = useTasks();
-
-  // مزامنة الأطراف مع الموكلين عند التحميل (مرة واحدة)
-  useEffect(() => {
-    if (allParties?.length && clients?.length !== undefined) {
-      // تحقق هل كل الأطراف لها موكل مقابل
-      const clientNameSet = new Set(clients.map((c: any) => c.name?.trim().toLowerCase()).filter(Boolean));
-      const missingParties = allParties.filter((p: any) => p.name?.trim() && !clientNameSet.has(p.name.trim().toLowerCase()));
-      if (missingParties.length > 0) {
-        syncPartiesToClients().catch(() => {});
-      }
-    }
-  }, [allParties, clients]);
 
   // قائمة أسماء المحامين للاكمال التراكمي
   const lawyerNameSuggestions = useMemo(() => {
@@ -302,26 +281,6 @@ export function Cases() {
     allParties?.forEach((p: any) => { if (p.lawyerName?.trim()) names.add(p.lawyerName.trim()); });
     return Array.from(names).sort((a, b) => a.localeCompare(b));
   }, [lawyers, allParties]);
-
-  // قائمة أسماء الموكلين لاقتراحات الأطراف
-  const clientNameSuggestions = useMemo(() => {
-    const names = new Set<string>();
-    clients?.forEach((c: any) => { if (c.name?.trim()) names.add(c.name.trim()); });
-    // إضافة أسماء الأطراف من جميع القضايا
-    allParties?.forEach((p: any) => { if (p.name?.trim()) names.add(p.name.trim()); });
-    return Array.from(names).sort((a, b) => a.localeCompare(b));
-  }, [clients, allParties]);
-
-  // خريطة الموكلين حسب الاسم للبحث السريع
-  const clientByNameMap = useMemo(() => {
-    const map: Record<string, any> = {};
-    clients?.forEach((c: any) => {
-      if (c.name?.trim()) {
-        map[c.name.trim().toLowerCase()] = c;
-      }
-    });
-    return map;
-  }, [clients]);
 
   // خريطة المحامين حسب الاسم للبحث السريع
   const lawyerByNameMap = useMemo(() => {
@@ -419,13 +378,6 @@ export function Cases() {
     }
   }, [selectedCaseId]);
 
-  // خريطة الموكلين
-  const clientMap = useMemo(() => {
-    const map: Record<number, ClientType> = {};
-    clients?.forEach((c) => { if (c.id) map[c.id] = c; });
-    return map;
-  }, [clients]);
-
   // تصفية القضايا
   const filteredCases = useMemo(() => {
     if (!cases) return [];
@@ -436,17 +388,16 @@ export function Cases() {
       if (activeTab === 'archived') matchTab = c.status === 'مؤرشفة' || c.status === 'مفصول فيها';
       if (activeTab === 'pending')  matchTab = c.status === 'للجدولة' || !c.caseNumber;
 
-      const clientName = c.clientId ? clientMap[c.clientId]?.name : '';
       const matchSearch = !searchTerm ||
         c.caseNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         c.subject?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         c.courtName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         c.councilName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        clientName?.toLowerCase().includes(searchTerm.toLowerCase());
+        allParties?.some((p: any) => p.caseId === c.id && p.name?.toLowerCase().includes(searchTerm.toLowerCase()));
       const matchNature = filterNature === 'all' || c.caseNature === filterNature;
       return matchTab && matchSearch && matchNature;
     });
-  }, [cases, clientMap, searchTerm, activeTab, filterNature]);
+  }, [cases, allParties, searchTerm, activeTab, filterNature]);
 
   // عدد القضايا لكل حالة (للفلاتر)
   const statusCounts = useMemo(() => {
@@ -531,14 +482,7 @@ export function Cases() {
   async function saveCase() {
     try {
     // تنظيف البيانات من الحقول العلاقية قبل الإرسال
-    const { client, parties: _p, delays: _d, sessions: _s, payments: _pay, archives: _a, createdAt: _ca, updatedAt: _ua, ...cleanFormData } = formData as any;
-
-    // حساب إجمالي الأتعاب من الأطراف "في حقه"
-    const forParties = parties.filter(p => (p.side || 'for') === 'for');
-    const computedTotalFees = forParties.reduce((sum, p) => sum + (p.totalFees || 0), 0);
-    const computedPaidAmount = forParties.reduce((sum, p) => sum + (p.paidAmount || 0), 0);
-    cleanFormData.totalFees = computedTotalFees;
-    cleanFormData.paidAmount = computedPaidAmount;
+    const { parties: _p, delays: _d, sessions: _s, payments: _pay, archives: _a, createdAt: _ca, updatedAt: _ua, ...cleanFormData } = formData as any;
 
     // كشف تكرار رقم القضية (فقط عند الإضافة)
     if (!editingCase?.id && !forceSaveCase) {
@@ -636,8 +580,6 @@ export function Cases() {
           totalFees: (row.side || 'for') === 'for' ? (row.totalFees || 0) : 0,
           paidAmount: (row.side || 'for') === 'for' ? (row.paidAmount || 0) : 0,
         });
-        // إضافة تلقائية كموكل إذا لم يكن موجوداً
-        await ensureClientForParty(row);
       }
       for (const p of partiesToDelete) {
         await apiDeleteParty(p.id);
@@ -708,7 +650,7 @@ export function Cases() {
       });
       const caseId = result.id;
 
-      // إضافة الأطراف + إضافة تلقائية للموكلين
+      // إضافة الأطراف المسجلة في القضية
       for (const party of parties) {
         if (party.name || party.role) {
           await createParty({
@@ -722,8 +664,6 @@ export function Cases() {
             totalFees: (party.side || 'for') === 'for' ? (party.totalFees || 0) : 0,
             paidAmount: (party.side || 'for') === 'for' ? (party.paidAmount || 0) : 0,
           });
-          // إضافة تلقائية كموكل إذا لم يكن موجوداً
-          await ensureClientForParty(party);
         }
       }
 
@@ -766,86 +706,6 @@ export function Cases() {
     } catch (error) {
       console.error('Delete party error:', error);
       toast.error('فشل في حذف الطرف');
-    }
-  }
-
-  async function saveNewClient() {
-    if (!newClientData.name) {
-      toast.error('اسم الموكل مطلوب');
-      return;
-    }
-    try {
-      const result = await createClient({
-        name: newClientData.name,
-        phone: newClientData.phone || '',
-      });
-      setFormData({ ...formData, clientId: result.id });
-      setNewClientData({});
-      setShowNewClientDialog(false);
-      toast.success('تم إضافة الموكل بنجاح');
-    } catch (error) {
-      console.error('Save new client error:', error);
-      toast.error('فشل في إضافة الموكل');
-    }
-  }
-
-  // إنشاء موكل جديد من داخل نموذج الأطراف
-  const [showPartyClientDialog, setShowPartyClientDialog] = useState(false);
-  const [partyClientData, setPartyClientData] = useState<{ name: string; phone: string; partyIdx: number | null }>({ name: '', phone: '', partyIdx: null });
-
-  function openPartyClientDialog(partyIdx: number) {
-    const party = parties[partyIdx];
-    setPartyClientData({
-      name: party?.name || '',
-      phone: party?.phone || '',
-      partyIdx,
-    });
-    setShowPartyClientDialog(true);
-  }
-
-  async function savePartyClient() {
-    if (!partyClientData.name?.trim()) {
-      toast.error('اسم الموكل مطلوب');
-      return;
-    }
-    try {
-      const result = await createClient({
-        name: partyClientData.name.trim(),
-        phone: partyClientData.phone || '',
-      });
-      // تحديث حقل الاسم والهاتف في الطرف
-      if (partyClientData.partyIdx !== null) {
-        const updated = [...parties];
-        updated[partyClientData.partyIdx] = {
-          ...updated[partyClientData.partyIdx],
-          name: partyClientData.name.trim(),
-          phone: partyClientData.phone || updated[partyClientData.partyIdx]?.phone || '',
-        };
-        setParties(updated);
-      }
-      setPartyClientData({ name: '', phone: '', partyIdx: null });
-      setShowPartyClientDialog(false);
-      toast.success('تم إضافة الموكل بنجاح');
-    } catch (error) {
-      console.error('Save party client error:', error);
-      toast.error('فشل في إضافة الموكل');
-    }
-  }
-
-  // إضافة تلقائية للموكل عند حفظ الطرف (إذا لم يكن موجوداً)
-  async function ensureClientForParty(party: PartyRow) {
-    if (!party.name?.trim()) return;
-    const nameLower = party.name.trim().toLowerCase();
-    // تحقق هل الموكل موجود بالفعل
-    if (clientByNameMap[nameLower]) return;
-    try {
-      await createClient({
-        name: party.name.trim(),
-        phone: party.phone || '',
-      });
-    } catch (error) {
-      // لا نوقف الحفظ إذا فشلت الإضافة التلقائية
-      console.error('Auto-create client error:', error);
     }
   }
 
@@ -921,7 +781,7 @@ export function Cases() {
   }
 
   // Loading state
-  if (casesLoading || clientsLoading || bodiesLoading) {
+  if (casesLoading || bodiesLoading) {
     return <CasesSkeleton />;
   }
 
@@ -941,6 +801,60 @@ export function Cases() {
           </Button>
         </div>
 
+        {/* أطراف النزاع */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base font-bold flex items-center gap-2">
+              <UserPlus className="w-4 h-4" />
+              أطراف النزاع
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {caseParties && caseParties.length > 0 ? (
+              <div className="space-y-2">
+                {caseParties.map((p) => (
+                  <div key={p.id} className="flex items-center justify-between p-2.5 rounded-lg border">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-sm font-bold">{p.name || '—'}</span>
+                        <Badge variant="outline" className="text-xs">{p.role || 'الصفة غير محددة'}</Badge>
+                        {p.side && (
+                          <Badge className={`text-xs ${
+                            p.side === 'for'
+                              ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                              : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                          }`}>
+                            {p.side === 'for' ? 'في حقه' : 'ضده'}
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                        {p.phone && <span>هاتف: {p.phone}</span>}
+                        {p.phone2 && <span>هاتف إضافي: {p.phone2}</span>}
+                        {p.address && <span>العنوان: {p.address}</span>}
+                        {p.lawyerName && <span>محامي: {p.lawyerName}</span>}
+                        {p.lawyerPhone && <span>هاتف المحامي: {p.lawyerPhone}</span>}
+                      </div>
+                    </div>
+                    {caseParties.length > 1 && p.id && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 shrink-0 text-muted-foreground hover:text-destructive"
+                        onClick={() => setDeletePartyConfirm(p.id!)}
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </Button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground text-center py-3">لا توجد أطراف مسجلة</p>
+            )}
+          </CardContent>
+        </Card>
+
         {/* المعلومات الأساسية */}
         <Card>
           <CardHeader className="pb-3">
@@ -957,142 +871,7 @@ export function Cases() {
                   sessions={caseSessions || []}
                   courtPhones={judicialBodies?.find(b => b.id === selectedCase.courtId)?.phones}
                 />
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="touch-target"
-                  onClick={() => {
-                    const date = (value: unknown) => {
-                      if (!value) return '—';
-                      const parsed = new Date(String(value));
-                      return Number.isNaN(parsed.getTime()) ? String(value) : parsed.toLocaleDateString('ar-DZ');
-                    };
-                    const clientRecord = selectedCase.client || clientMap[selectedCase.clientId || 0];
-                    const clientName = clientRecord?.name || 'موكل غير محدد';
-                    const driveFolderId = clientRecord?.googleDriveFolderId || '';
-                    const caseNumber = selectedCase.caseNumber || `بدون-رقم-${selectedCase.id}`;
-                    const safeFilePart = (value: string) => value.trim().replaceAll(String.fromCharCode(92), '-').replace(/[/:*?"<>|]/g, '-').replace(/\s+/g, '-').replace(/-+/g, '-').slice(0, 90) || 'غير-محدد';
-                    const fileName = `${safeFilePart(clientName)} - ${safeFilePart(caseNumber)}.md`;
-                    const caseTasks = (allTasks || []).filter((task: any) => task.relatedCaseId === selectedCase.id);
-                    const parties = caseParties || [];
-                    const delays = caseDelays || [];
-                    const sessions = caseSessions || [];
-                    const payments = (selectedCase as any).payments || [];
-                    const lines = [
-                      '---',
-                      'document_type: algerian_law_office_case',
-                      'document_version: 2',
-                      `case_id: ${selectedCase.id}`,
-                      `case_number: "${caseNumber.replace(/"/g, '\\"')}"`,
-                      `client_id: ${selectedCase.clientId ?? ''}`,
-                      `client_name: "${clientName.replace(/"/g, '\\"')}"`,
-                      `google_drive_folder_id: "${driveFolderId}"`,
-                      `exported_at: "${new Date().toISOString()}"`,
-                      '---',
-                      '',
-                      `# ملف القضية: ${caseNumber}`,
-                      '',
-                      '## 1. الفهرسة والتعريف',
-                      `- **اسم الموكل:** ${clientName}`,
-                      `- **معرّف الموكل:** ${selectedCase.clientId ?? '—'}`,
-                      `- **معرّف مجلد Google Drive:** ${driveFolderId || 'غير محدد'}`,
-                      `- **رقم القضية:** ${caseNumber}`,
-                      `- **رقم القضية الأصلية:** ${selectedCase.origCaseNumber || '—'}`,
-                      `- **المعرّف الداخلي للقضية:** ${selectedCase.id}`,
-                      '',
-                      '## 2. البيانات القضائية والإدارية',
-                      `- **الموضوع:** ${selectedCase.subject || '—'}`,
-                      `- **الحالة:** ${selectedCase.status || '—'}`,
-                      `- **طبيعة القضية:** ${selectedCase.caseNature || '—'}`,
-                      `- **مرحلة التقاضي:** ${selectedCase.litigationStage || '—'}`,
-                      `- **المرحلة المخصصة:** ${selectedCase.customStage || '—'}`,
-                      `- **نوع الجهة القضائية:** ${selectedCase.judiciaryType || '—'}`,
-                      `- **مستوى المحكمة:** ${selectedCase.courtLevel || '—'}`,
-                      `- **المجلس:** ${selectedCase.councilName || '—'}`,
-                      `- **المحكمة/الجهة القضائية:** ${selectedCase.courtName || '—'}`,
-                      `- **معرّف الهيئة القضائية:** ${selectedCase.courtId ?? '—'}`,
-                      `- **الغرفة:** ${selectedCase.chamber || '—'}`,
-                      `- **رقم الغرفة:** ${selectedCase.chamberNumber ?? '—'}`,
-                      `- **الولاية القضائية:** ${selectedCase.wilayaId ?? '—'}`,
-                      `- **المحامي المكلف:** ${selectedCase.lawyer || '—'}`,
-                      `- **هاتف قاعة المحامين:** ${selectedCase.barPhone || '—'}`,
-                      '',
-                      '## 3. التواريخ',
-                      `- **تاريخ التسجيل:** ${date(selectedCase.registrationDate)}`,
-                      `- **تاريخ أول جلسة:** ${date(selectedCase.firstSessionDate)}`,
-                      `- **تاريخ المداولة:** ${date(selectedCase.delibDate)}`,
-                      `- **تاريخ الحكم:** ${date((selectedCase as any).judgmentDate)}`,
-                      `- **تاريخ الإنشاء:** ${date(selectedCase.createdAt)}`,
-                      `- **آخر تحديث:** ${date(selectedCase.updatedAt)}`,
-                      '',
-                      '## 4. الأطراف',
-                      ...(parties.length ? parties.flatMap((party: any, index: number) => [
-                        `### 4.${index + 1} — ${party.name || 'طرف غير مسمى'}`,
-                        `- **معرّف الطرف:** ${party.id ?? '—'}`,
-                        `- **الصفة:** ${party.role || '—'}`,
-                        `- **الجهة:** ${party.side === 'against' ? 'ضده' : 'في حقه'}`,
-                        `- **الهاتف:** ${party.phone || '—'}`,
-                        `- **المحامي:** ${party.lawyerName || '—'}`,
-                        `- **هاتف المحامي:** ${party.lawyerPhone || '—'}`,
-                        `- **الأتعاب:** ${party.totalFees ?? 0}`,
-                        `- **المبلغ المدفوع:** ${party.paidAmount ?? 0}`,
-                        ''
-                      ]) : ['لا توجد أطراف مسجلة.', '']),
-                      '## 5. الوقائع والملاحظات',
-                      selectedCase.notes || 'لا توجد ملاحظات مسجلة.',
-                      '',
-                      '## 6. الأحكام والقرارات',
-                      `- **منطوق/بيانات الحكم:** ${selectedCase.judgment || 'لا توجد بيانات حكم.'}`,
-                      `- **تاريخ الحكم:** ${date((selectedCase as any).judgmentDate)}`,
-                      `- **نتيجة القضية:** ${selectedCase.caseResult || 'غير محددة'}`,
-                      '',
-                      '## 7. الجلسات',
-                      ...(sessions.length ? sessions.map((session: any, index: number) =>
-                        `### الجلسة ${index + 1} — ${date(session.date)}\n- الوقت: ${session.time || '—'}\n- المحكمة: ${session.court || '—'}\n- الغرفة: ${session.chamber || '—'}\n- القاعة: ${session.roomNumber || '—'}\n- الحالة: ${session.status || '—'}\n- النتيجة: ${session.result || '—'}\n- الملاحظات: ${session.notes || '—'}`
-                      ) : ['لا توجد جلسات مسجلة.']),
-                      '',
-                      '## 8. التأجيلات والآجال',
-                      ...(delays.length ? delays.map((delay: any, index: number) =>
-                        `### التأجيل ${index + 1}\n- التاريخ: ${date(delay.delayDate)}\n- السبب: ${delay.reason || '—'}\n- الملاحظات: ${delay.notes || '—'}`
-                      ) : ['لا توجد تأجيلات مسجلة.']),
-                      '',
-                      '## 9. المدفوعات والحسابات',
-                      ...(payments.length ? payments.map((payment: any, index: number) =>
-                        `### العملية ${index + 1}\n- التاريخ: ${date(payment.date)}\n- النوع: ${payment.type || '—'}\n- التصنيف: ${payment.category || '—'}\n- المبلغ: ${payment.amount ?? 0}\n- الملاحظات: ${payment.notes || '—'}`
-                      ) : ['لا توجد مدفوعات مسجلة أو غير متاحة في بيانات التصدير.']),
-                      `- **إجمالي الأتعاب:** ${selectedCase.totalFees ?? 0}`,
-                      `- **المبلغ المدفوع:** ${selectedCase.paidAmount ?? 0}`,
-                      `- **المتبقي:** ${(selectedCase.totalFees || 0) - (selectedCase.paidAmount || 0)}`,
-                      '',
-                      '## 10. المهام والإجراءات المرتبطة',
-                      ...(caseTasks.length ? caseTasks.map((task: any, index: number) =>
-                        `### المهمة ${index + 1} — ${task.title || 'دون عنوان'}\n- النوع: ${task.taskType || '—'}\n- الحالة: ${task.status || '—'}\n- الأولوية: ${task.priority || '—'}\n- تاريخ الاستحقاق: ${date(task.dueDate)}\n- بداية الإجراء: ${date(task.startDate)}\n- الأجل القانوني: ${date(task.legalDeadline)}\n- الوصف: ${task.description || '—'}\n- الملاحظات: ${task.notes || '—'}`
-                      ) : ['لا توجد مهام مرتبطة بالقضية.']),
-                      '',
-                      '## 11. بيانات النظام',
-                      `- **تاريخ الإنشاء في النظام:** ${date(selectedCase.createdAt)}`,
-                      `- **آخر تحديث في النظام:** ${date(selectedCase.updatedAt)}`,
-                      '',
-                      '---',
-                      '> ملف مولّد آلياً من تطبيق إدارة مكتب المحاماة. البيانات تعكس ما هو مسجل ومتاح في التطبيق وقت التصدير.',
-                      `> تاريخ التصدير: ${new Date().toLocaleString('ar-DZ')}`,
-                      ''
-                    ];
-                    const blob = new Blob([String.fromCharCode(0xFEFF) + lines.join(String.fromCharCode(10))], { type: 'text/markdown;charset=utf-8' });
-                    const url = URL.createObjectURL(blob);
-                    const link = document.createElement('a');
-                    link.href = url;
-                    link.download = fileName;
-                    document.body.appendChild(link);
-                    link.click();
-                    link.remove();
-                    URL.revokeObjectURL(url);
-                    toast.success(`تم تصدير ملف القضية: ${fileName}`);
-                  }}
-                >
-                  <FileDown className="w-3 h-3 ml-1" />
-                  تصدير MD
-                </Button>
+                
                 <CaseAnnouncementButton
                   caseData={selectedCase}
                   parties={caseParties || []}
@@ -1107,20 +886,25 @@ export function Cases() {
           <CardContent className="space-y-3">
             <p className="text-sm font-semibold">{selectedCase.subject || '—'}</p>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
-              {selectedCase.clientId && clientMap[selectedCase.clientId] && (
-                <DetailField label="الموكل" value={clientMap[selectedCase.clientId].name} />
-              )}
               <DetailField label="طبيعة القضية" value={selectedCase.caseNature} />
               <DetailField label="مرحلة التقاضي" value={selectedCase.litigationStage} />
               <DetailField label="رقم القضية الأصلية" value={selectedCase.origCaseNumber} />
+              <DetailField label="الحالة الإجرائية" value={selectedCase.status} />
+              <div className="col-span-2 md:col-span-3 mt-1">
+                <Separator />
+                <p className="text-sm font-bold mt-3 mb-1 text-teal-700 dark:text-teal-400">الجهة القضائية المختصة</p>
+              </div>
+              <DetailField label="نوع القضاء" value={selectedCase.judiciaryType} />
+              <DetailField label="مستوى / درجة التقاضي" value={selectedCase.courtLevel} />
+              <DetailField label="الولاية" value={WILAYAS.find(w => w.code === selectedCase.wilayaId)?.name} />
               <DetailField label="المجلس" value={selectedCase.councilName} />
               <DetailField label="المحكمة" value={selectedCase.courtName} />
+              <DetailField label="الغرفة/القسم" value={selectedCase.chamber} />
               {(() => {
                 const courtBody = judicialBodies?.find(b => b.id === selectedCase.courtId);
                 const courtPhones = courtBody?.phones ? (() => { try { const p = JSON.parse(courtBody.phones); return Array.isArray(p) ? p.filter((x: string) => x.trim()) : []; } catch { return []; } })() : [];
                 return courtPhones.length > 0 ? <DetailField label="هاتف المحكمة" value={courtPhones.join(' / ')} /> : null;
               })()}
-              <DetailField label="الغرفة/القسم" value={selectedCase.chamber} />
               <DetailField label="هاتف قاعة المحامين" value={selectedCase.barPhone} />
               {selectedCase.caseResult && (
                 <div className="col-span-2 md:col-span-3">
@@ -1158,14 +942,125 @@ export function Cases() {
               <DetailField label="تاريخ المداولة" value={<DateDisplay value={selectedCase.delibDate as any} />} />
             </div>
 
-            {/* المالية - تفصيل حسب كل موكل */}
+            {/* منطوق الحكم */}
+            {selectedCase.judgment && (
+              <>
+                <Separator />
+                <div>
+                  <Label className="text-xs text-muted-foreground">منطوق الحكم</Label>
+                  <p className="text-sm mt-1 p-3 bg-muted/50 rounded-lg whitespace-pre-wrap leading-relaxed">{selectedCase.judgment}</p>
+                </div>
+              </>
+            )}
+
+            {/* ملاحظات */}
+            {selectedCase.notes && (
+              <div>
+                <Label className="text-xs text-muted-foreground">ملاحظات</Label>
+                <p className="text-sm mt-1 p-3 bg-muted/50 rounded-lg whitespace-pre-wrap leading-relaxed">{selectedCase.notes}</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* التأجيلات */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base font-bold flex items-center gap-2">
+              <Clock className="w-4 h-4" />
+              التأجيلات
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {caseDelays && caseDelays.length > 0 ? (
+              <div className="space-y-2">
+                {[...caseDelays].sort((a, b) => (a.delayDate || '').localeCompare(b.delayDate || '')).map((d) => (
+                  <div key={d.id} className="flex items-center justify-between p-2.5 rounded-lg border">
+                    <div>
+                      <p className="text-sm font-medium">{d.reason || '—'}</p>
+                      {d.notes && <p className="text-xs text-muted-foreground">{d.notes}</p>}
+                    </div>
+                    <Badge variant="outline" className="text-xs"><DateDisplay value={d.delayDate as any} /></Badge>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground text-center py-3">لا توجد تأجيلات</p>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* المهام المرتبطة بالقضية */}
+        {selectedCase.id && (
+          <CaseTasksCard
+            caseId={selectedCase.id}
+            allTasks={allTasks}
+          />
+        )}
+
+        {/* الجلسات */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base font-bold flex items-center gap-2">
+              <CalendarIcon className="w-4 h-4" />
+              الجلسات
+              {caseSessions && caseSessions.length > 0 && (
+                <Badge variant="secondary" className="text-xs">
+                  {caseSessions.length.toLocaleString('en-US')}
+                </Badge>
+              )}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {caseSessions && caseSessions.length > 0 ? (
+              <div className="space-y-2">
+                {[...caseSessions]
+                  .sort((a, b) => (a.date || '').localeCompare(b.date || ''))
+                  .map((s) => (
+                  <div key={s.id} className="p-2.5 rounded-lg border space-y-1">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <Badge className={`text-xs ${
+                          s.status === 'completed' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' :
+                          s.status === 'postponed' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' :
+                          s.status === 'cancelled' ? 'bg-gray-100 text-gray-700 dark:bg-gray-800/50 dark:text-gray-400' :
+                          'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400'
+                        }`}>
+                          {s.status === 'completed' ? 'مكتملة' :
+                           s.status === 'postponed' ? 'مؤجلة' :
+                           s.status === 'cancelled' ? 'ملغاة' : 'مجدولة'}
+                        </Badge>
+                        <span className="text-sm font-semibold tabular-nums"><DateDisplay value={s.date as any} /></span>
+                        {s.time && <span className="text-xs text-muted-foreground">{s.time}</span>}
+                      </div>
+                    </div>
+                    {(s.chamber || s.roomNumber || s.notes) && (
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
+                        {s.chamber && <span>{s.chamber}</span>}
+                        {s.roomNumber && <span>• قاعة {s.roomNumber}</span>}
+                        {s.notes && <span className="truncate">• {s.notes}</span>}
+                      </div>
+                    )}
+                    {s.result && (
+                      <p className="text-xs font-medium text-teal-700 dark:text-teal-400">النتيجة: {s.result}</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground text-center py-3">لا توجد جلسات مسجلة</p>
+            )}
+          </CardContent>
+        </Card>
+
+            {/* المالية - تفصيل الأتعاب للأطراف الذين نمثلهم */}
             <Separator />
             <div>
               <h4 className="text-sm font-bold mb-2 flex items-center gap-1.5">
                 <Wallet className="w-4 h-4 text-teal-600 dark:text-teal-400" />
                 الأتعاب
               </h4>
-              {/* أتعاب كل موكل */}
+              {/* أتعاب الأطراف الذين نمثلهم */}
               {caseParties && caseParties.filter(p => (p.side || 'for') === 'for').length > 0 ? (
                 <div className="space-y-2 mb-3">
                   {caseParties.filter(p => (p.side || 'for') === 'for').map((p) => {
@@ -1217,170 +1112,6 @@ export function Cases() {
                 </div>
               </div>
             </div>
-
-            {/* منطوق الحكم */}
-            {selectedCase.judgment && (
-              <>
-                <Separator />
-                <div>
-                  <Label className="text-xs text-muted-foreground">منطوق الحكم</Label>
-                  <p className="text-sm mt-1 p-3 bg-muted/50 rounded-lg whitespace-pre-wrap leading-relaxed">{selectedCase.judgment}</p>
-                </div>
-              </>
-            )}
-
-            {/* ملاحظات */}
-            {selectedCase.notes && (
-              <div>
-                <Label className="text-xs text-muted-foreground">ملاحظات</Label>
-                <p className="text-sm mt-1 p-3 bg-muted/50 rounded-lg whitespace-pre-wrap leading-relaxed">{selectedCase.notes}</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* أطراف النزاع */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base font-bold flex items-center gap-2">
-              <UserPlus className="w-4 h-4" />
-              أطراف النزاع
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {caseParties && caseParties.length > 0 ? (
-              <div className="space-y-2">
-                {caseParties.map((p) => (
-                  <div key={p.id} className="flex items-center justify-between p-2.5 rounded-lg border">
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <Badge variant="outline" className="text-xs">{p.role || '—'}</Badge>
-                        {p.side && (
-                          <Badge className={`text-xs ${
-                            p.side === 'for'
-                              ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                              : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-                          }`}>
-                            {p.side === 'for' ? 'في حقه' : 'ضده'}
-                          </Badge>
-                        )}
-                        <span className="text-sm font-medium">{p.name || '—'}</span>
-                      </div>
-                      <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
-                        {p.phone && <span>هاتف: {p.phone}</span>}
-                        {p.lawyerName && <span>محامي: {p.lawyerName}</span>}
-                        {p.lawyerPhone && <span>هاتف المحامي: {p.lawyerPhone}</span>}
-                      </div>
-                    </div>
-                    {caseParties.length > 1 && p.id && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 shrink-0 text-muted-foreground hover:text-destructive"
-                        onClick={() => setDeletePartyConfirm(p.id!)}
-                      >
-                        <X className="w-3.5 h-3.5" />
-                      </Button>
-                    )}
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground text-center py-3">لا توجد أطراف مسجلة</p>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* التأجيلات */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base font-bold flex items-center gap-2">
-              <Clock className="w-4 h-4" />
-              التأجيلات
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {caseDelays && caseDelays.length > 0 ? (
-              <div className="space-y-2">
-                {caseDelays.map((d) => (
-                  <div key={d.id} className="flex items-center justify-between p-2.5 rounded-lg border">
-                    <div>
-                      <p className="text-sm font-medium">{d.reason || '—'}</p>
-                      {d.notes && <p className="text-xs text-muted-foreground">{d.notes}</p>}
-                    </div>
-                    <Badge variant="outline" className="text-xs"><DateDisplay value={d.delayDate as any} /></Badge>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground text-center py-3">لا توجد تأجيلات</p>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* المهام المرتبطة بالقضية */}
-        {selectedCase.id && (
-          <CaseTasksCard
-            caseId={selectedCase.id}
-            allTasks={allTasks}
-            clientId={selectedCase.clientId}
-          />
-        )}
-
-        {/* الجلسات */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base font-bold flex items-center gap-2">
-              <CalendarIcon className="w-4 h-4" />
-              الجلسات
-              {caseSessions && caseSessions.length > 0 && (
-                <Badge variant="secondary" className="text-xs">
-                  {caseSessions.length.toLocaleString('en-US')}
-                </Badge>
-              )}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {caseSessions && caseSessions.length > 0 ? (
-              <div className="space-y-2">
-                {[...caseSessions]
-                  .sort((a, b) => (b.date || '').localeCompare(a.date || ''))
-                  .map((s) => (
-                  <div key={s.id} className="p-2.5 rounded-lg border space-y-1">
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <Badge className={`text-xs ${
-                          s.status === 'completed' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' :
-                          s.status === 'postponed' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' :
-                          s.status === 'cancelled' ? 'bg-gray-100 text-gray-700 dark:bg-gray-800/50 dark:text-gray-400' :
-                          'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400'
-                        }`}>
-                          {s.status === 'completed' ? 'مكتملة' :
-                           s.status === 'postponed' ? 'مؤجلة' :
-                           s.status === 'cancelled' ? 'ملغاة' : 'مجدولة'}
-                        </Badge>
-                        <span className="text-sm font-semibold tabular-nums"><DateDisplay value={s.date as any} /></span>
-                        {s.time && <span className="text-xs text-muted-foreground">{s.time}</span>}
-                      </div>
-                    </div>
-                    {(s.chamber || s.roomNumber || s.notes) && (
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
-                        {s.chamber && <span>{s.chamber}</span>}
-                        {s.roomNumber && <span>• قاعة {s.roomNumber}</span>}
-                        {s.notes && <span className="truncate">• {s.notes}</span>}
-                      </div>
-                    )}
-                    {s.result && (
-                      <p className="text-xs font-medium text-teal-700 dark:text-teal-400">النتيجة: {s.result}</p>
-                    )}
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground text-center py-3">لا توجد جلسات مسجلة</p>
-            )}
-          </CardContent>
-        </Card>
 
         {/* أزرار الإجراءات */}
         <div className="flex flex-wrap gap-2">
@@ -1508,7 +1239,7 @@ export function Cases() {
                   <CardContent className="p-4 space-y-3">
                     {(() => {
                       const casePartiesForCard = c.parties || allParties?.filter((p: any) => p.caseId === c.id) || [];
-                      const clientsForCard = casePartiesForCard.filter((p: any) => (p.side || 'for') === 'for');
+                      const representedPartiesForCard = casePartiesForCard.filter((p: any) => (p.side || 'for') === 'for');
                       const opponentsForCard = casePartiesForCard.filter((p: any) => p.side === 'against');
                       const caseSessionsForCard = c.sessions || allSessions?.filter((s: any) => s.caseId === c.id) || [];
                       const caseDelaysForCard = c.delays || allDelays?.filter((d: any) => d.caseId === c.id) || [];
@@ -1524,14 +1255,10 @@ export function Cases() {
                         detail: [x.reason, x.notes].filter(Boolean).join(' — '), kind: 'delay'
                       }));
                       if (c.delibDate) dateRows.push({ label: 'المداولة', value: c.delibDate, kind: 'base' });
-                      if (c.judgmentDate) dateRows.push({ label: 'صدور الحكم', value: c.judgmentDate, detail: c.caseResult === 'won' ? 'حكم لصالح الموكل' : c.caseResult === 'lost' ? 'حكم ضد الموكل' : undefined, kind: 'judgment' });
+                      if (c.judgmentDate) dateRows.push({ label: 'صدور الحكم', value: c.judgmentDate, detail: c.caseResult === 'won' ? 'حكم لصالح الطرف الذي نمثله' : c.caseResult === 'lost' ? 'حكم ضد الطرف الذي نمثله' : undefined, kind: 'judgment' });
                       dateRows.sort((a, b) => new Date(a.value).getTime() - new Date(b.value).getTime());
-                      const totalFeesCard = clientsForCard.length
-                        ? clientsForCard.reduce((sum: number, p: any) => sum + Number(p.totalFees || 0), 0)
-                        : Number(c.totalFees || 0);
-                      const paidCard = clientsForCard.length
-                        ? clientsForCard.reduce((sum: number, p: any) => sum + Number(p.paidAmount || 0), 0)
-                        : Number(c.paidAmount || 0);
+                      const totalFeesCard = Number(c.totalFees || 0);
+                      const paidCard = Number(c.paidAmount || 0);
                       const remainingCard = totalFeesCard - paidCard;
                       const judiciaryLabel = [c.litigationStage, c.courtLevel, c.judiciaryType].filter(Boolean).join(' • ');
                       return (
@@ -1562,13 +1289,13 @@ export function Cases() {
 
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                             <div className="rounded-lg border p-2.5 space-y-1.5">
-                              <p className="text-xs font-bold text-teal-700 dark:text-teal-400">الموكلون ومحاموهم</p>
-                              {clientsForCard.length ? clientsForCard.map((p: any) => (
+                              <p className="text-xs font-bold text-teal-700 dark:text-teal-400">الأطراف الذين نمثلهم ومحاموهم</p>
+                              {representedPartiesForCard.length ? representedPartiesForCard.map((p: any) => (
                                 <div key={p.id} className="text-xs flex flex-wrap gap-x-2 gap-y-0.5">
                                   <span className="font-semibold">{p.name || 'اسم غير محدد'}</span>
                                   <span className="text-muted-foreground">المحامي: {p.lawyerName || 'غير محدد'}</span>
                                 </div>
-                              )) : <p className="text-xs text-muted-foreground">لا توجد بيانات موكل مسجلة</p>}
+                              )) : <p className="text-xs text-muted-foreground">لا توجد أطراف نمثلها مسجلة</p>}
                             </div>
                             <div className="rounded-lg border p-2.5 space-y-1.5">
                               <p className="text-xs font-bold text-rose-700 dark:text-rose-400">الخصوم ومحاموهم</p>
@@ -1630,6 +1357,165 @@ export function Cases() {
           </DialogHeader>
 
           <div className="space-y-6">
+            {/* أطراف النزاع */}
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-bold text-teal-700 dark:text-teal-400">أطراف النزاع</h3>
+                <Button variant="outline" size="sm" onClick={() => setParties([...parties, emptyParty()])} className="touch-target">
+                  <Plus className="w-3 h-3 ml-1" />
+                  إضافة طرف
+                </Button>
+              </div>
+              <div className="space-y-3">
+                {parties.map((party, idx) => (
+                  <div key={party.id} className="p-3 border rounded-lg space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-muted-foreground">الطرف {(idx + 1).toLocaleString('en-US')}</span>
+                      {parties.length > 1 && (
+                        <Button variant="ghost" size="sm" onClick={() => setParties(parties.filter((p) => p.id !== party.id))} className="touch-target">
+                          <X className="w-3 h-3" />
+                        </Button>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                      <div>
+                        <Label className="text-xs">الاسم</Label>
+                        <div className="flex gap-1">
+                          <ComboboxInput
+                            value={party.name || ''}
+                            onChange={(v) => {
+                              const updated = [...parties];
+                              updated[idx] = { ...updated[idx], name: v };
+                              // ملء الهاتف تلقائياً عند اختيار اسم من القائمة
+                              if (v) {
+                                const nameKey = v.trim().toLowerCase();
+                                // ثانياً: البحث في أطراف القضايا السابقة
+                                if (partyPhoneMap[nameKey] && !updated[idx].phone) {
+                                  updated[idx] = { ...updated[idx], phone: partyPhoneMap[nameKey] };
+                                }
+                              }
+                              setParties(updated);
+                            }}
+                            suggestions={Array.from(new Set((allParties || []).map((p: any) => p.name?.trim()).filter(Boolean)))}
+                            placeholder="ابدأ بكتابة الاسم..."
+                            addLabel="كطرف"
+                            className="h-10"
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
+                            className="h-10 w-10 shrink-0"
+                            onClick={() => { const updated = [...parties]; updated[idx] = { ...updated[idx], name: updated[idx].name || '', side: updated[idx].side || 'for' }; setParties(updated); }}
+                            title="تأكيد بيانات الطرف"
+                          >
+                            <UserPlus className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+                      <div>
+                        <Label className="text-xs">اسم المحامي</Label>
+                        <ComboboxInput
+                          value={party.lawyerName || ''}
+                          onChange={(v) => {
+                            const updated = [...parties];
+                            updated[idx] = { ...updated[idx], lawyerName: v };
+                            // ملء هاتف المحامي تلقائياً عند اختيار اسم من القائمة
+                            if (v) {
+                              const nameKey = v.trim().toLowerCase();
+                              // أولاً: البحث في جدول المحامين
+                              if (lawyerByNameMap[nameKey]) {
+                                const existingLawyer = lawyerByNameMap[nameKey];
+                                if (existingLawyer.phone && !updated[idx].lawyerPhone) {
+                                  updated[idx] = { ...updated[idx], lawyerPhone: existingLawyer.phone };
+                                } else if (existingLawyer.phone2 && !updated[idx].lawyerPhone) {
+                                  updated[idx] = { ...updated[idx], lawyerPhone: existingLawyer.phone2 };
+                                }
+                              }
+                              // ثانياً: البحث في أطراف القضايا السابقة
+                              if (partyLawyerPhoneMap[nameKey] && !updated[idx].lawyerPhone) {
+                                updated[idx] = { ...updated[idx], lawyerPhone: partyLawyerPhoneMap[nameKey] };
+                              }
+                            }
+                            setParties(updated);
+                          }}
+                          suggestions={lawyerNameSuggestions}
+                          placeholder="ابدأ بكتابة اسم المحامي..."
+                          addLabel="كاسم محامي"
+                          className="h-10"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs">الهاتف</Label>
+                        <Input
+                          value={party.phone || ''}
+                          onChange={(e) => {
+                            const updated = [...parties];
+                            updated[idx] = { ...updated[idx], phone: e.target.value };
+                            setParties(updated);
+                          }}
+                          placeholder="رقم الهاتف"
+                          className="h-10"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs">هاتف المحامي</Label>
+                        <Input
+                          value={party.lawyerPhone || ''}
+                          onChange={(e) => {
+                            const updated = [...parties];
+                            updated[idx] = { ...updated[idx], lawyerPhone: e.target.value };
+                            setParties(updated);
+                          }}
+                          placeholder="هاتف المحامي"
+                          className="h-10"
+                        />
+                      </div><div>
+                        <Label className="text-xs">الصفة الإجرائية</Label>
+                        <SelectWithCustom
+                          field="partyRole"
+                          value={party.role || ''}
+                          onChange={v => {
+                            const updated = [...parties];
+                            updated[idx] = { ...updated[idx], role: v };
+                            setParties(updated);
+                          }}
+                          staticOptions={PARTY_ROLES.map(r => ({ value: r, label: r }))}
+                          placeholder="اختر المركز القانوني..."
+                        />
+                        <div className="flex gap-1 mt-1">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const updated = [...parties];
+                              updated[idx] = { ...updated[idx], side: 'for' };
+                              setParties(updated);
+                            }}
+                            className={`flex-1 h-8 rounded-md border text-xs font-medium transition-colors ${(party.side || 'for') === 'for' ? 'bg-green-500 text-white border-green-500' : 'border-border text-muted-foreground hover:border-green-400'}`}
+                          >
+                            في حقه
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const updated = [...parties];
+                              updated[idx] = { ...updated[idx], side: 'against' };
+                              setParties(updated);
+                            }}
+                            className={`flex-1 h-8 rounded-md border text-xs font-medium transition-colors ${party.side === 'against' ? 'bg-red-500 text-white border-red-500' : 'border-border text-muted-foreground hover:border-red-400'}`}
+                          >
+                            ضده
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                  </div>
+                ))}
+              </div>
+            </div>
+
+
             {/* المعلومات الأساسية */}
             <div>
               <h3 className="text-sm font-bold mb-3 text-teal-700 dark:text-teal-400">المعلومات الأساسية</h3>
@@ -1720,6 +1606,45 @@ export function Cases() {
 
               </div>
             </div>
+
+
+            {/* التواريخ */}
+            <div>
+              <h3 className="text-sm font-bold mb-3 text-teal-700 dark:text-teal-400">التواريخ</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div>
+                  <Label className="text-xs">تاريخ التسجيل</Label>
+                  <Input
+                    type="date"
+                    dir="ltr"
+                    value={toDateInputValue(formData.registrationDate as any)}
+                    onChange={(e) => setFormData({ ...formData, registrationDate: e.target.value })}
+                    className="h-11"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs">أول جلسة</Label>
+                  <Input
+                    type="date"
+                    dir="ltr"
+                    value={toDateInputValue(formData.firstSessionDate as any)}
+                    onChange={(e) => setFormData({ ...formData, firstSessionDate: e.target.value })}
+                    className="h-11"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs">تاريخ المداولة</Label>
+                  <Input
+                    type="date"
+                    dir="ltr"
+                    value={toDateInputValue(formData.delibDate as any)}
+                    onChange={(e) => setFormData({ ...formData, delibDate: e.target.value })}
+                    className="h-11"
+                  />
+                </div>
+              </div>
+            </div>
+
 
             {/* التسلسل القضائي */}
             <div>
@@ -1915,361 +1840,6 @@ export function Cases() {
               </div>
             </div>
 
-            {/* المالية - ملخص محسوب من الأطراف */}
-            <div>
-              <h3 className="text-sm font-bold mb-3 text-teal-700 dark:text-teal-400">المالية (إجمالي)</h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <div>
-                  <Label className="text-xs">إجمالي الأتعاب (د.ج)</Label>
-                  <Input
-                    type="number"
-                    value={parties.filter(p => (p.side || 'for') === 'for').reduce((sum, p) => sum + (p.totalFees || 0), 0).toLocaleString('en-US')}
-                    disabled
-                    className="bg-muted h-11"
-                  />
-                </div>
-                <div>
-                  <Label className="text-xs">إجمالي المدفوع (د.ج)</Label>
-                  <Input
-                    type="number"
-                    value={parties.filter(p => (p.side || 'for') === 'for').reduce((sum, p) => sum + (p.paidAmount || 0), 0).toLocaleString('en-US')}
-                    disabled
-                    className="bg-muted h-11"
-                  />
-                </div>
-                <div>
-                  <Label className="text-xs">إجمالي المتبقي (د.ج)</Label>
-                  <Input
-                    type="number"
-                    value={(() => {
-                      const forP = parties.filter(p => (p.side || 'for') === 'for');
-                      const total = forP.reduce((s, p) => s + (p.totalFees || 0), 0);
-                      const paid = forP.reduce((s, p) => s + (p.paidAmount || 0), 0);
-                      return (total - paid).toLocaleString('en-US');
-                    })()}
-                    disabled
-                    className="bg-muted h-11"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* كشف أتعاب كل موكل - مرتبط مباشرة بالملخص المالي */}
-            <div className="rounded-xl border border-border bg-card p-3 sm:p-4 space-y-3">
-              <div className="flex items-center justify-between gap-2">
-                <div>
-                  <h3 className="text-sm font-bold text-foreground">كشف أتعاب كل موكل</h3>
-                  <p className="text-xs text-muted-foreground mt-1">تفصيل مستقل للمبالغ المسجلة لكل موكل في حقه</p>
-                </div>
-                <Badge variant="secondary">
-                  {parties.filter(p => (p.side || 'for') === 'for').length} موكل
-                </Badge>
-              </div>
-              {parties.filter(p => (p.side || 'for') === 'for').length > 0 ? (
-                <div className="overflow-x-auto rounded-lg border">
-                  <table className="w-full min-w-[620px] text-sm text-right">
-                    <thead className="bg-muted/60 text-muted-foreground">
-                      <tr>
-                        <th className="px-3 py-2.5 font-semibold">الموكل</th>
-                        <th className="px-3 py-2.5 font-semibold">الأتعاب</th>
-                        <th className="px-3 py-2.5 font-semibold">المدفوع</th>
-                        <th className="px-3 py-2.5 font-semibold">المتبقي</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {parties.filter(p => (p.side || 'for') === 'for').map((party, index) => {
-                        const fees = Number(party.totalFees || 0);
-                        const paid = Number(party.paidAmount || 0);
-                        const remaining = fees - paid;
-                        return (
-                          <tr key={party.id} className={index % 2 === 0 ? 'bg-background' : 'bg-muted/20'}>
-                            <td className="px-3 py-2.5 font-medium">{party.name?.trim() || 'موكل دون اسم'}</td>
-                            <td className="px-3 py-2.5 tabular-nums">{formatCurrency(fees)}</td>
-                            <td className="px-3 py-2.5 tabular-nums text-emerald-700 dark:text-emerald-400">{formatCurrency(paid)}</td>
-                            <td className={`px-3 py-2.5 tabular-nums font-semibold ${remaining > 0 ? 'text-amber-700 dark:text-amber-400' : 'text-emerald-700 dark:text-emerald-400'}`}>
-                              {formatCurrency(remaining)}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                    <tfoot className="border-t bg-muted/50 font-bold">
-                      <tr>
-                        <td className="px-3 py-2.5">إجمالي القضية</td>
-                        <td className="px-3 py-2.5 tabular-nums">{formatCurrency(parties.filter(p => (p.side || 'for') === 'for').reduce((sum, p) => sum + Number(p.totalFees || 0), 0))}</td>
-                        <td className="px-3 py-2.5 tabular-nums">{formatCurrency(parties.filter(p => (p.side || 'for') === 'for').reduce((sum, p) => sum + Number(p.paidAmount || 0), 0))}</td>
-                        <td className="px-3 py-2.5 tabular-nums">{formatCurrency(parties.filter(p => (p.side || 'for') === 'for').reduce((sum, p) => sum + Number(p.totalFees || 0) - Number(p.paidAmount || 0), 0))}</td>
-                      </tr>
-                    </tfoot>
-                  </table>
-                </div>
-              ) : (
-                <p className="rounded-lg bg-muted/40 px-3 py-4 text-center text-sm text-muted-foreground">
-                  أضف موكلاً بصفة «في حقه» لإظهار كشف أتعابه هنا.
-                </p>
-              )}
-            </div>
-
-            {/* التواريخ */}
-            <div>
-              <h3 className="text-sm font-bold mb-3 text-teal-700 dark:text-teal-400">التواريخ</h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <div>
-                  <Label className="text-xs">تاريخ التسجيل</Label>
-                  <Input
-                    type="date"
-                    dir="ltr"
-                    value={toDateInputValue(formData.registrationDate as any)}
-                    onChange={(e) => setFormData({ ...formData, registrationDate: e.target.value })}
-                    className="h-11"
-                  />
-                </div>
-                <div>
-                  <Label className="text-xs">أول جلسة</Label>
-                  <Input
-                    type="date"
-                    dir="ltr"
-                    value={toDateInputValue(formData.firstSessionDate as any)}
-                    onChange={(e) => setFormData({ ...formData, firstSessionDate: e.target.value })}
-                    className="h-11"
-                  />
-                </div>
-                <div>
-                  <Label className="text-xs">تاريخ المداولة</Label>
-                  <Input
-                    type="date"
-                    dir="ltr"
-                    value={toDateInputValue(formData.delibDate as any)}
-                    onChange={(e) => setFormData({ ...formData, delibDate: e.target.value })}
-                    className="h-11"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* أطراف النزاع */}
-            <div>
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-sm font-bold text-teal-700 dark:text-teal-400">أطراف النزاع</h3>
-                <Button variant="outline" size="sm" onClick={() => setParties([...parties, emptyParty()])} className="touch-target">
-                  <Plus className="w-3 h-3 ml-1" />
-                  إضافة طرف
-                </Button>
-              </div>
-              <div className="space-y-3">
-                {parties.map((party, idx) => (
-                  <div key={party.id} className="p-3 border rounded-lg space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-muted-foreground">الطرف {(idx + 1).toLocaleString('en-US')}</span>
-                      {parties.length > 1 && (
-                        <Button variant="ghost" size="sm" onClick={() => setParties(parties.filter((p) => p.id !== party.id))} className="touch-target">
-                          <X className="w-3 h-3" />
-                        </Button>
-                      )}
-                    </div>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                      <div>
-                        <Label className="text-xs">المركز القانوني</Label>
-                        <SelectWithCustom
-                          field="partyRole"
-                          value={party.role || ''}
-                          onChange={v => {
-                            const updated = [...parties];
-                            updated[idx] = { ...updated[idx], role: v };
-                            setParties(updated);
-                          }}
-                          staticOptions={PARTY_ROLES.map(r => ({ value: r, label: r }))}
-                          placeholder="اختر المركز القانوني..."
-                        />
-                        <div className="flex gap-1 mt-1">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const updated = [...parties];
-                              updated[idx] = { ...updated[idx], side: 'for' };
-                              setParties(updated);
-                            }}
-                            className={`flex-1 h-8 rounded-md border text-xs font-medium transition-colors ${
-                              (party.side || 'for') === 'for'
-                                ? 'bg-green-500 text-white border-green-500'
-                                : 'border-border text-muted-foreground hover:border-green-400'
-                            }`}
-                          >
-                            في حقه
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const updated = [...parties];
-                              updated[idx] = { ...updated[idx], side: 'against' };
-                              setParties(updated);
-                            }}
-                            className={`flex-1 h-8 rounded-md border text-xs font-medium transition-colors ${
-                              party.side === 'against'
-                                ? 'bg-red-500 text-white border-red-500'
-                                : 'border-border text-muted-foreground hover:border-red-400'
-                            }`}
-                          >
-                            ضده
-                          </button>
-                        </div>
-                      </div>
-                      <div>
-                        <Label className="text-xs">الاسم</Label>
-                        <div className="flex gap-1">
-                          <ComboboxInput
-                            value={party.name || ''}
-                            onChange={(v) => {
-                              const updated = [...parties];
-                              updated[idx] = { ...updated[idx], name: v };
-                              // ملء الهاتف تلقائياً عند اختيار اسم من القائمة
-                              if (v) {
-                                const nameKey = v.trim().toLowerCase();
-                                // أولاً: البحث في جدول الموكلين
-                                if (clientByNameMap[nameKey]) {
-                                  const existingClient = clientByNameMap[nameKey];
-                                  if (existingClient.phone && !updated[idx].phone) {
-                                    updated[idx] = { ...updated[idx], phone: existingClient.phone };
-                                  }
-                                  if (existingClient.phone2 && !updated[idx].phone) {
-                                    updated[idx] = { ...updated[idx], phone: existingClient.phone2 };
-                                  }
-                                }
-                                // ثانياً: البحث في أطراف القضايا السابقة
-                                if (partyPhoneMap[nameKey] && !updated[idx].phone) {
-                                  updated[idx] = { ...updated[idx], phone: partyPhoneMap[nameKey] };
-                                }
-                              }
-                              setParties(updated);
-                            }}
-                            suggestions={clientNameSuggestions}
-                            placeholder="ابدأ بكتابة الاسم..."
-                            addLabel="كطرف"
-                            className="h-10"
-                          />
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="icon"
-                            className="h-10 w-10 shrink-0"
-                            onClick={() => openPartyClientDialog(idx)}
-                            title="إضافة موكل جديد"
-                          >
-                            <UserPlus className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </div>
-                      <div>
-                        <Label className="text-xs">الهاتف</Label>
-                        <Input
-                          value={party.phone || ''}
-                          onChange={(e) => {
-                            const updated = [...parties];
-                            updated[idx] = { ...updated[idx], phone: e.target.value };
-                            setParties(updated);
-                          }}
-                          placeholder="رقم الهاتف"
-                          className="h-10"
-                        />
-                      </div>
-                      <div>
-                        <Label className="text-xs">اسم المحامي</Label>
-                        <ComboboxInput
-                          value={party.lawyerName || ''}
-                          onChange={(v) => {
-                            const updated = [...parties];
-                            updated[idx] = { ...updated[idx], lawyerName: v };
-                            // ملء هاتف المحامي تلقائياً عند اختيار اسم من القائمة
-                            if (v) {
-                              const nameKey = v.trim().toLowerCase();
-                              // أولاً: البحث في جدول المحامين
-                              if (lawyerByNameMap[nameKey]) {
-                                const existingLawyer = lawyerByNameMap[nameKey];
-                                if (existingLawyer.phone && !updated[idx].lawyerPhone) {
-                                  updated[idx] = { ...updated[idx], lawyerPhone: existingLawyer.phone };
-                                } else if (existingLawyer.phone2 && !updated[idx].lawyerPhone) {
-                                  updated[idx] = { ...updated[idx], lawyerPhone: existingLawyer.phone2 };
-                                }
-                              }
-                              // ثانياً: البحث في أطراف القضايا السابقة
-                              if (partyLawyerPhoneMap[nameKey] && !updated[idx].lawyerPhone) {
-                                updated[idx] = { ...updated[idx], lawyerPhone: partyLawyerPhoneMap[nameKey] };
-                              }
-                            }
-                            setParties(updated);
-                          }}
-                          suggestions={lawyerNameSuggestions}
-                          placeholder="ابدأ بكتابة اسم المحامي..."
-                          addLabel="كاسم محامي"
-                          className="h-10"
-                        />
-                      </div>
-                      <div>
-                        <Label className="text-xs">هاتف المحامي</Label>
-                        <Input
-                          value={party.lawyerPhone || ''}
-                          onChange={(e) => {
-                            const updated = [...parties];
-                            updated[idx] = { ...updated[idx], lawyerPhone: e.target.value };
-                            setParties(updated);
-                          }}
-                          placeholder="هاتف المحامي"
-                          className="h-10"
-                        />
-                      </div>
-                    </div>
-                    {/* أتعاب هذا الطرف - تظهر فقط للأطراف "في حقه" */}
-                    {(party.side || 'for') === 'for' && (
-                      <div className="mt-2 p-2.5 bg-teal-50/50 dark:bg-teal-900/10 rounded-lg border border-teal-100 dark:border-teal-800/30">
-                        <div className="flex items-center gap-1.5 mb-2">
-                          <Wallet className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
-                          <span className="text-xs font-bold text-teal-700 dark:text-teal-400">أتعاب {party.name || 'الطرف'}</span>
-                        </div>
-                        <div className="grid grid-cols-3 gap-2">
-                          <div>
-                            <Label className="text-xs">الأتعاب (د.ج)</Label>
-                            <Input
-                              type="number"
-                              value={party.totalFees || ''}
-                              onChange={(e) => {
-                                const updated = [...parties];
-                                updated[idx] = { ...updated[idx], totalFees: e.target.value ? Number(e.target.value) : 0 };
-                                setParties(updated);
-                              }}
-                              placeholder="0"
-                              className="h-9 text-sm"
-                            />
-                          </div>
-                          <div>
-                            <Label className="text-xs">المدفوع (د.ج)</Label>
-                            <Input
-                              type="number"
-                              value={party.paidAmount || ''}
-                              onChange={(e) => {
-                                const updated = [...parties];
-                                updated[idx] = { ...updated[idx], paidAmount: e.target.value ? Number(e.target.value) : 0 };
-                                setParties(updated);
-                              }}
-                              placeholder="0"
-                              className="h-9 text-sm"
-                            />
-                          </div>
-                          <div>
-                            <Label className="text-xs">المتبقي (د.ج)</Label>
-                            <Input
-                              type="number"
-                              value={((party.totalFees || 0) - (party.paidAmount || 0)).toLocaleString('en-US')}
-                              disabled
-                              className="bg-muted h-9 text-sm"
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
 
             {/* التأجيلات */}
             <div>
@@ -2322,6 +1892,7 @@ export function Cases() {
               )}
             </div>
 
+
             {/* منطوق الحكم وملاحظات */}
             <div>
               <h3 className="text-sm font-bold mb-3 text-teal-700 dark:text-teal-400">معلومات إضافية</h3>
@@ -2373,6 +1944,27 @@ export function Cases() {
                 </div>
               </div>
             </div>
+            {/* الأتعاب والوضع المالي — مستقلة عن سجلات الأطراف */}
+            <div>
+              <h3 className="text-sm font-bold mb-3 text-teal-700 dark:text-teal-400">الأتعاب والوضع المالي</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div>
+                  <Label className="text-xs">إجمالي الأتعاب للقضية (د.ج)</Label>
+                  <Input type="number" min="0" value={Number(formData.totalFees || 0)} onChange={(e) => setFormData({ ...formData, totalFees: e.target.value ? Number(e.target.value) : 0 })} className="h-11" />
+                </div>
+                <div>
+                  <Label className="text-xs">المبلغ المدفوع (د.ج)</Label>
+                  <Input type="number" min="0" value={Number(formData.paidAmount || 0)} onChange={(e) => setFormData({ ...formData, paidAmount: e.target.value ? Number(e.target.value) : 0 })} className="h-11" />
+                </div>
+                <div>
+                  <Label className="text-xs">المبلغ المتبقي (د.ج)</Label>
+                  <Input type="number" value={Math.max(0, Number(formData.totalFees || 0) - Number(formData.paidAmount || 0))} disabled className="bg-muted h-11" />
+                </div>
+              </div>
+              <p className="mt-2 text-xs text-muted-foreground">تُسجل أتعاب القضية على مستوى القضية، ولا تُجمع تلقائياً من بيانات الأطراف.</p>
+            </div>
+
+
           </div>
 
           <DialogFooter className="flex gap-2">
@@ -2391,75 +1983,6 @@ export function Cases() {
             <Button onClick={saveCase} className="bg-teal-600 hover:bg-teal-700">
               {editingCase ? 'تحديث' : 'حفظ'}
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* حوار إنشاء موكل جديد */}
-      <Dialog open={showNewClientDialog} onOpenChange={setShowNewClientDialog}>
-        <DialogContent className="max-w-sm" dir="rtl">
-          <DialogHeader>
-            <DialogTitle className="text-base font-bold">موكل جديد</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-3">
-            <div>
-              <Label className="text-xs">الاسم <span className="text-destructive">*</span></Label>
-              <Input
-                value={newClientData.name || ''}
-                onChange={(e) => setNewClientData({ ...newClientData, name: e.target.value })}
-                placeholder="اسم الموكل"
-                className="h-11"
-              />
-            </div>
-            <div>
-              <Label className="text-xs">الهاتف</Label>
-              <Input
-                value={newClientData.phone || ''}
-                onChange={(e) => setNewClientData({ ...newClientData, phone: e.target.value })}
-                placeholder="رقم الهاتف"
-                className="h-11"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowNewClientDialog(false)}>إلغاء</Button>
-            <Button onClick={saveNewClient} className="bg-teal-600 hover:bg-teal-700">حفظ</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* حوار إضافة موكل جديد من نموذج الأطراف */}
-      <Dialog open={showPartyClientDialog} onOpenChange={setShowPartyClientDialog}>
-        <DialogContent className="max-w-sm" dir="rtl">
-          <DialogHeader>
-            <DialogTitle className="text-base font-bold flex items-center gap-2">
-              <UserPlus className="w-4 h-4" />
-              إضافة موكل جديد
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-3">
-            <div>
-              <Label className="text-xs">الاسم واللقب <span className="text-destructive">*</span></Label>
-              <Input
-                value={partyClientData.name}
-                onChange={(e) => setPartyClientData({ ...partyClientData, name: e.target.value })}
-                placeholder="الاسم واللقب"
-                className="h-11"
-              />
-            </div>
-            <div>
-              <Label className="text-xs">الهاتف</Label>
-              <Input
-                value={partyClientData.phone}
-                onChange={(e) => setPartyClientData({ ...partyClientData, phone: e.target.value })}
-                placeholder="رقم الهاتف"
-                className="h-11"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowPartyClientDialog(false)}>إلغاء</Button>
-            <Button onClick={savePartyClient} className="bg-teal-600 hover:bg-teal-700">إضافة الموكل</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -2581,10 +2104,9 @@ function DetailField({ label, value }: { label: string; value?: React.ReactNode 
 // ============================================================================
 // بطاقة المهام المرتبطة بقضية — تُعرض داخل تفاصيل القضية
 // ============================================================================
-function CaseTasksCard({ caseId, allTasks, clientId }: {
+function CaseTasksCard({ caseId, allTasks }: {
   caseId: number;
   allTasks: any[];
-  clientId?: number | null;
 }) {
   const { setActiveSection, setSelectedTaskId } = useAppStore();
   const [showQuickAdd, setShowQuickAdd] = React.useState(false);
@@ -2607,7 +2129,6 @@ function CaseTasksCard({ caseId, allTasks, clientId }: {
         priority: 'medium',
         status: 'pending',
         relatedCaseId: caseId,
-        relatedClientId: clientId ?? null,
         reminderOffsets: [7, 1, 0],
       });
       setQuickTitle('');
@@ -2725,6 +2246,7 @@ function CaseTasksCard({ caseId, allTasks, clientId }: {
                           {days < 0 ? `متأخرة ${Math.abs(days)}ي` : days === 0 ? 'اليوم' : days === 1 ? 'غداً' : `${days}ي`}
                         </span>
                       )}
+                      
                     </div>
                   </div>
                   <Button

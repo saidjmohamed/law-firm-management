@@ -15,71 +15,6 @@ const fetcher = async (url: string) => {
 };
 
 // ============================================================================
-// الموكلون
-// ============================================================================
-export function useClients() {
-  const { data, error, isLoading } = useSWR('/api/clients', fetcher);
-  return { clients: data || [], error, isLoading };
-}
-
-export function useClient(id: number | null) {
-  const { data, error, isLoading } = useSWR(
-    id ? `/api/clients/${id}` : null,
-    fetcher
-  );
-  return { client: data, error, isLoading };
-}
-
-export async function createClient(data: Record<string, unknown>) {
-  const res = await fetch('/api/clients', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data),
-  });
-  if (!res.ok) {
-    if (res.status === 409) {
-      const errorData = await res.json().catch(() => ({}));
-      throw new Error(errorData.error || 'موكل بنفس الاسم موجود بالفعل');
-    }
-    throw new Error('فشل في إنشاء الموكل');
-  }
-  const result = await res.json();
-  await mutate('/api/clients');
-  return result;
-}
-
-export async function updateClient(id: number, data: Record<string, unknown>) {
-  const res = await fetch(`/api/clients/${id}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data),
-  });
-  if (!res.ok) throw new Error('فشل في تحديث الموكل');
-  const result = await res.json();
-  await mutate('/api/clients');
-  await mutate(`/api/clients/${id}`);
-  return result;
-}
-
-export async function deleteClient(id: number) {
-  const res = await fetch(`/api/clients/${id}`, { method: 'DELETE' });
-  if (!res.ok) throw new Error('فشل في حذف الموكل');
-  await mutate('/api/clients');
-}
-
-/**
- * مزامنة جميع الأطراف مع جدول الموكلين
- * كل طرف (سواء في حقه أو ضده) يضاف كموكل إذا لم يكن موجوداً
- */
-export async function syncPartiesToClients() {
-  const res = await fetch('/api/clients/sync-parties', { method: 'POST' });
-  if (!res.ok) throw new Error('فشل في مزامنة الأطراف مع الموكلين');
-  const result = await res.json();
-  await mutate('/api/clients');
-  return result;
-}
-
-// ============================================================================
 // القضايا
 // ============================================================================
 export function useCases() {
@@ -468,7 +403,6 @@ export function getSettingValue(settings: Record<string, string>, key: string): 
 // إعادة تحميل البيانات
 // ============================================================================
 export async function refreshAll() {
-  await mutate('/api/clients');
   await mutate('/api/cases');
   await mutate('/api/sessions');
   await mutate('/api/payments');

@@ -37,12 +37,12 @@ Work Log:
 - Updated AUTH_SECRET and APP_PASSWORD to include preview environment
 - Committed migration files to git and pushed to GitHub
 - Triggered Vercel deployment via API - deployment successful
-- Tested all APIs: login, clients (CRUD), cases, sessions, payments, delays, judicial-bodies, archives, settings
+- Tested all APIs: login, cases, sessions, payments, delays, judicial-bodies, archives, settings
 - Verified custom domain lawfirm-dz.vercel.app works
 - Cleaned up test data
 
 Stage Summary:
-- Database: Neon Postgres fully operational with 9 tables (Client, Case, Party, Delay, Session, Payment, Archive, JudicialBody, Setting)
+- Database: Neon Postgres fully operational with tables including Case, Party, Delay, Session, Payment, Archive, JudicialBody, Setting
 - Migration: prisma/migrations/20260524084104_init/ applied successfully
 - Vercel: All 4 env vars set (DATABASE_URL, DIRECT_URL, AUTH_SECRET, APP_PASSWORD)
 - Deployment: lawfirm-dz.vercel.app - live and working
