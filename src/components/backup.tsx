@@ -3,7 +3,6 @@
 import React, { useState, useRef } from 'react';
 import {
   useCases,
-  useClients,
   useSessions,
   usePayments,
   useDelays,
@@ -48,7 +47,6 @@ export function BackupManager() {
   const jsonInputRef = useRef<HTMLInputElement>(null);
 
   const { cases } = useCases();
-  const { clients } = useClients();
   const { sessions } = useSessions();
   const { payments } = usePayments();
   const { delays } = useDelays();
@@ -59,7 +57,6 @@ export function BackupManager() {
   const lastBackupDate = getSettingValue(settings, 'lastBackupDate');
 
   const stats = {
-    clients: clients.length,
     cases: cases.length,
     sessions: sessions.length,
     payments: payments.length,
@@ -72,11 +69,10 @@ export function BackupManager() {
     try {
       const backupData = {
         // معلومات النسخة الاحتياطية
-        schemaVersion: 2,
+        schemaVersion: 3,
         exportDate: new Date().toISOString(),
         appVersion: '3.0',
         counts: {
-          clients: clients.length,
           cases: cases.length,
           sessions: sessions.length,
           payments: payments.length,
@@ -85,7 +81,6 @@ export function BackupManager() {
           archives: archives.length,
         },
         // البيانات الفعلية
-        clients,
         cases,
         sessions,
         payments,
@@ -131,7 +126,7 @@ export function BackupManager() {
     if (!data || typeof data !== 'object') {
       return { ok: false, error: 'الملف غير صالح' };
     }
-    const expectedArrays = ['clients', 'cases', 'sessions', 'payments', 'delays', 'parties', 'archives'];
+    const expectedArrays = ['cases', 'sessions', 'payments', 'delays', 'parties', 'archives'];
     for (const key of expectedArrays) {
       if (data[key] !== undefined && !Array.isArray(data[key])) {
         return { ok: false, error: `الحقل ${key} يجب أن يكون مصفوفة` };
@@ -140,7 +135,6 @@ export function BackupManager() {
     return {
       ok: true,
       counts: {
-        clients: data.clients?.length ?? 0,
         cases: data.cases?.length ?? 0,
         sessions: data.sessions?.length ?? 0,
         payments: data.payments?.length ?? 0,
@@ -208,40 +202,20 @@ export function BackupManager() {
       }
 
       const expectedCounts = validation.counts!;
-      const importedCounts = { clients: 0, cases: 0, sessions: 0, payments: 0, delays: 0, parties: 0, archives: 0 };
-
-      // استيراد بالترتيب الصحيح: clients → cases → parties/delays/sessions/payments → archives
-      // (لأن بعض الجداول لها foreign keys تتطلب وجود الأب أولاً)
-
-      // 1) الموكلون (بدون الـ id الأصلي — سيُعين id جديد)
-      // ملاحظة: للحفاظ على روابط cases→client، نستخدم خريطة قديم→جديد
-      const clientIdMap = new Map<number, number>();
-      if (Array.isArray(data.clients)) {
-        for (const client of data.clients) {
-          const oldId = client.id;
-          const res = await fetch('/api/clients', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(cleanRecord(client)),
-          });
-          if (res.ok) {
-            const newClient = await res.json().catch(() => null);
-            if (newClient?.id && oldId) clientIdMap.set(oldId, newClient.id);
-            importedCounts.clients++;
-          }
-        }
-      }
+      const importedCounts = { cases: 0, sessions: 0, payments: 0, delays: 0, parties: 0, archives: 0 };
 
       // 2) القضايا
       const caseIdMap = new Map<number, number>();
+      // توافق رجعي: تحويل ارتباط الموكل في النسخ القديمة إلى طرف في القضية.
+      const legacyClients = new Map<number, any>((Array.isArray(data.clients) ? data.clients : []).map((client: any) => [Number(client.id), client]));
+      const legacyCaseParties = new Map<number, any>();
       if (Array.isArray(data.cases)) {
         for (const caseItem of data.cases) {
           const oldId = caseItem.id;
-          // ترجمة clientId القديم إلى الجديد
           const cleaned = cleanRecord(caseItem);
-          if (cleaned.clientId && clientIdMap.has(cleaned.clientId)) {
-            cleaned.clientId = clientIdMap.get(cleaned.clientId);
-          }
+          const legacyClient = caseItem.clientId ? legacyClients.get(Number(caseItem.clientId)) : null;
+          if (legacyClient) legacyCaseParties.set(Number(oldId), legacyClient);
+          delete cleaned.clientId;
           const res = await fetch('/api/cases', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -299,6 +273,17 @@ export function BackupManager() {
         }
       }
 
+      // تحويل روابط الموكل القديمة إلى أطراف ممثلة بعد إنشاء الأطراف الأصلية.
+      for (const [oldCaseId, legacyClient] of legacyCaseParties) {
+        const newCaseId = caseIdMap.get(oldCaseId);
+        if (!newCaseId) continue;
+        const existingRepresented = Array.isArray(data.parties) && data.parties.some((p: any) => Number(p.caseId) === oldCaseId && p.side === 'for' && (p.name || '').trim().toLowerCase() === (legacyClient.name || '').trim().toLowerCase());
+        if (!existingRepresented) {
+          const converted = { caseId: newCaseId, name: legacyClient.name || '', phone: legacyClient.phone || '', role: '', side: 'for' };
+          if (await postJson('/api/parties', converted)) importedCounts.parties++;
+        }
+      }
+
       // 7) الأرشيف
       if (Array.isArray(data.archives)) {
         for (const archive of data.archives) {
@@ -314,7 +299,6 @@ export function BackupManager() {
 
       // تقرير التحقق من السلامة
       const failedCounts = {
-        clients: expectedCounts.clients - importedCounts.clients,
         cases: expectedCounts.cases - importedCounts.cases,
         sessions: expectedCounts.sessions - importedCounts.sessions,
         payments: expectedCounts.payments - importedCounts.payments,
@@ -325,7 +309,7 @@ export function BackupManager() {
       const totalFailed = Object.values(failedCounts).reduce((a, b) => a + b, 0);
 
       if (totalFailed === 0) {
-        toast.success(`تم استيراد كل السجلات بنجاح (${importedCounts.cases} قضية، ${importedCounts.clients} موكل)`);
+        toast.success(`تم استيراد كل السجلات بنجاح (${importedCounts.cases} قضية، ${importedCounts.parties} طرف)`);
       } else {
         toast.warning(`استيراد جزئي — فشل ${totalFailed} سجل`, {
           description: JSON.stringify(failedCounts),
@@ -370,7 +354,7 @@ export function BackupManager() {
         <CardContent>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <StatBadge label="القضايا" count={stats.cases} />
-            <StatBadge label="الموكلون" count={stats.clients} />
+            <StatBadge label="الأطراف" count={stats.parties} />
             <StatBadge label="الجلسات" count={stats.sessions} />
             <StatBadge label="المدفوعات" count={stats.payments} />
             <StatBadge label="التأجيلات" count={stats.delays} />
@@ -473,7 +457,7 @@ export function BackupManager() {
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground mb-3">
-            حذف جميع البيانات وإعادة تحميل البيانات الأولية (19 قضية + 16 موكل). استخدم هذا الخيار إذا كانت البيانات مفقودة أو تالفة.
+            حذف جميع البيانات وإعادة تحميل البيانات الأولية. استخدم هذا الخيار إذا كانت البيانات مفقودة أو تالفة.
           </p>
           <Button
             variant="destructive"
