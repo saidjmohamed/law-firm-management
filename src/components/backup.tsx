@@ -276,13 +276,13 @@ export function BackupManager() {
       // 4) الجلسات
       if (Array.isArray(data.sessions)) {
         for (const session of data.sessions) {
+          const oldId = session.id;
           const cleaned = cleanRecord(session);
-          const oldId = cleaned.id;
           if (cleaned.caseId && caseIdMap.has(cleaned.caseId)) cleaned.caseId = caseIdMap.get(cleaned.caseId);
-          if (await postJson('/api/sessions', cleaned)) {
-            const created = await fetch('/api/sessions').then(r => r.ok ? r.json() : []).catch(() => []);
-            const match = Array.isArray(created) ? created.find((x: any) => x.caseId === cleaned.caseId && x.date === cleaned.date && x.time === cleaned.time) : null;
-            if (match?.id && oldId) sessionIdMap.set(oldId, match.id);
+          const res = await fetch('/api/sessions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(cleaned) });
+          if (res.ok) {
+            const created = await res.json().catch(() => null);
+            if (created?.id && oldId) sessionIdMap.set(oldId, created.id);
             importedCounts.sessions++;
           }
         }
