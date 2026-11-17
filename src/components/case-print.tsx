@@ -164,321 +164,63 @@ export function CasePrintButton({ caseData, parties, delays, sessions, courtPhon
       const html = `<!DOCTYPE html>
 <html dir="rtl" lang="ar">
 <head>
-  <meta charset="UTF-8">
-  <title>ملف القضية - ${escapeHtml(caseData.caseNumber || '')}</title>
-  <style>
-    @page {
-      size: A4;
-      margin: 12mm 10mm;
-    }
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-    body {
-      font-family: 'Segoe UI', Tahoma, 'Noto Sans Arabic', Arial, sans-serif;
-      direction: rtl;
-      color: #000;
-      font-size: 12px;
-      line-height: 1.6;
-      background: #fff;
-      -webkit-print-color-adjust: exact;
-      print-color-adjust: exact;
-    }
-
-    /* الديباجة */
-    .letterhead {
-      text-align: center;
-      margin-bottom: 16px;
-      padding-bottom: 12px;
-      border-bottom: 3px double #000;
-    }
-    .letterhead h1 {
-      font-size: 18px;
-      font-weight: 900;
-      color: #000;
-      margin-bottom: 2px;
-    }
-    .letterhead h2 {
-      font-size: 13px;
-      font-weight: 700;
-      color: #000;
-      margin-bottom: 4px;
-    }
-    .letterhead .contact {
-      font-size: 10px;
-      color: #333;
-      line-height: 1.7;
-    }
-    .letterhead .contact span {
-      display: inline-block;
-      margin: 0 6px;
-    }
-
-    /* عنوان القضية */
-    .case-title {
-      text-align: center;
-      font-size: 15px;
-      font-weight: 900;
-      color: #000;
-      margin-bottom: 14px;
-      padding: 8px 0;
-      border-top: 2px solid #000;
-      border-bottom: 2px solid #000;
-    }
-
-    /* عناوين الأقسام */
-    .section-title {
-      font-size: 12px;
-      font-weight: 900;
-      color: #fff;
-      background: #000;
-      padding: 5px 12px;
-      margin-bottom: 6px;
-      margin-top: 14px;
-      border-radius: 3px;
-      display: inline-block;
-    }
-
-    /* جداول المعلومات */
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-bottom: 6px;
-    }
-    th {
-      background: #000;
-      color: #fff;
-      font-weight: 900;
-      padding: 6px 10px;
-      text-align: center;
-      font-size: 10px;
-    }
-    .info-table td {
-      border: 1px solid #333;
-      padding: 5px 10px;
-      font-size: 11px;
-      vertical-align: middle;
-    }
-    .info-table td:first-child {
-      font-weight: 800;
-      color: #000;
-      width: 24%;
-      background: #e5e5e5;
-      font-size: 10px;
-    }
-    .info-table td:nth-child(2) {
-      width: 26%;
-    }
-    .info-table td:nth-child(3) {
-      font-weight: 800;
-      color: #000;
-      width: 24%;
-      background: #e5e5e5;
-      font-size: 10px;
-    }
-
-    /* تسمية الأطراف */
-    .party-label {
-      font-size: 11px;
-      font-weight: 900;
-      padding: 3px 10px;
-      margin-top: 8px;
-      margin-bottom: 2px;
-      display: inline-block;
-      border-radius: 3px 3px 0 0;
-      color: #fff;
-    }
-    .party-favor { background: #333; }
-    .party-against { background: #000; }
-    .party-other { background: #666; }
-
-    /* تذييل */
-    .footer {
-      margin-top: 20px;
-      padding-top: 8px;
-      border-top: 1px solid #000;
-      display: flex;
-      justify-content: space-between;
-      font-size: 9px;
-      color: #333;
-      font-weight: 600;
-    }
-
-    @media print {
-      body { margin: 0; }
-    }
-  </style>
+<meta charset="UTF-8">
+<title>بطاقة المجلد الورقي - ${escapeHtml(caseData.caseNumber || '')}</title>
+<style>
+@page{size:A4;margin:12mm 10mm}*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',Tahoma,Arial,sans-serif;direction:rtl;color:#000;font-size:12px;line-height:1.6}
+header{text-align:center;border-bottom:3px double #000;padding-bottom:10px;margin-bottom:12px}
+header h1{font-size:18px;font-weight:900}header h2{font-size:13px}
+header p{font-size:10px}.title{text-align:center;font-size:16px;font-weight:900;border:2px solid #000;padding:7px;margin-bottom:10px}
+.section{font-weight:900;background:#000;color:#fff;padding:5px 9px;margin:12px 0 5px;display:inline-block}
+table{width:100%;border-collapse:collapse;margin-bottom:7px;page-break-inside:avoid}
+th{background:#e5e5e5;border:1px solid #333;padding:5px;font-size:10px}
+td{border:1px solid #333;padding:5px 7px;font-size:11px;vertical-align:middle}
+td:first-child{font-weight:800;background:#f0f0f0}
+.party-heading{font-weight:900;margin:6px 0 3px}
+.footer{border-top:1px solid #000;margin-top:16px;padding-top:6px;display:flex;justify-content:space-between;font-size:9px}
+@media print{body{margin:0}}
+</style>
 </head>
 <body>
+<header><h1>${escapeHtml(lawyerName)}</h1><h2>${escapeHtml(lawyerTitle)}</h2>
+<p>${escapeHtml(lawyerAddress)} ${escapeHtml(lawyerPhone)} ${escapeHtml(lawyerEmail)}</p></header>
+<div class="title">بطاقة تعريف المجلد الورقي — القضية رقم: ${escapeHtml(caseData.caseNumber || '—')}</div>
 
-  <!-- الديباجة -->
-  <div class="letterhead">
-    <h1>${escapeHtml(lawyerName)}</h1>
-    <h2>${escapeHtml(lawyerTitle)}</h2>
-    <div class="contact">
-      ${lawyerAddress ? `<span>${escapeHtml(lawyerAddress)}</span>` : ''}
-      ${lawyerPhone ? `<span>الهاتف: ${escapeHtml(lawyerPhone)}</span>` : ''}
-      ${lawyerEmail ? `<span>${escapeHtml(lawyerEmail)}</span>` : ''}
-    </div>
-  </div>
+<div class="section">أولاً: أطراف القضية ومحاموهم</div>
+${[['في حقه',inFavorRows],['ضده',againstRows],['أطراف أخرى',otherRows]].map(([label,rows])=>rows?`<div class="party-heading">${label}</div><table><thead><tr><th>الاسم واللقب</th><th>الصفة الإجرائية</th><th>الهاتف</th><th>المحامي</th><th>هاتف المحامي</th></tr></thead><tbody>${rows}</tbody></table>`:'').join('')}
+${parties.length===0?'<p>لا توجد أطراف مسجلة</p>':''}
 
-  <!-- عنوان القضية -->
-  <div class="case-title">ملف القضية رقم: ${escapeHtml(caseData.caseNumber || '—')}</div>
+<div class="section">ثانياً: بيانات القضية</div>
+<table>
+<tr><td>رقم الملف الداخلي</td><td>${escapeHtml(caseData.id || '—')}</td><td>رقم القضية</td><td>${escapeHtml(caseData.caseNumber || '—')}</td></tr>
+<tr><td>رقم القضية الأصلية</td><td>${escapeHtml(caseData.origCaseNumber || '—')}</td><td>الموضوع</td><td>${escapeHtml(caseData.subject || '—')}</td></tr>
+<tr><td>طبيعة القضية</td><td>${escapeHtml(caseData.caseNature || '—')}</td><td>مرحلة التقاضي</td><td>${escapeHtml(caseData.litigationStage || '—')}</td></tr>
+<tr><td>الحالة الإجرائية</td><td>${escapeHtml(caseData.status || '—')}</td><td>تاريخ التسجيل</td><td>${formatDate(caseData.registrationDate)}</td></tr>
+<tr><td>أول جلسة</td><td>${formatDate(caseData.firstSessionDate)}</td><td>تاريخ المداولة</td><td>${formatDate(caseData.delibDate)}</td></tr>
+</table>
 
-  <!-- معالم القضية -->
-  <div class="section-title">معالم القضية</div>
-  <table class="info-table">
-    <tr>
-      <td>رقم الملف الداخلي</td>
-      <td>${escapeHtml(caseData.id || '—')}</td>
-      <td>رقم القضية</td>
-      <td>${escapeHtml(caseData.caseNumber || '—')}</td>
-    </tr>
-    <tr>
-      <td>الموكل</td>
-      <td>${escapeHtml(caseData.client?.name || '—')}</td>
-      <td>الموضوع</td>
-      <td>${escapeHtml(caseData.subject || '—')}</td>
-    </tr>
-    <tr>
-      <td>طبيعة القضية</td>
-      <td>${escapeHtml(caseData.caseNature || '—')}</td>
-      <td>مرحلة التقاضي</td>
-      <td>${escapeHtml(caseData.litigationStage || '—')}</td>
-    </tr>
-    <tr>
-      <td>الحالة الإجرائية</td>
-      <td>${escapeHtml(caseData.status || '—')}</td>
-      <td>درجة التقاضي</td>
-      <td>${escapeHtml(caseData.courtLevel || '—')}</td>
-    </tr>
-    <tr>
-      <td>المجلس</td>
-      <td>${escapeHtml(caseData.councilName || '—')}</td>
-      <td>المحكمة</td>
-      <td>${escapeHtml(caseData.courtName || '—')}</td>
-    </tr>
-    <tr>
-      <td>الغرفة / القسم</td>
-      <td>${escapeHtml(caseData.chamber || '—')}</td>
-      <td>الولاية</td>
-      <td>${escapeHtml(wilayaName || '—')}</td>
-    </tr>
-    ${(() => { try { const ph = courtPhones ? JSON.parse(courtPhones) : []; return Array.isArray(ph) && ph.length > 0 ? `<tr><td>هاتف المحكمة</td><td>${ph.join(' / ')}</td><td></td><td></td></tr>` : ''; } catch { return ''; } })()}
-    <tr>
-      <td>تاريخ التسجيل</td>
-      <td>${formatDate(caseData.registrationDate)}</td>
-      <td>أول جلسة</td>
-      <td>${formatDate(caseData.firstSessionDate)}</td>
-    </tr>
-    <tr>
-      <td>رقم القضية الأصلية</td>
-      <td>${escapeHtml(caseData.origCaseNumber || '—')}</td>
-      <td>تاريخ المداولة</td>
-      <td>${formatDate(caseData.delibDate)}</td>
-    </tr>
-    ${caseData.barPhone ? `<tr><td>هاتف قاعة المحامين</td><td>${escapeHtml(caseData.barPhone)}</td><td></td><td></td></tr>` : ''}
-    <tr>
-      <td>إجمالي الأتعاب</td>
-      <td>${(caseData.totalFees || 0).toLocaleString('fr-DZ')} دج</td>
-      <td>المدفوع / المتبقي</td>
-      <td>${(caseData.paidAmount || 0).toLocaleString('fr-DZ')} / ${remainingFees.toLocaleString('fr-DZ')} دج</td>
-    </tr>
-    </table>
+<div class="section">ثالثاً: الجهة القضائية</div>
+<table>
+<tr><td>نوع القضاء</td><td>${escapeHtml(caseData.judiciaryType || '—')}</td><td>درجة التقاضي</td><td>${escapeHtml(caseData.courtLevel || '—')}</td></tr>
+<tr><td>الولاية</td><td>${escapeHtml(wilayaName || '—')}</td><td>المجلس</td><td>${escapeHtml(caseData.councilName || '—')}</td></tr>
+<tr><td>المحكمة</td><td>${escapeHtml(caseData.courtName || '—')}</td><td>الغرفة / القسم</td><td>${escapeHtml(caseData.chamber || '—')}</td></tr>
+${caseData.chamberNumber? `<tr><td>رقم الغرفة</td><td>${escapeHtml(caseData.chamberNumber)}</td><td></td><td></td></tr>`:''}
+${caseData.barPhone?`<tr><td>هاتف قاعة المحامين</td><td colspan="3">${escapeHtml(caseData.barPhone)}</td></tr>`:''}
+</table>
 
-  <!-- أطراف النزاع -->
-  <div class="section-title">أطراف النزاع</div>
+<div class="section">رابعاً: الجلسات والتأجيلات</div>
+<div class="party-heading">الجلسات</div>
+<table><thead><tr><th>#</th><th>التاريخ</th><th>المحكمة / الغرفة</th><th>الملاحظات</th></tr></thead><tbody>${buildSessionRows()}</tbody></table>
+<div class="party-heading">التأجيلات</div>
+<table><thead><tr><th>#</th><th>التاريخ</th><th>سبب التأجيل</th></tr></thead><tbody>${buildDelayRows()}</tbody></table>
 
-  ${inFavorParties.length > 0 ? `
-  <div class="party-label party-favor">في حقه</div>
-  <table>
-    <thead>
-      <tr>
-        <th>الاسم واللقب</th>
-        <th>المركز القانوني</th>
-        <th>الهاتف</th>
-        <th>محاميه</th>
-        <th>هاتف المحامي</th>
-      </tr>
-    </thead>
-    <tbody>${inFavorRows}</tbody>
-  </table>` : ''}
-
-  ${againstParties.length > 0 ? `
-  <div class="party-label party-against">ضده</div>
-  <table>
-    <thead>
-      <tr>
-        <th>الاسم واللقب</th>
-        <th>المركز القانوني</th>
-        <th>الهاتف</th>
-        <th>محاميه</th>
-        <th>هاتف المحامي</th>
-      </tr>
-    </thead>
-    <tbody>${againstRows}</tbody>
-  </table>` : ''}
-
-  ${otherParties.length > 0 ? `
-  <div class="party-label party-other">أطراف أخرى</div>
-  <table>
-    <thead>
-      <tr>
-        <th>الاسم واللقب</th>
-        <th>المركز القانوني</th>
-        <th>الهاتف</th>
-        <th>محاميه</th>
-        <th>هاتف المحامي</th>
-      </tr>
-    </thead>
-    <tbody>${otherRows}</tbody>
-  </table>` : ''}
-
-  ${parties.length === 0 ? '<p style="color:#666;font-size:11px;padding:4px 0;">لا توجد أطراف مسجلة</p>' : ''}
-
-  <!-- تأجيلات الجلسات -->
-  <div class="section-title">تأجيلات الجلسات</div>
-  <table>
-    <thead>
-      <tr>
-        <th>#</th>
-        <th>التاريخ</th>
-        <th>السبب</th>
-      </tr>
-    </thead>
-    <tbody>${buildDelayRows()}</tbody>
-  </table>
-
-  <!-- الجلسات -->
-  ${sessions.length > 0 ? `
-  <div class="section-title">الجلسات</div>
-  <table>
-    <thead>
-      <tr>
-        <th>#</th>
-        <th>التاريخ</th>
-        <th>المحكمة / الغرفة</th>
-        <th>الملاحظات</th>
-      </tr>
-    </thead>
-    <tbody>${buildSessionRows()}</tbody>
-  </table>` : ''}
-
-  <!-- ملاحظات -->
-  ${caseData.notes ? `
-  <div class="section-title">ملاحظات</div>
-  <div style="border:2px solid #000;border-radius:4px;padding:8px;margin-top:6px;font-size:11px;white-space:pre-wrap;line-height:1.8;font-weight:600;background:#f5f5f5;">${escapeHtml(caseData.notes)}</div>` : ''}
-
-  <!-- تذييل -->
-  <div class="footer">
-    <span>مكتب الاستاذ ${escapeHtml(lawyerName)} - ${escapeHtml(lawyerTitle)}</span>
-    <span>طبع بتاريخ: ${new Date().toLocaleDateString('ar-DZ')}</span>
-  </div>
-
-</body>
-</html>`;
+<div class="section">خامساً: الأتعاب والوضع المالي</div>
+<table><tr><td>إجمالي الأتعاب</td><td>${(caseData.totalFees || 0).toLocaleString('fr-DZ')} دج</td><td>المبلغ المدفوع</td><td>${(caseData.paidAmount || 0).toLocaleString('fr-DZ')} دج</td></tr>
+<tr><td>المبلغ المتبقي</td><td colspan="3">${remainingFees.toLocaleString('fr-DZ')} دج</td></tr></table>
+${caseData.notes?`<div class="section">ملاحظات</div><p style="border:1px solid #000;padding:8px;white-space:pre-wrap">${escapeHtml(caseData.notes)}</p>`:''}
+<div class="footer"><span>مكتب الأستاذ ${escapeHtml(lawyerName)} — ${escapeHtml(lawyerTitle)}</span><span>تاريخ الطباعة: ${new Date().toLocaleDateString('ar-DZ')}</span></div>
+</body></html>`
 
       const printWindow = window.open('', '_blank');
       if (printWindow) {
