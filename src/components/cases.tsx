@@ -81,6 +81,11 @@ interface PartyType {
   side?: string;
   name?: string;
   phone?: string;
+  phone2?: string;
+  address?: string;
+  wilaya?: number;
+  nationalId?: string;
+  contactNotes?: string;
   lawyerName?: string;
   lawyerPhone?: string;
   totalFees?: number;
@@ -825,6 +830,8 @@ export function Cases() {
                       </div>
                       <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
                         {p.phone && <span>هاتف: {p.phone}</span>}
+                        {p.phone2 && <span>هاتف إضافي: {p.phone2}</span>}
+                        {p.address && <span>العنوان: {p.address}</span>}
                         {p.lawyerName && <span>محامي: {p.lawyerName}</span>}
                         {p.lawyerPhone && <span>هاتف المحامي: {p.lawyerPhone}</span>}
                       </div>
