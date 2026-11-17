@@ -37,7 +37,7 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { id: 'dashboard', label: 'لوحة التحكم', icon: LayoutDashboard },
-  { id: 'clients', label: 'الأطراف الذين نمثلهم', icon: Users },
+  { id: 'represented-parties', label: 'الأطراف الذين نمثلهم', icon: Users },
   { id: 'cases', label: 'القضايا', icon: Briefcase },
   { id: 'sessions', label: 'الجلسات', icon: CalendarDays },
   { id: 'tasks', label: 'المهام', icon: ListChecks },
