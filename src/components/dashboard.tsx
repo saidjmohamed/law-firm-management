@@ -356,7 +356,7 @@ export function Dashboard() {
         </Button>
         <Button
           variant="outline"
-          onClick={() => setActiveSection('clients')}
+          onClick={() => setActiveSection('cases')}
           className="touch-target hover:border-primary/40 hover:bg-accent/50"
         >
           <Plus className="w-4 h-4 ml-2" />
