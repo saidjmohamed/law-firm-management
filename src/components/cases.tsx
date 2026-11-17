@@ -1462,6 +1462,43 @@ export function Cases() {
                           placeholder="هاتف المحامي"
                           className="h-10"
                         />
+                      </div><div>
+                        <Label className="text-xs">المركز القانوني</Label>
+                        <SelectWithCustom
+                          field="partyRole"
+                          value={party.role || ''}
+                          onChange={v => {
+                            const updated = [...parties];
+                            updated[idx] = { ...updated[idx], role: v };
+                            setParties(updated);
+                          }}
+                          staticOptions={PARTY_ROLES.map(r => ({ value: r, label: r }))}
+                          placeholder="اختر المركز القانوني..."
+                        />
+                        <div className="flex gap-1 mt-1">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const updated = [...parties];
+                              updated[idx] = { ...updated[idx], side: 'for' };
+                              setParties(updated);
+                            }}
+                            className={`flex-1 h-8 rounded-md border text-xs font-medium transition-colors ${(party.side || 'for') === 'for' ? 'bg-green-500 text-white border-green-500' : 'border-border text-muted-foreground hover:border-green-400'}`}
+                          >
+                            في حقه
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const updated = [...parties];
+                              updated[idx] = { ...updated[idx], side: 'against' };
+                              setParties(updated);
+                            }}
+                            className={`flex-1 h-8 rounded-md border text-xs font-medium transition-colors ${party.side === 'against' ? 'bg-red-500 text-white border-red-500' : 'border-border text-muted-foreground hover:border-red-400'}`}
+                          >
+                            ضده
+                          </button>
+                        </div>
                       </div>
                     </div>
                     {/* أتعاب هذا الطرف - تظهر فقط للأطراف "في حقه" */}
@@ -2323,52 +2360,7 @@ function CaseTasksCard({ caseId, allTasks }: {
                         }`}>
                           {days < 0 ? `متأخرة ${Math.abs(days)}ي` : days === 0 ? 'اليوم' : days === 1 ? 'غداً' : `${days}ي`}
                         </span>
-                      )}<div>
-                        <Label className="text-xs">المركز القانوني</Label>
-                        <SelectWithCustom
-                          field="partyRole"
-                          value={party.role || ''}
-                          onChange={v => {
-                            const updated = [...parties];
-                            updated[idx] = { ...updated[idx], role: v };
-                            setParties(updated);
-                          }}
-                          staticOptions={PARTY_ROLES.map(r => ({ value: r, label: r }))}
-                          placeholder="اختر المركز القانوني..."
-                        />
-                        <div className="flex gap-1 mt-1">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const updated = [...parties];
-                              updated[idx] = { ...updated[idx], side: 'for' };
-                              setParties(updated);
-                            }}
-                            className={`flex-1 h-8 rounded-md border text-xs font-medium transition-colors ${
-                              (party.side || 'for') === 'for'
-                                ? 'bg-green-500 text-white border-green-500'
-                                : 'border-border text-muted-foreground hover:border-green-400'
-                            }`}
-                          >
-                            في حقه
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const updated = [...parties];
-                              updated[idx] = { ...updated[idx], side: 'against' };
-                              setParties(updated);
-                            }}
-                            className={`flex-1 h-8 rounded-md border text-xs font-medium transition-colors ${
-                              party.side === 'against'
-                                ? 'bg-red-500 text-white border-red-500'
-                                : 'border-border text-muted-foreground hover:border-red-400'
-                            }`}
-                          >
-                            ضده
-                          </button>
-                        </div>
-                      </div>
+                      )}
                       
                     </div>
                   </div>
