@@ -255,7 +255,7 @@ export function TasksManager() {
   return (
     <div className="space-y-5">
       {/* بطاقات الإحصائيات */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <StatBox label="متأخرة" value={stats.overdue} icon={AlertCircle} color="red" />
         <StatBox label="اليوم" value={stats.today} icon={Clock} color="orange" />
         <StatBox label="هذا الأسبوع" value={stats.thisWeek} icon={CalendarIcon} color="amber" />
@@ -343,7 +343,6 @@ export function TasksManager() {
                   ))}
                 </SelectContent>
               </Select>
-            </div>
             </div>
           </div>
         </CardContent>
