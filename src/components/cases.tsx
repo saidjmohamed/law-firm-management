@@ -479,13 +479,6 @@ export function Cases() {
     // تنظيف البيانات من الحقول العلاقية قبل الإرسال
     const { parties: _p, delays: _d, sessions: _s, payments: _pay, archives: _a, createdAt: _ca, updatedAt: _ua, ...cleanFormData } = formData as any;
 
-    // حساب إجمالي الأتعاب من الأطراف "في حقه"
-    const forParties = parties.filter(p => (p.side || 'for') === 'for');
-    const computedTotalFees = forParties.reduce((sum, p) => sum + (p.totalFees || 0), 0);
-    const computedPaidAmount = forParties.reduce((sum, p) => sum + (p.paidAmount || 0), 0);
-    cleanFormData.totalFees = computedTotalFees;
-    cleanFormData.paidAmount = computedPaidAmount;
-
     // كشف تكرار رقم القضية (فقط عند الإضافة)
     if (!editingCase?.id && !forceSaveCase) {
       const dupes = findDuplicateCaseNumbers(formData.caseNumber || '', cases || [], editingCase?.id);
@@ -1501,54 +1494,7 @@ export function Cases() {
                         </div>
                       </div>
                     </div>
-                    {/* أتعاب هذا الطرف - تظهر فقط للأطراف "في حقه" */}
-                    {(party.side || 'for') === 'for' && (
-                      <div className="mt-2 p-2.5 bg-teal-50/50 dark:bg-teal-900/10 rounded-lg border border-teal-100 dark:border-teal-800/30">
-                        <div className="flex items-center gap-1.5 mb-2">
-                          <Wallet className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
-                          <span className="text-xs font-bold text-teal-700 dark:text-teal-400">أتعاب {party.name || 'الطرف'}</span>
-                        </div>
-                        <div className="grid grid-cols-3 gap-2">
-                          <div>
-                            <Label className="text-xs">الأتعاب (د.ج)</Label>
-                            <Input
-                              type="number"
-                              value={party.totalFees || ''}
-                              onChange={(e) => {
-                                const updated = [...parties];
-                                updated[idx] = { ...updated[idx], totalFees: e.target.value ? Number(e.target.value) : 0 };
-                                setParties(updated);
-                              }}
-                              placeholder="0"
-                              className="h-9 text-sm"
-                            />
-                          </div>
-                          <div>
-                            <Label className="text-xs">المدفوع (د.ج)</Label>
-                            <Input
-                              type="number"
-                              value={party.paidAmount || ''}
-                              onChange={(e) => {
-                                const updated = [...parties];
-                                updated[idx] = { ...updated[idx], paidAmount: e.target.value ? Number(e.target.value) : 0 };
-                                setParties(updated);
-                              }}
-                              placeholder="0"
-                              className="h-9 text-sm"
-                            />
-                          </div>
-                          <div>
-                            <Label className="text-xs">المتبقي (د.ج)</Label>
-                            <Input
-                              type="number"
-                              value={((party.totalFees || 0) - (party.paidAmount || 0)).toLocaleString('en-US')}
-                              disabled
-                              className="bg-muted h-9 text-sm"
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    )}
+
                   </div>
                 ))}
               </div>
@@ -1932,45 +1878,25 @@ export function Cases() {
             </div>
 
 
-            {/* المالية - ملخص محسوب من الأطراف */}
+            {/* الأتعاب والوضع المالي — مستقلة عن سجلات الأطراف */}
             <div>
-              <h3 className="text-sm font-bold mb-3 text-teal-700 dark:text-teal-400">المالية (إجمالي)</h3>
+              <h3 className="text-sm font-bold mb-3 text-teal-700 dark:text-teal-400">الأتعاب والوضع المالي</h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 <div>
-                  <Label className="text-xs">إجمالي الأتعاب (د.ج)</Label>
-                  <Input
-                    type="number"
-                    value={Number(formData.totalFees || 0).toLocaleString('en-US')}
-                    disabled
-                    className="bg-muted h-11"
-                  />
+                  <Label className="text-xs">إجمالي الأتعاب للقضية (د.ج)</Label>
+                  <Input type="number" min="0" value={Number(formData.totalFees || 0)} onChange={(e) => setFormData({ ...formData, totalFees: e.target.value ? Number(e.target.value) : 0 })} className="h-11" />
                 </div>
                 <div>
-                  <Label className="text-xs">إجمالي المدفوع (د.ج)</Label>
-                  <Input
-                    type="number"
-                    value={Number(formData.paidAmount || 0).toLocaleString('en-US')}
-                    disabled
-                    className="bg-muted h-11"
-                  />
+                  <Label className="text-xs">المبلغ المدفوع (د.ج)</Label>
+                  <Input type="number" min="0" value={Number(formData.paidAmount || 0)} onChange={(e) => setFormData({ ...formData, paidAmount: e.target.value ? Number(e.target.value) : 0 })} className="h-11" />
                 </div>
                 <div>
-                  <Label className="text-xs">إجمالي المتبقي (د.ج)</Label>
-                  <Input
-                    type="number"
-                    value={(() => {
-                      const forP = parties.filter(p => (p.side || 'for') === 'for');
-                      const total = Number(formData.totalFees || 0);
-                      const paid = Number(formData.paidAmount || 0);
-                      return (total - paid).toLocaleString('en-US');
-                    })()}
-                    disabled
-                    className="bg-muted h-11"
-                  />
+                  <Label className="text-xs">المبلغ المتبقي (د.ج)</Label>
+                  <Input type="number" value={Math.max(0, Number(formData.totalFees || 0) - Number(formData.paidAmount || 0))} disabled className="bg-muted h-11" />
                 </div>
               </div>
+              <p className="mt-2 text-xs text-muted-foreground">تُسجل أتعاب القضية على مستوى القضية، ولا تُجمع تلقائياً من بيانات الأطراف.</p>
             </div>
-
 
             {/* كشف الأتعاب للأطراف الذين نمثلهم */}
             <div className="rounded-xl border border-border bg-card p-3 sm:p-4 space-y-3">
