@@ -238,14 +238,14 @@ export function BackupManager() {
       // 2) القضايا
       const caseIdMap = new Map<number, number>();
       const sessionIdMap = new Map<number, number>();
-      // توافق رجعي: تحويل ارتباط الموكل في النسخ القديمة إلى طرف في القضية.
-      const legacyClients = new Map<number, any>((Array.isArray(data.clients) ? data.clients : []).map((client: any) => [Number(client.id), client]));
+      // توافق رجعي: تحويل ارتباط الشخص القديم إلى طرف ممثل في القضية.
+      const legacyPeople = new Map<number, any>((Array.isArray(data.clients) ? data.clients : []).map((client: any) => [Number(client.id), client]));
       const legacyCaseParties = new Map<number, any>();
       if (Array.isArray(data.cases)) {
         for (const caseItem of data.cases) {
           const oldId = caseItem.id;
           const cleaned = cleanRecord(caseItem);
-          const legacyClient = caseItem.clientId ? legacyClients.get(Number(caseItem.clientId)) : null;
+          const legacyPerson = caseItem.clientId ? legacyPeople.get(Number(caseItem.clientId)) : null;
           if (legacyClient) legacyCaseParties.set(Number(oldId), legacyClient);
           delete cleaned.clientId;
           if (cleaned.courtId && judicialBodyIdMap.has(cleaned.courtId)) cleaned.courtId = judicialBodyIdMap.get(cleaned.courtId);
@@ -309,11 +309,11 @@ export function BackupManager() {
         }
       }
 
-      // تحويل روابط الموكل القديمة إلى أطراف ممثلة بعد إنشاء الأطراف الأصلية.
+      // تحويل روابط الأشخاص القديمة إلى أطراف ممثلة بعد إنشاء الأطراف الأصلية.
       for (const [oldCaseId, legacyClient] of legacyCaseParties) {
         const newCaseId = caseIdMap.get(oldCaseId);
         if (!newCaseId) continue;
-        const existingRepresented = Array.isArray(data.parties) && data.parties.some((p: any) => Number(p.caseId) === oldCaseId && p.side === 'for' && (p.name || '').trim().toLowerCase() === (legacyClient.name || '').trim().toLowerCase());
+        const existingRepresented = Array.isArray(data.parties) && data.parties.some((p: any) => Number(p.caseId) === oldCaseId && (p.side || 'for') === 'for' && (p.name || '').trim().toLowerCase() === (legacyClient.name || '').trim().toLowerCase());
         if (!existingRepresented) {
           const converted = { caseId: newCaseId, name: legacyClient.name || '', phone: legacyClient.phone || '', phone2: legacyClient.phone2 || '', address: legacyClient.address || null, wilaya: legacyClient.wilaya ?? 16, nationalId: legacyClient.nationalId || null, contactNotes: legacyClient.notes || null, role: '', side: 'for' };
           if (await postJson('/api/parties', converted)) importedCounts.parties++;
