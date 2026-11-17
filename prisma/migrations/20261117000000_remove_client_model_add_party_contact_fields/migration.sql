@@ -41,6 +41,29 @@ WHERE NOT EXISTS (
     AND LOWER(COALESCE(p."name", '')) = LOWER(COALESCE(cl."name", ''))
 );
 
+-- Preserve legacy people that have no linked case in a migration-only
+-- settings payload so their data is not silently discarded. Google Drive
+-- folder identifiers are intentionally excluded by product requirement.
+INSERT INTO "Setting" ("key", "value", "createdAt", "updatedAt")
+SELECT
+  'legacyUnassignedPartyData',
+  COALESCE(json_agg(json_build_object(
+    'name', cl."name",
+    'phone', cl."phone",
+    'phone2', cl."phone2",
+    'address', cl."address",
+    'wilaya', cl."wilaya",
+    'nationalId', cl."nationalId",
+    'notes', cl."notes"
+  )), '[]'::json)::text,
+  CURRENT_TIMESTAMP,
+  CURRENT_TIMESTAMP
+FROM "Client" AS cl
+WHERE NOT EXISTS (SELECT 1 FROM "Case" AS c WHERE c."clientId" = cl."id")
+HAVING COUNT(*) > 0
+ON CONFLICT ("key") DO UPDATE
+SET "value" = EXCLUDED."value", "updatedAt" = CURRENT_TIMESTAMP;
+
 -- Tasks previously linked only to a client are attached to a case only when
 -- that client belongs to exactly one case. Ambiguous associations are retained
 -- in the task notes rather than assigned to an arbitrary case.
