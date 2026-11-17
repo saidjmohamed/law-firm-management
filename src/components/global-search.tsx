@@ -118,7 +118,7 @@ export function GlobalSearch() {
   // وصول سريع
   const quickItems: { label: string; section: Section; icon: React.ElementType; keywords: string }[] = [
     { label: 'القضايا', section: 'cases', icon: Briefcase, keywords: 'قضية قضايا' },
-    { label: 'الأطراف الذين نمثلهم', section: 'clients', icon: Users, keywords: 'أطراف نمثلهم' },
+    { label: 'الأطراف الذين نمثلهم', section: 'represented-parties', icon: Users, keywords: 'أطراف نمثلهم' },
     { label: 'الجلسات', section: 'cases', icon: Calendar, keywords: 'جلسة جلسات محكمة' },
     { label: 'الهيئات القضائية', section: 'courts', icon: Scale, keywords: 'محكمة مجلس هيئة' },
     { label: 'المدفوعات', section: 'payments', icon: Banknote, keywords: 'دفع مدفوعات أتعاب' },
