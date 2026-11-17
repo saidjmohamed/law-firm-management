@@ -14,6 +14,7 @@ export async function GET(request: NextRequest) {
       include: {
         case: {
           select: {
+            id: true,
             caseNumber: true,
             subject: true,
           },
