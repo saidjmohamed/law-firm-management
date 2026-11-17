@@ -14,6 +14,9 @@ type RepresentedParty = {
   role?: string | null;
   side?: string | null;
   phone?: string | null;
+  phone2?: string | null;
+  address?: string | null;
+  contactNotes?: string | null;
   lawyerName?: string | null;
   lawyerPhone?: string | null;
   caseId: number;
@@ -65,6 +68,9 @@ export function RepresentedParties() {
                     <Badge variant="secondary">نمثل هذا الطرف</Badge>
                   </div>
                   {party.phone && <p className="flex items-center gap-1 text-sm text-muted-foreground"><Phone className="h-3.5 w-3.5" />{party.phone}</p>}
+                  {party.phone2 && <p className="text-sm text-muted-foreground">هاتف إضافي: {party.phone2}</p>}
+                  {party.address && <p className="text-sm text-muted-foreground">العنوان: {party.address}</p>}
+                  {party.contactNotes && <p className="text-sm text-muted-foreground">ملاحظات الاتصال: {party.contactNotes}</p>}
                   {party.lawyerName && <p className="text-sm text-muted-foreground">المحامي: {party.lawyerName}{party.lawyerPhone ? ` — ${party.lawyerPhone}` : ''}</p>}
                 </div>
                 <div className="shrink-0 rounded-lg bg-muted/50 p-3 text-sm">
