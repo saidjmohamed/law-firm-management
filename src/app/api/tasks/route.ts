@@ -4,13 +4,12 @@ import { toDateOrNull } from '@/lib/date-utils';
 
 // ============================================================================
 // GET /api/tasks — قائمة المهام
-// query params: ?caseId=1&clientId=2&status=pending&priority=high&taskType=session
+// query params: ?caseId=1&status=pending&priority=high&taskType=session
 // ============================================================================
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const caseId = searchParams.get('caseId');
-    const clientId = searchParams.get('clientId');
     const status = searchParams.get('status');
     const priority = searchParams.get('priority');
     const taskType = searchParams.get('taskType');
@@ -18,7 +17,6 @@ export async function GET(request: NextRequest) {
 
     const where: Record<string, unknown> = {};
     if (caseId) where.relatedCaseId = parseInt(caseId);
-    if (clientId) where.relatedClientId = parseInt(clientId);
     if (status) where.status = status;
     if (priority) where.priority = priority;
     if (taskType) where.taskType = taskType;
@@ -34,7 +32,6 @@ export async function GET(request: NextRequest) {
       ],
       include: {
         relatedCase: { select: { id: true, caseNumber: true, subject: true, status: true } },
-        relatedClient: { select: { id: true, name: true, phone: true } },
       },
     });
 
@@ -66,7 +63,6 @@ export async function POST(request: NextRequest) {
       sourceType: body.sourceType || 'manual',
       sourceId: body.sourceId ?? null,
       relatedCaseId: body.relatedCaseId ?? null,
-      relatedClientId: body.relatedClientId ?? null,
       assignedTo: body.assignedTo ?? null,
       notes: body.notes ?? null,
     };
