@@ -50,19 +50,6 @@ export async function PUT(
       data: updateData,
     });
 
-    // إعادة حساب Case.totalFees و Case.paidAmount من أطراف القضية
-    if (party.caseId) {
-      const caseParties = await prisma.party.findMany({
-        where: { caseId: party.caseId, side: 'for' },
-      });
-      const totalFees = caseParties.reduce((sum, p) => sum + (p.totalFees || 0), 0);
-      const paidAmount = caseParties.reduce((sum, p) => sum + (p.paidAmount || 0), 0);
-      await prisma.case.update({
-        where: { id: party.caseId },
-        data: { totalFees, paidAmount },
-      });
-    }
-
     return NextResponse.json(party);
   } catch (error) {
     console.error('Error updating party:', error);
@@ -77,27 +64,9 @@ export async function DELETE(
   try {
     const { id } = await params;
 
-    // جلب بيانات الطرف قبل الحذف لإعادة حساب الأتعاب
-    const party = await prisma.party.findUnique({
-      where: { id: parseInt(id) },
-    });
-
     await prisma.party.delete({
       where: { id: parseInt(id) },
     });
-
-    // إعادة حساب Case.totalFees و Case.paidAmount
-    if (party?.caseId) {
-      const caseParties = await prisma.party.findMany({
-        where: { caseId: party.caseId, side: 'for' },
-      });
-      const totalFees = caseParties.reduce((sum, p) => sum + (p.totalFees || 0), 0);
-      const paidAmount = caseParties.reduce((sum, p) => sum + (p.paidAmount || 0), 0);
-      await prisma.case.update({
-        where: { id: party.caseId },
-        data: { totalFees, paidAmount },
-      });
-    }
 
     return NextResponse.json({ message: 'Party deleted' });
   } catch (error) {
