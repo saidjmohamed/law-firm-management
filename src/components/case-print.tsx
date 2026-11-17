@@ -11,6 +11,7 @@ interface Case {
   id?: number;
   caseNumber?: string;
   subject?: string;
+  client?: { id: number; name?: string } | null;
   caseNature?: string;
   litigationStage?: string;
   origCaseNumber?: string;
@@ -106,6 +107,7 @@ export function CasePrintButton({ caseData, parties, delays, sessions, courtPhon
       const lawyerEmail = await getSettingValue(settings, 'lawyerEmail') || '';
 
       const wilayaName = WILAYAS.find(w => w.code === caseData.wilayaId)?.name || '';
+      const remainingFees = Math.max(0, (caseData.totalFees || 0) - (caseData.paidAmount || 0));
 
       // تقسيم الأطراف حسب حقل side (for = في حقه، against = ضده)
       // إذا كان side فارغ/null، نعتبره 'for' (في حقه) كقيمة افتراضية
@@ -329,8 +331,14 @@ export function CasePrintButton({ caseData, parties, delays, sessions, courtPhon
   <div class="section-title">معالم القضية</div>
   <table class="info-table">
     <tr>
+      <td>رقم الملف الداخلي</td>
+      <td>${escapeHtml(caseData.id || '—')}</td>
       <td>رقم القضية</td>
       <td>${escapeHtml(caseData.caseNumber || '—')}</td>
+    </tr>
+    <tr>
+      <td>الموكل</td>
+      <td>${escapeHtml(caseData.client?.name || '—')}</td>
       <td>الموضوع</td>
       <td>${escapeHtml(caseData.subject || '—')}</td>
     </tr>
@@ -339,6 +347,12 @@ export function CasePrintButton({ caseData, parties, delays, sessions, courtPhon
       <td>${escapeHtml(caseData.caseNature || '—')}</td>
       <td>مرحلة التقاضي</td>
       <td>${escapeHtml(caseData.litigationStage || '—')}</td>
+    </tr>
+    <tr>
+      <td>الحالة الإجرائية</td>
+      <td>${escapeHtml(caseData.status || '—')}</td>
+      <td>درجة التقاضي</td>
+      <td>${escapeHtml(caseData.courtLevel || '—')}</td>
     </tr>
     <tr>
       <td>المجلس</td>
@@ -366,6 +380,12 @@ export function CasePrintButton({ caseData, parties, delays, sessions, courtPhon
       <td>${formatDate(caseData.delibDate)}</td>
     </tr>
     ${caseData.barPhone ? `<tr><td>هاتف قاعة المحامين</td><td>${escapeHtml(caseData.barPhone)}</td><td></td><td></td></tr>` : ''}
+    <tr>
+      <td>إجمالي الأتعاب</td>
+      <td>${(caseData.totalFees || 0).toLocaleString('fr-DZ')} دج</td>
+      <td>المدفوع / المتبقي</td>
+      <td>${(caseData.paidAmount || 0).toLocaleString('fr-DZ')} / ${remainingFees.toLocaleString('fr-DZ')} دج</td>
+    </tr>
     </table>
 
   <!-- أطراف النزاع -->
