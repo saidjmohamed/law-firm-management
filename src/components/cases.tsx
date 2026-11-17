@@ -889,14 +889,22 @@ export function Cases() {
               <DetailField label="طبيعة القضية" value={selectedCase.caseNature} />
               <DetailField label="مرحلة التقاضي" value={selectedCase.litigationStage} />
               <DetailField label="رقم القضية الأصلية" value={selectedCase.origCaseNumber} />
+              <DetailField label="الحالة الإجرائية" value={selectedCase.status} />
+              <div className="col-span-2 md:col-span-3 mt-1">
+                <Separator />
+                <p className="text-sm font-bold mt-3 mb-1 text-teal-700 dark:text-teal-400">الجهة القضائية المختصة</p>
+              </div>
+              <DetailField label="نوع القضاء" value={selectedCase.judiciaryType} />
+              <DetailField label="مستوى / درجة التقاضي" value={selectedCase.courtLevel} />
+              <DetailField label="الولاية" value={WILAYAS.find(w => w.code === selectedCase.wilayaId)?.name} />
               <DetailField label="المجلس" value={selectedCase.councilName} />
               <DetailField label="المحكمة" value={selectedCase.courtName} />
+              <DetailField label="الغرفة/القسم" value={selectedCase.chamber} />
               {(() => {
                 const courtBody = judicialBodies?.find(b => b.id === selectedCase.courtId);
                 const courtPhones = courtBody?.phones ? (() => { try { const p = JSON.parse(courtBody.phones); return Array.isArray(p) ? p.filter((x: string) => x.trim()) : []; } catch { return []; } })() : [];
                 return courtPhones.length > 0 ? <DetailField label="هاتف المحكمة" value={courtPhones.join(' / ')} /> : null;
               })()}
-              <DetailField label="الغرفة/القسم" value={selectedCase.chamber} />
               <DetailField label="هاتف قاعة المحامين" value={selectedCase.barPhone} />
               {selectedCase.caseResult && (
                 <div className="col-span-2 md:col-span-3">
@@ -966,7 +974,7 @@ export function Cases() {
           <CardContent>
             {caseDelays && caseDelays.length > 0 ? (
               <div className="space-y-2">
-                {caseDelays.map((d) => (
+                {[...caseDelays].sort((a, b) => (a.delayDate || '').localeCompare(b.delayDate || '')).map((d) => (
                   <div key={d.id} className="flex items-center justify-between p-2.5 rounded-lg border">
                     <div>
                       <p className="text-sm font-medium">{d.reason || '—'}</p>
@@ -1007,7 +1015,7 @@ export function Cases() {
             {caseSessions && caseSessions.length > 0 ? (
               <div className="space-y-2">
                 {[...caseSessions]
-                  .sort((a, b) => (b.date || '').localeCompare(a.date || ''))
+                  .sort((a, b) => (a.date || '').localeCompare(b.date || ''))
                   .map((s) => (
                   <div key={s.id} className="p-2.5 rounded-lg border space-y-1">
                     <div className="flex items-center justify-between gap-2">
