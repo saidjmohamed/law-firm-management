@@ -278,6 +278,7 @@ export function BackupManager() {
         for (const session of data.sessions) {
           const oldId = session.id;
           const cleaned = cleanRecord(session);
+          cleaned.skipAutoTask = true;
           if (cleaned.caseId && caseIdMap.has(cleaned.caseId)) cleaned.caseId = caseIdMap.get(cleaned.caseId);
           const res = await fetch('/api/sessions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(cleaned) });
           if (res.ok) {
