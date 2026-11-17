@@ -7,6 +7,9 @@ ALTER TABLE "Party"
   ADD COLUMN "nationalId" TEXT,
   ADD COLUMN "contactNotes" TEXT;
 
+-- Older rows with NULL side were treated by the former UI as represented parties.
+UPDATE "Party" SET "side" = 'for' WHERE "side" IS NULL;
+
 -- Enrich an already existing represented party with legacy contact data.
 UPDATE "Party" AS p
 SET
