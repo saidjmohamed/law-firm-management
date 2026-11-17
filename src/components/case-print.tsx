@@ -86,6 +86,12 @@ interface CasePrintProps {
   courtPhones?: string;
 }
 
+function escapeHtml(value: unknown): string {
+  return String(value ?? '—').replace(/[&<>"']/g, (char) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+  })[char] || char);
+}
+
 export function CasePrintButton({ caseData, parties, delays, sessions, courtPhones }: CasePrintProps) {
   const [loading, setLoading] = React.useState(false);
   const { settings } = useSettings();
@@ -112,11 +118,11 @@ export function CasePrintButton({ caseData, parties, delays, sessions, courtPhon
         if (partyList.length === 0) return '';
         return partyList.map(p => `
           <tr>
-            <td style="padding:6px 10px;border:1px solid #333;font-size:11px;font-weight:600;">${p.name || '—'}</td>
-            <td style="padding:6px 10px;border:1px solid #333;font-size:11px;text-align:center;">${p.role || '—'}</td>
-            <td style="padding:6px 10px;border:1px solid #333;font-size:11px;text-align:center;">${p.phone || '—'}</td>
-            <td style="padding:6px 10px;border:1px solid #333;font-size:11px;text-align:center;">${p.lawyerName || '—'}</td>
-            <td style="padding:6px 10px;border:1px solid #333;font-size:11px;text-align:center;">${p.lawyerPhone || '—'}</td>
+            <td style="padding:6px 10px;border:1px solid #333;font-size:11px;font-weight:600;">${escapeHtml(p.name || '—')}</td>
+            <td style="padding:6px 10px;border:1px solid #333;font-size:11px;text-align:center;">${escapeHtml(p.role || '—')}</td>
+            <td style="padding:6px 10px;border:1px solid #333;font-size:11px;text-align:center;">${escapeHtml(p.phone || '—')}</td>
+            <td style="padding:6px 10px;border:1px solid #333;font-size:11px;text-align:center;">${escapeHtml(p.lawyerName || '—')}</td>
+            <td style="padding:6px 10px;border:1px solid #333;font-size:11px;text-align:center;">${escapeHtml(p.lawyerPhone || '—')}</td>
           </tr>
         `).join('');
       }
@@ -127,25 +133,25 @@ export function CasePrintButton({ caseData, parties, delays, sessions, courtPhon
 
       // بناء التأجيلات
       function buildDelayRows() {
-        if (delays.length === 0) return '<tr><td colspan="3" style="padding:8px;text-align:center;color:#666;font-size:11px;">لا توجد تأجيلات</td></tr>';
+        if (orderedDelays.length === 0) return '<tr><td colspan="3" style="padding:8px;text-align:center;color:#666;font-size:11px;">لا توجد تأجيلات</td></tr>';
         return orderedDelays.map((d, i) => `
           <tr>
             <td style="padding:5px 10px;border:1px solid #333;font-size:11px;text-align:center;width:40px;">${i + 1}</td>
             <td style="padding:5px 10px;border:1px solid #333;font-size:11px;text-align:center;width:120px;">${formatDate(d.delayDate)}</td>
-            <td style="padding:5px 10px;border:1px solid #333;font-size:11px;">${d.reason || '—'}</td>
+            <td style="padding:5px 10px;border:1px solid #333;font-size:11px;">${escapeHtml(d.reason || '—')}</td>
           </tr>
         `).join('');
       }
 
       // بناء الجلسات
       function buildSessionRows() {
-        if (sessions.length === 0) return '<tr><td colspan="4" style="padding:8px;text-align:center;color:#666;font-size:11px;">لا توجد جلسات</td></tr>';
+        if (orderedSessions.length === 0) return '<tr><td colspan="4" style="padding:8px;text-align:center;color:#666;font-size:11px;">لا توجد جلسات</td></tr>';
         return orderedSessions.map((s, i) => `
           <tr>
             <td style="padding:5px 10px;border:1px solid #333;font-size:11px;text-align:center;width:40px;">${i + 1}</td>
             <td style="padding:5px 10px;border:1px solid #333;font-size:11px;text-align:center;width:120px;">${formatDate(s.date)}</td>
-            <td style="padding:5px 10px;border:1px solid #333;font-size:11px;text-align:center;">${s.court || s.chamber || '—'}</td>
-            <td style="padding:5px 10px;border:1px solid #333;font-size:11px;">${s.notes || s.result || '—'}</td>
+            <td style="padding:5px 10px;border:1px solid #333;font-size:11px;text-align:center;">${escapeHtml(s.court || s.chamber || '—')}</td>
+            <td style="padding:5px 10px;border:1px solid #333;font-size:11px;">${escapeHtml(s.notes || s.result || '—')}</td>
           </tr>
         `).join('');
       }
@@ -157,7 +163,7 @@ export function CasePrintButton({ caseData, parties, delays, sessions, courtPhon
 <html dir="rtl" lang="ar">
 <head>
   <meta charset="UTF-8">
-  <title>ملف القضية - ${caseData.caseNumber || ''}</title>
+  <title>ملف القضية - ${escapeHtml(caseData.caseNumber || '')}</title>
   <style>
     @page {
       size: A4;
@@ -307,44 +313,44 @@ export function CasePrintButton({ caseData, parties, delays, sessions, courtPhon
 
   <!-- الديباجة -->
   <div class="letterhead">
-    <h1>${lawyerName}</h1>
-    <h2>${lawyerTitle}</h2>
+    <h1>${escapeHtml(lawyerName)}</h1>
+    <h2>${escapeHtml(lawyerTitle)}</h2>
     <div class="contact">
-      ${lawyerAddress ? `<span>${lawyerAddress}</span>` : ''}
-      ${lawyerPhone ? `<span>الهاتف: ${lawyerPhone}</span>` : ''}
-      ${lawyerEmail ? `<span>${lawyerEmail}</span>` : ''}
+      ${lawyerAddress ? `<span>${escapeHtml(lawyerAddress)}</span>` : ''}
+      ${lawyerPhone ? `<span>الهاتف: ${escapeHtml(lawyerPhone)}</span>` : ''}
+      ${lawyerEmail ? `<span>${escapeHtml(lawyerEmail)}</span>` : ''}
     </div>
   </div>
 
   <!-- عنوان القضية -->
-  <div class="case-title">ملف القضية رقم: ${caseData.caseNumber || '—'}</div>
+  <div class="case-title">ملف القضية رقم: ${escapeHtml(caseData.caseNumber || '—')}</div>
 
   <!-- معالم القضية -->
   <div class="section-title">معالم القضية</div>
   <table class="info-table">
     <tr>
       <td>رقم القضية</td>
-      <td>${caseData.caseNumber || '—'}</td>
+      <td>${escapeHtml(caseData.caseNumber || '—')}</td>
       <td>الموضوع</td>
-      <td>${caseData.subject || '—'}</td>
+      <td>${escapeHtml(caseData.subject || '—')}</td>
     </tr>
     <tr>
       <td>طبيعة القضية</td>
-      <td>${caseData.caseNature || '—'}</td>
+      <td>${escapeHtml(caseData.caseNature || '—')}</td>
       <td>مرحلة التقاضي</td>
-      <td>${caseData.litigationStage || '—'}</td>
+      <td>${escapeHtml(caseData.litigationStage || '—')}</td>
     </tr>
     <tr>
       <td>المجلس</td>
-      <td>${caseData.councilName || '—'}</td>
+      <td>${escapeHtml(caseData.councilName || '—')}</td>
       <td>المحكمة</td>
-      <td>${caseData.courtName || '—'}</td>
+      <td>${escapeHtml(caseData.courtName || '—')}</td>
     </tr>
     <tr>
       <td>الغرفة / القسم</td>
-      <td>${caseData.chamber || '—'}</td>
+      <td>${escapeHtml(caseData.chamber || '—')}</td>
       <td>الولاية</td>
-      <td>${wilayaName || '—'}</td>
+      <td>${escapeHtml(wilayaName || '—')}</td>
     </tr>
     ${(() => { try { const ph = courtPhones ? JSON.parse(courtPhones) : []; return Array.isArray(ph) && ph.length > 0 ? `<tr><td>هاتف المحكمة</td><td>${ph.join(' / ')}</td><td></td><td></td></tr>` : ''; } catch { return ''; } })()}
     <tr>
@@ -355,11 +361,11 @@ export function CasePrintButton({ caseData, parties, delays, sessions, courtPhon
     </tr>
     <tr>
       <td>رقم القضية الأصلية</td>
-      <td>${caseData.origCaseNumber || '—'}</td>
+      <td>${escapeHtml(caseData.origCaseNumber || '—')}</td>
       <td>تاريخ المداولة</td>
       <td>${formatDate(caseData.delibDate)}</td>
     </tr>
-    ${caseData.barPhone ? `<tr><td>هاتف قاعة المحامين</td><td>${caseData.barPhone}</td><td></td><td></td></tr>` : ''}
+    ${caseData.barPhone ? `<tr><td>هاتف قاعة المحامين</td><td>${escapeHtml(caseData.barPhone)}</td><td></td><td></td></tr>` : ''}
     </table>
 
   <!-- أطراف النزاع -->
@@ -443,11 +449,11 @@ export function CasePrintButton({ caseData, parties, delays, sessions, courtPhon
   <!-- ملاحظات -->
   ${caseData.notes ? `
   <div class="section-title">ملاحظات</div>
-  <div style="border:2px solid #000;border-radius:4px;padding:8px;margin-top:6px;font-size:11px;white-space:pre-wrap;line-height:1.8;font-weight:600;background:#f5f5f5;">${caseData.notes}</div>` : ''}
+  <div style="border:2px solid #000;border-radius:4px;padding:8px;margin-top:6px;font-size:11px;white-space:pre-wrap;line-height:1.8;font-weight:600;background:#f5f5f5;">${escapeHtml(caseData.notes)}</div>` : ''}
 
   <!-- تذييل -->
   <div class="footer">
-    <span>مكتب الاستاذ ${lawyerName} - ${lawyerTitle}</span>
+    <span>مكتب الاستاذ ${escapeHtml(lawyerName)} - ${escapeHtml(lawyerTitle)}</span>
     <span>طبع بتاريخ: ${new Date().toLocaleDateString('ar-DZ')}</span>
   </div>
 
