@@ -1463,7 +1463,7 @@ export function Cases() {
                           className="h-10"
                         />
                       </div><div>
-                        <Label className="text-xs">المركز القانوني</Label>
+                        <Label className="text-xs">الصفة الإجرائية</Label>
                         <SelectWithCustom
                           field="partyRole"
                           value={party.role || ''}
