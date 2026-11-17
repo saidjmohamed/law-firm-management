@@ -252,10 +252,6 @@ export function Cases() {
   const [archiveConfirm, setArchiveConfirm] = useState<number | null>(null);
   const [deletePartyConfirm, setDeletePartyConfirm] = useState<number | null>(null);
 
-  // حوار إنشاء موكل جديد
-  const [showNewClientDialog, setShowNewClientDialog] = useState(false);
-  const [newClientData, setNewClientData] = useState<Partial<ClientType>>({});
-
   // حوار إنشاء هيئة قضائية جديدة
   const [showNewCourtDialog, setShowNewCourtDialog] = useState(false);
   const [newCourtData, setNewCourtData] = useState<Partial<JudicialBodyType>>({});
@@ -274,25 +270,12 @@ export function Cases() {
   const [forceSaveCase, setForceSaveCase] = useState(false);
 
   const { cases, isLoading: casesLoading } = useCases();
-  const { clients, isLoading: clientsLoading } = useClients();
   const { parties: allParties } = useParties();
   const { delays: allDelays } = useDelays();
   const { judicialBodies, isLoading: bodiesLoading } = useJudicialBodies();
   const { sessions: allSessions } = useSessions();
   const { lawyers } = useLawyers();
   const { tasks: allTasks } = useTasks();
-
-  // مزامنة الأطراف مع الموكلين عند التحميل (مرة واحدة)
-  useEffect(() => {
-    if (allParties?.length && clients?.length !== undefined) {
-      // تحقق هل كل الأطراف لها موكل مقابل
-      const clientNameSet = new Set(clients.map((c: any) => c.name?.trim().toLowerCase()).filter(Boolean));
-      const missingParties = allParties.filter((p: any) => p.name?.trim() && !clientNameSet.has(p.name.trim().toLowerCase()));
-      if (missingParties.length > 0) {
-        syncPartiesToClients().catch(() => {});
-      }
-    }
-  }, [allParties, clients]);
 
   // قائمة أسماء المحامين للاكمال التراكمي
   const lawyerNameSuggestions = useMemo(() => {
@@ -302,26 +285,6 @@ export function Cases() {
     allParties?.forEach((p: any) => { if (p.lawyerName?.trim()) names.add(p.lawyerName.trim()); });
     return Array.from(names).sort((a, b) => a.localeCompare(b));
   }, [lawyers, allParties]);
-
-  // قائمة أسماء الموكلين لاقتراحات الأطراف
-  const clientNameSuggestions = useMemo(() => {
-    const names = new Set<string>();
-    clients?.forEach((c: any) => { if (c.name?.trim()) names.add(c.name.trim()); });
-    // إضافة أسماء الأطراف من جميع القضايا
-    allParties?.forEach((p: any) => { if (p.name?.trim()) names.add(p.name.trim()); });
-    return Array.from(names).sort((a, b) => a.localeCompare(b));
-  }, [clients, allParties]);
-
-  // خريطة الموكلين حسب الاسم للبحث السريع
-  const clientByNameMap = useMemo(() => {
-    const map: Record<string, any> = {};
-    clients?.forEach((c: any) => {
-      if (c.name?.trim()) {
-        map[c.name.trim().toLowerCase()] = c;
-      }
-    });
-    return map;
-  }, [clients]);
 
   // خريطة المحامين حسب الاسم للبحث السريع
   const lawyerByNameMap = useMemo(() => {
@@ -419,13 +382,6 @@ export function Cases() {
     }
   }, [selectedCaseId]);
 
-  // خريطة الموكلين
-  const clientMap = useMemo(() => {
-    const map: Record<number, ClientType> = {};
-    clients?.forEach((c) => { if (c.id) map[c.id] = c; });
-    return map;
-  }, [clients]);
-
   // تصفية القضايا
   const filteredCases = useMemo(() => {
     if (!cases) return [];
@@ -436,17 +392,16 @@ export function Cases() {
       if (activeTab === 'archived') matchTab = c.status === 'مؤرشفة' || c.status === 'مفصول فيها';
       if (activeTab === 'pending')  matchTab = c.status === 'للجدولة' || !c.caseNumber;
 
-      const clientName = c.clientId ? clientMap[c.clientId]?.name : '';
       const matchSearch = !searchTerm ||
         c.caseNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         c.subject?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         c.courtName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         c.councilName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        clientName?.toLowerCase().includes(searchTerm.toLowerCase());
+        allParties?.some((p: any) => p.caseId === c.id && p.name?.toLowerCase().includes(searchTerm.toLowerCase()));
       const matchNature = filterNature === 'all' || c.caseNature === filterNature;
       return matchTab && matchSearch && matchNature;
     });
-  }, [cases, clientMap, searchTerm, activeTab, filterNature]);
+  }, [cases, allParties, searchTerm, activeTab, filterNature]);
 
   // عدد القضايا لكل حالة (للفلاتر)
   const statusCounts = useMemo(() => {
@@ -636,8 +591,6 @@ export function Cases() {
           totalFees: (row.side || 'for') === 'for' ? (row.totalFees || 0) : 0,
           paidAmount: (row.side || 'for') === 'for' ? (row.paidAmount || 0) : 0,
         });
-        // إضافة تلقائية كموكل إذا لم يكن موجوداً
-        await ensureClientForParty(row);
       }
       for (const p of partiesToDelete) {
         await apiDeleteParty(p.id);
@@ -708,7 +661,7 @@ export function Cases() {
       });
       const caseId = result.id;
 
-      // إضافة الأطراف + إضافة تلقائية للموكلين
+      // إضافة الأطراف المسجلة في القضية
       for (const party of parties) {
         if (party.name || party.role) {
           await createParty({
@@ -722,8 +675,6 @@ export function Cases() {
             totalFees: (party.side || 'for') === 'for' ? (party.totalFees || 0) : 0,
             paidAmount: (party.side || 'for') === 'for' ? (party.paidAmount || 0) : 0,
           });
-          // إضافة تلقائية كموكل إذا لم يكن موجوداً
-          await ensureClientForParty(party);
         }
       }
 
@@ -766,86 +717,6 @@ export function Cases() {
     } catch (error) {
       console.error('Delete party error:', error);
       toast.error('فشل في حذف الطرف');
-    }
-  }
-
-  async function saveNewClient() {
-    if (!newClientData.name) {
-      toast.error('اسم الموكل مطلوب');
-      return;
-    }
-    try {
-      const result = await createClient({
-        name: newClientData.name,
-        phone: newClientData.phone || '',
-      });
-      setFormData({ ...formData, clientId: result.id });
-      setNewClientData({});
-      setShowNewClientDialog(false);
-      toast.success('تم إضافة الموكل بنجاح');
-    } catch (error) {
-      console.error('Save new client error:', error);
-      toast.error('فشل في إضافة الموكل');
-    }
-  }
-
-  // إنشاء موكل جديد من داخل نموذج الأطراف
-  const [showPartyClientDialog, setShowPartyClientDialog] = useState(false);
-  const [partyClientData, setPartyClientData] = useState<{ name: string; phone: string; partyIdx: number | null }>({ name: '', phone: '', partyIdx: null });
-
-  function openPartyClientDialog(partyIdx: number) {
-    const party = parties[partyIdx];
-    setPartyClientData({
-      name: party?.name || '',
-      phone: party?.phone || '',
-      partyIdx,
-    });
-    setShowPartyClientDialog(true);
-  }
-
-  async function savePartyClient() {
-    if (!partyClientData.name?.trim()) {
-      toast.error('اسم الموكل مطلوب');
-      return;
-    }
-    try {
-      const result = await createClient({
-        name: partyClientData.name.trim(),
-        phone: partyClientData.phone || '',
-      });
-      // تحديث حقل الاسم والهاتف في الطرف
-      if (partyClientData.partyIdx !== null) {
-        const updated = [...parties];
-        updated[partyClientData.partyIdx] = {
-          ...updated[partyClientData.partyIdx],
-          name: partyClientData.name.trim(),
-          phone: partyClientData.phone || updated[partyClientData.partyIdx]?.phone || '',
-        };
-        setParties(updated);
-      }
-      setPartyClientData({ name: '', phone: '', partyIdx: null });
-      setShowPartyClientDialog(false);
-      toast.success('تم إضافة الموكل بنجاح');
-    } catch (error) {
-      console.error('Save party client error:', error);
-      toast.error('فشل في إضافة الموكل');
-    }
-  }
-
-  // إضافة تلقائية للموكل عند حفظ الطرف (إذا لم يكن موجوداً)
-  async function ensureClientForParty(party: PartyRow) {
-    if (!party.name?.trim()) return;
-    const nameLower = party.name.trim().toLowerCase();
-    // تحقق هل الموكل موجود بالفعل
-    if (clientByNameMap[nameLower]) return;
-    try {
-      await createClient({
-        name: party.name.trim(),
-        phone: party.phone || '',
-      });
-    } catch (error) {
-      // لا نوقف الحفظ إذا فشلت الإضافة التلقائية
-      console.error('Auto-create client error:', error);
     }
   }
 
@@ -967,12 +838,7 @@ export function Cases() {
                       const parsed = new Date(String(value));
                       return Number.isNaN(parsed.getTime()) ? String(value) : parsed.toLocaleDateString('ar-DZ');
                     };
-                    const clientRecord = selectedCase.client || clientMap[selectedCase.clientId || 0];
-                    const clientName = clientRecord?.name || 'موكل غير محدد';
-                    const driveFolderId = clientRecord?.googleDriveFolderId || '';
                     const caseNumber = selectedCase.caseNumber || `بدون-رقم-${selectedCase.id}`;
-                    const safeFilePart = (value: string) => value.trim().replaceAll(String.fromCharCode(92), '-').replace(/[/:*?"<>|]/g, '-').replace(/\s+/g, '-').replace(/-+/g, '-').slice(0, 90) || 'غير-محدد';
-                    const fileName = `${safeFilePart(clientName)} - ${safeFilePart(caseNumber)}.md`;
                     const caseTasks = (allTasks || []).filter((task: any) => task.relatedCaseId === selectedCase.id);
                     const parties = caseParties || [];
                     const delays = caseDelays || [];
@@ -984,18 +850,12 @@ export function Cases() {
                       'document_version: 2',
                       `case_id: ${selectedCase.id}`,
                       `case_number: "${caseNumber.replace(/"/g, '\\"')}"`,
-                      `client_id: ${selectedCase.clientId ?? ''}`,
-                      `client_name: "${clientName.replace(/"/g, '\\"')}"`,
-                      `google_drive_folder_id: "${driveFolderId}"`,
                       `exported_at: "${new Date().toISOString()}"`,
                       '---',
                       '',
                       `# ملف القضية: ${caseNumber}`,
                       '',
                       '## 1. الفهرسة والتعريف',
-                      `- **اسم الموكل:** ${clientName}`,
-                      `- **معرّف الموكل:** ${selectedCase.clientId ?? '—'}`,
-                      `- **معرّف مجلد Google Drive:** ${driveFolderId || 'غير محدد'}`,
                       `- **رقم القضية:** ${caseNumber}`,
                       `- **رقم القضية الأصلية:** ${selectedCase.origCaseNumber || '—'}`,
                       `- **المعرّف الداخلي للقضية:** ${selectedCase.id}`,
@@ -1077,12 +937,12 @@ export function Cases() {
                     const url = URL.createObjectURL(blob);
                     const link = document.createElement('a');
                     link.href = url;
-                    link.download = fileName;
+                    link.download = `القضية-${selectedCase.id}.md`;
                     document.body.appendChild(link);
                     link.click();
                     link.remove();
                     URL.revokeObjectURL(url);
-                    toast.success(`تم تصدير ملف القضية: ${fileName}`);
+                    toast.success('تم تصدير بيانات القضية');
                   }}
                 >
                   <FileDown className="w-3 h-3 ml-1" />
@@ -1102,9 +962,6 @@ export function Cases() {
           <CardContent className="space-y-3">
             <p className="text-sm font-semibold">{selectedCase.subject || '—'}</p>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
-              {selectedCase.clientId && clientMap[selectedCase.clientId] && (
-                <DetailField label="الموكل" value={clientMap[selectedCase.clientId].name} />
-              )}
               <DetailField label="طبيعة القضية" value={selectedCase.caseNature} />
               <DetailField label="مرحلة التقاضي" value={selectedCase.litigationStage} />
               <DetailField label="رقم القضية الأصلية" value={selectedCase.origCaseNumber} />
@@ -1318,7 +1175,6 @@ export function Cases() {
           <CaseTasksCard
             caseId={selectedCase.id}
             allTasks={allTasks}
-            clientId={selectedCase.clientId}
           />
         )}
 
@@ -1720,7 +1576,7 @@ export function Cases() {
                               }
                               setParties(updated);
                             }}
-                            suggestions={clientNameSuggestions}
+                            suggestions={Array.from(new Set((allParties || []).map((p: any) => p.name?.trim()).filter(Boolean)))}
                             placeholder="ابدأ بكتابة الاسم..."
                             addLabel="كطرف"
                             className="h-10"
@@ -1730,8 +1586,8 @@ export function Cases() {
                             variant="outline"
                             size="icon"
                             className="h-10 w-10 shrink-0"
-                            onClick={() => openPartyClientDialog(idx)}
-                            title="إضافة موكل جديد"
+                            onClick={() => { const updated = [...parties]; updated[idx] = { ...updated[idx], name: updated[idx].name || '', side: updated[idx].side || 'for' }; setParties(updated); }}
+                            title="تأكيد بيانات الطرف"
                           >
                             <UserPlus className="w-4 h-4" />
                           </Button>
@@ -2397,75 +2253,6 @@ export function Cases() {
         </DialogContent>
       </Dialog>
 
-      {/* حوار إنشاء موكل جديد */}
-      <Dialog open={showNewClientDialog} onOpenChange={setShowNewClientDialog}>
-        <DialogContent className="max-w-sm" dir="rtl">
-          <DialogHeader>
-            <DialogTitle className="text-base font-bold">موكل جديد</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-3">
-            <div>
-              <Label className="text-xs">الاسم <span className="text-destructive">*</span></Label>
-              <Input
-                value={newClientData.name || ''}
-                onChange={(e) => setNewClientData({ ...newClientData, name: e.target.value })}
-                placeholder="اسم الموكل"
-                className="h-11"
-              />
-            </div>
-            <div>
-              <Label className="text-xs">الهاتف</Label>
-              <Input
-                value={newClientData.phone || ''}
-                onChange={(e) => setNewClientData({ ...newClientData, phone: e.target.value })}
-                placeholder="رقم الهاتف"
-                className="h-11"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowNewClientDialog(false)}>إلغاء</Button>
-            <Button onClick={saveNewClient} className="bg-teal-600 hover:bg-teal-700">حفظ</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* حوار إضافة موكل جديد من نموذج الأطراف */}
-      <Dialog open={showPartyClientDialog} onOpenChange={setShowPartyClientDialog}>
-        <DialogContent className="max-w-sm" dir="rtl">
-          <DialogHeader>
-            <DialogTitle className="text-base font-bold flex items-center gap-2">
-              <UserPlus className="w-4 h-4" />
-              إضافة موكل جديد
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-3">
-            <div>
-              <Label className="text-xs">الاسم واللقب <span className="text-destructive">*</span></Label>
-              <Input
-                value={partyClientData.name}
-                onChange={(e) => setPartyClientData({ ...partyClientData, name: e.target.value })}
-                placeholder="الاسم واللقب"
-                className="h-11"
-              />
-            </div>
-            <div>
-              <Label className="text-xs">الهاتف</Label>
-              <Input
-                value={partyClientData.phone}
-                onChange={(e) => setPartyClientData({ ...partyClientData, phone: e.target.value })}
-                placeholder="رقم الهاتف"
-                className="h-11"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowPartyClientDialog(false)}>إلغاء</Button>
-            <Button onClick={savePartyClient} className="bg-teal-600 hover:bg-teal-700">إضافة الموكل</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
       {/* حوار إنشاء هيئة قضائية جديدة */}
       <Dialog open={showNewCourtDialog} onOpenChange={setShowNewCourtDialog}>
         <DialogContent className="max-w-sm" dir="rtl">
@@ -2583,10 +2370,9 @@ function DetailField({ label, value }: { label: string; value?: React.ReactNode 
 // ============================================================================
 // بطاقة المهام المرتبطة بقضية — تُعرض داخل تفاصيل القضية
 // ============================================================================
-function CaseTasksCard({ caseId, allTasks, clientId }: {
+function CaseTasksCard({ caseId, allTasks }: {
   caseId: number;
   allTasks: any[];
-  clientId?: number | null;
 }) {
   const { setActiveSection, setSelectedTaskId } = useAppStore();
   const [showQuickAdd, setShowQuickAdd] = React.useState(false);
@@ -2609,7 +2395,6 @@ function CaseTasksCard({ caseId, allTasks, clientId }: {
         priority: 'medium',
         status: 'pending',
         relatedCaseId: caseId,
-        relatedClientId: clientId ?? null,
         reminderOffsets: [7, 1, 0],
       });
       setQuickTitle('');
