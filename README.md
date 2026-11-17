@@ -68,10 +68,11 @@ npm run dev
    - `AUTH_SECRET` — مفتاح JWT
    - `APP_PASSWORD` — كلمة مرور الدخول
    - `MCP_API_KEY` — مفتاح MCP server
-3. Build command (مُعد مسبقاً في `package.json`):
+3. Build command:
    ```
-   prisma generate && prisma migrate deploy && next build && cp -r .next/static .next/standalone/.next/ && cp -r public .next/standalone/
+   npm run build
    ```
+   يتضمن البناء توليد Prisma Client وتجميع Next.js فقط، ولا يطبق migrations على قاعدة البيانات تلقائياً. يجب مراجعة migration الخاصة بإزالة جدول الأشخاص القديم وأخذ نسخة احتياطية قبل تنفيذها يدوياً على قاعدة البيانات.
 
 ## هيكل المشروع
 
