@@ -237,6 +237,7 @@ export function BackupManager() {
 
       // 2) القضايا
       const caseIdMap = new Map<number, number>();
+      const delayIdMap = new Map<number, number>();
       const sessionIdMap = new Map<number, number>();
       // توافق رجعي: تحويل ارتباط الشخص القديم إلى طرف ممثل في القضية.
       const legacyPeople = new Map<number, any>((Array.isArray(data.clients) ? data.clients : []).map((client: any) => [Number(client.id), client]));
@@ -265,11 +266,15 @@ export function BackupManager() {
       // 3) التأجيلات (تحتاج caseId)
       if (Array.isArray(data.delays)) {
         for (const delay of data.delays) {
+          const oldId = delay.id;
           const cleaned = cleanRecord(delay);
-          if (cleaned.caseId && caseIdMap.has(cleaned.caseId)) {
-            cleaned.caseId = caseIdMap.get(cleaned.caseId);
+          if (cleaned.caseId && caseIdMap.has(cleaned.caseId)) cleaned.caseId = caseIdMap.get(cleaned.caseId);
+          const res = await fetch('/api/delays', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(cleaned) });
+          if (res.ok) {
+            const created = await res.json().catch(() => null);
+            if (created?.id && oldId) delayIdMap.set(oldId, created.id);
+            importedCounts.delays++;
           }
-          if (await postJson('/api/delays', cleaned)) importedCounts.delays++;
         }
       }
 
@@ -327,6 +332,8 @@ export function BackupManager() {
           const cleaned = cleanRecord(task);
           if (cleaned.relatedCaseId && caseIdMap.has(cleaned.relatedCaseId)) cleaned.relatedCaseId = caseIdMap.get(cleaned.relatedCaseId);
           if (cleaned.sourceType === 'session' && cleaned.sourceId && sessionIdMap.has(cleaned.sourceId)) cleaned.sourceId = sessionIdMap.get(cleaned.sourceId);
+          if (cleaned.sourceType === 'delay' && cleaned.sourceId && delayIdMap.has(cleaned.sourceId)) cleaned.sourceId = delayIdMap.get(cleaned.sourceId);
+          if (cleaned.sourceType === 'judgment' && cleaned.sourceId && caseIdMap.has(cleaned.sourceId)) cleaned.sourceId = caseIdMap.get(cleaned.sourceId);
           delete cleaned.relatedClientId;
           if (await postJson('/api/tasks', cleaned)) importedCounts.tasks++;
         }
