@@ -135,7 +135,6 @@ export async function PATCH(
       id: _id,
       createdAt,
       updatedAt,
-      client,
       parties,
       delays,
       sessions,
