@@ -246,7 +246,7 @@ export function BackupManager() {
           const oldId = caseItem.id;
           const cleaned = cleanRecord(caseItem);
           const legacyPerson = caseItem.clientId ? legacyPeople.get(Number(caseItem.clientId)) : null;
-          if (legacyClient) legacyCaseParties.set(Number(oldId), legacyClient);
+          if (legacyPerson) legacyCaseParties.set(Number(oldId), legacyPerson);
           delete cleaned.clientId;
           if (cleaned.courtId && judicialBodyIdMap.has(cleaned.courtId)) cleaned.courtId = judicialBodyIdMap.get(cleaned.courtId);
           const res = await fetch('/api/cases', {
@@ -310,12 +310,12 @@ export function BackupManager() {
       }
 
       // تحويل روابط الأشخاص القديمة إلى أطراف ممثلة بعد إنشاء الأطراف الأصلية.
-      for (const [oldCaseId, legacyClient] of legacyCaseParties) {
+      for (const [oldCaseId, legacyPerson] of legacyCaseParties) {
         const newCaseId = caseIdMap.get(oldCaseId);
         if (!newCaseId) continue;
-        const existingRepresented = Array.isArray(data.parties) && data.parties.some((p: any) => Number(p.caseId) === oldCaseId && (p.side || 'for') === 'for' && (p.name || '').trim().toLowerCase() === (legacyClient.name || '').trim().toLowerCase());
+        const existingRepresented = Array.isArray(data.parties) && data.parties.some((p: any) => Number(p.caseId) === oldCaseId && (p.side || 'for') === 'for' && (p.name || '').trim().toLowerCase() === (legacyPerson.name || '').trim().toLowerCase());
         if (!existingRepresented) {
-          const converted = { caseId: newCaseId, name: legacyClient.name || '', phone: legacyClient.phone || '', phone2: legacyClient.phone2 || '', address: legacyClient.address || null, wilaya: legacyClient.wilaya ?? 16, nationalId: legacyClient.nationalId || null, contactNotes: legacyClient.notes || null, role: '', side: 'for' };
+          const converted = { caseId: newCaseId, name: legacyPerson.name || '', phone: legacyPerson.phone || '', phone2: legacyPerson.phone2 || '', address: legacyPerson.address || null, wilaya: legacyPerson.wilaya ?? 16, nationalId: legacyPerson.nationalId || null, contactNotes: legacyPerson.notes || null, role: '', side: 'for' };
           if (await postJson('/api/parties', converted)) importedCounts.parties++;
         }
       }
