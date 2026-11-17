@@ -1493,13 +1493,13 @@ export function Cases() {
         {filteredCases.length > 0 ? (
           filteredCases
             .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-            .map((c) => {
+            .map((c, index) => {
               const remaining = (c.totalFees || 0) - (c.paidAmount || 0);
               const borderColor = STATUS_BORDER_COLORS[c.status || ''] || 'border-r-gray-300';
               return (
                 <Card
                   key={c.id}
-                  className={`cursor-pointer hover:shadow-md transition-all duration-200 border-r-4 ${borderColor}`}
+                  className={`cursor-pointer transition-all duration-200 border-r-4 ${borderColor} ${index % 2 === 0 ? "bg-white dark:bg-slate-900" : "bg-slate-50 dark:bg-slate-800/70"} hover:shadow-md hover:brightness-[0.99]`}
                   onClick={() => {
                     setSelectedCaseId(c.id ?? null);
                     setView('detail');
