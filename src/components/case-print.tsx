@@ -103,9 +103,9 @@ export function CasePrintButton({ caseData, parties, delays, sessions, courtPhon
 
       // تقسيم الأطراف حسب حقل side (for = في حقه، against = ضده)
       // إذا كان side فارغ/null، نعتبره 'for' (في حقه) كقيمة افتراضية
-      const inFavorParties = parties.filter(p => !p.side || p.side === 'for');
+      const inFavorParties = parties.filter(p => p.side === 'for');
       const againstParties = parties.filter(p => p.side === 'against');
-      const otherParties = parties.filter(p => p.side && p.side !== 'for' && p.side !== 'against');
+      const otherParties = parties.filter(p => !p.side || (p.side !== 'for' && p.side !== 'against'));
 
       // بناء صفوف الأطراف — Monochrome
       function buildPartyRows(partyList: Party[]) {
@@ -128,7 +128,7 @@ export function CasePrintButton({ caseData, parties, delays, sessions, courtPhon
       // بناء التأجيلات
       function buildDelayRows() {
         if (delays.length === 0) return '<tr><td colspan="3" style="padding:8px;text-align:center;color:#666;font-size:11px;">لا توجد تأجيلات</td></tr>';
-        return delays.map((d, i) => `
+        return orderedDelays.map((d, i) => `
           <tr>
             <td style="padding:5px 10px;border:1px solid #333;font-size:11px;text-align:center;width:40px;">${i + 1}</td>
             <td style="padding:5px 10px;border:1px solid #333;font-size:11px;text-align:center;width:120px;">${formatDate(d.delayDate)}</td>
@@ -140,7 +140,7 @@ export function CasePrintButton({ caseData, parties, delays, sessions, courtPhon
       // بناء الجلسات
       function buildSessionRows() {
         if (sessions.length === 0) return '<tr><td colspan="4" style="padding:8px;text-align:center;color:#666;font-size:11px;">لا توجد جلسات</td></tr>';
-        return sessions.map((s, i) => `
+        return orderedSessions.map((s, i) => `
           <tr>
             <td style="padding:5px 10px;border:1px solid #333;font-size:11px;text-align:center;width:40px;">${i + 1}</td>
             <td style="padding:5px 10px;border:1px solid #333;font-size:11px;text-align:center;width:120px;">${formatDate(s.date)}</td>
@@ -149,6 +149,9 @@ export function CasePrintButton({ caseData, parties, delays, sessions, courtPhon
           </tr>
         `).join('');
       }
+
+      const orderedSessions = [...sessions].sort((a, b) => new Date(a.date || 0).getTime() - new Date(b.date || 0).getTime());
+      const orderedDelays = [...delays].sort((a, b) => new Date(a.delayDate || 0).getTime() - new Date(b.delayDate || 0).getTime());
 
       const html = `<!DOCTYPE html>
 <html dir="rtl" lang="ar">
@@ -283,20 +286,6 @@ export function CasePrintButton({ caseData, parties, delays, sessions, courtPhon
     .party-against { background: #000; }
     .party-other { background: #666; }
 
-    /* منطوق الحكم */
-    .judgment-box {
-      border: 2px solid #000;
-      border-radius: 4px;
-      padding: 10px;
-      margin-top: 6px;
-      min-height: 40px;
-      white-space: pre-wrap;
-      line-height: 1.8;
-      font-size: 11px;
-      font-weight: 600;
-      background: #f5f5f5;
-    }
-
     /* تذييل */
     .footer {
       margin-top: 20px;
@@ -371,9 +360,7 @@ export function CasePrintButton({ caseData, parties, delays, sessions, courtPhon
       <td>${formatDate(caseData.delibDate)}</td>
     </tr>
     ${caseData.barPhone ? `<tr><td>هاتف قاعة المحامين</td><td>${caseData.barPhone}</td><td></td><td></td></tr>` : ''}
-    ${caseData.caseResult === 'won' ? `<tr><td>نتيجة القضية</td><td style="color:#059669;font-weight:bold">✓ ربحت القضية</td><td></td><td></td></tr>` : ''}
-    ${caseData.caseResult === 'lost' ? `<tr><td>نتيجة القضية</td><td style="color:#dc2626;font-weight:bold">✗ خسرت القضية</td><td></td><td></td></tr>` : ''}
-  </table>
+    </table>
 
   <!-- أطراف النزاع -->
   <div class="section-title">أطراف النزاع</div>
@@ -452,11 +439,6 @@ export function CasePrintButton({ caseData, parties, delays, sessions, courtPhon
     </thead>
     <tbody>${buildSessionRows()}</tbody>
   </table>` : ''}
-
-  <!-- منطوق الحكم -->
-  ${caseData.judgment ? `
-  <div class="section-title">منطوق الحكم / القرار</div>
-  <div class="judgment-box">${caseData.judgment}</div>` : ''}
 
   <!-- ملاحظات -->
   ${caseData.notes ? `
