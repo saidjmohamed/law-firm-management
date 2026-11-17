@@ -1885,83 +1885,6 @@ export function Cases() {
             </div>
 
 
-            {/* الأتعاب والوضع المالي — مستقلة عن سجلات الأطراف */}
-            <div>
-              <h3 className="text-sm font-bold mb-3 text-teal-700 dark:text-teal-400">الأتعاب والوضع المالي</h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <div>
-                  <Label className="text-xs">إجمالي الأتعاب للقضية (د.ج)</Label>
-                  <Input type="number" min="0" value={Number(formData.totalFees || 0)} onChange={(e) => setFormData({ ...formData, totalFees: e.target.value ? Number(e.target.value) : 0 })} className="h-11" />
-                </div>
-                <div>
-                  <Label className="text-xs">المبلغ المدفوع (د.ج)</Label>
-                  <Input type="number" min="0" value={Number(formData.paidAmount || 0)} onChange={(e) => setFormData({ ...formData, paidAmount: e.target.value ? Number(e.target.value) : 0 })} className="h-11" />
-                </div>
-                <div>
-                  <Label className="text-xs">المبلغ المتبقي (د.ج)</Label>
-                  <Input type="number" value={Math.max(0, Number(formData.totalFees || 0) - Number(formData.paidAmount || 0))} disabled className="bg-muted h-11" />
-                </div>
-              </div>
-              <p className="mt-2 text-xs text-muted-foreground">تُسجل أتعاب القضية على مستوى القضية، ولا تُجمع تلقائياً من بيانات الأطراف.</p>
-            </div>
-
-            {/* كشف الأتعاب للأطراف الذين نمثلهم */}
-            <div className="rounded-xl border border-border bg-card p-3 sm:p-4 space-y-3">
-              <div className="flex items-center justify-between gap-2">
-                <div>
-                  <h3 className="text-sm font-bold text-foreground">كشف الأتعاب للأطراف الذين نمثلهم</h3>
-                  <p className="text-xs text-muted-foreground mt-1">تفصيل مستقل للمبالغ المسجلة للأطراف الذين نمثلهم</p>
-                </div>
-                <Badge variant="secondary">
-                  {parties.filter(p => (p.side || 'for') === 'for').length} طرفاً
-                </Badge>
-              </div>
-              {parties.filter(p => (p.side || 'for') === 'for').length > 0 ? (
-                <div className="overflow-x-auto rounded-lg border">
-                  <table className="w-full min-w-[620px] text-sm text-right">
-                    <thead className="bg-muted/60 text-muted-foreground">
-                      <tr>
-                        <th className="px-3 py-2.5 font-semibold">الطرف</th>
-                        <th className="px-3 py-2.5 font-semibold">الأتعاب</th>
-                        <th className="px-3 py-2.5 font-semibold">المدفوع</th>
-                        <th className="px-3 py-2.5 font-semibold">المتبقي</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {parties.filter(p => (p.side || 'for') === 'for').map((party, index) => {
-                        const fees = Number(party.totalFees || 0);
-                        const paid = Number(party.paidAmount || 0);
-                        const remaining = fees - paid;
-                        return (
-                          <tr key={party.id} className={index % 2 === 0 ? 'bg-background' : 'bg-muted/20'}>
-                            <td className="px-3 py-2.5 font-medium">{party.name?.trim() || 'طرف دون اسم'}</td>
-                            <td className="px-3 py-2.5 tabular-nums">{formatCurrency(fees)}</td>
-                            <td className="px-3 py-2.5 tabular-nums text-emerald-700 dark:text-emerald-400">{formatCurrency(paid)}</td>
-                            <td className={`px-3 py-2.5 tabular-nums font-semibold ${remaining > 0 ? 'text-amber-700 dark:text-amber-400' : 'text-emerald-700 dark:text-emerald-400'}`}>
-                              {formatCurrency(remaining)}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                    <tfoot className="border-t bg-muted/50 font-bold">
-                      <tr>
-                        <td className="px-3 py-2.5">إجمالي القضية</td>
-                        <td className="px-3 py-2.5 tabular-nums">{formatCurrency(parties.filter(p => (p.side || 'for') === 'for').reduce((sum, p) => sum + Number(p.totalFees || 0), 0))}</td>
-                        <td className="px-3 py-2.5 tabular-nums">{formatCurrency(parties.filter(p => (p.side || 'for') === 'for').reduce((sum, p) => sum + Number(p.paidAmount || 0), 0))}</td>
-                        <td className="px-3 py-2.5 tabular-nums">{formatCurrency(parties.filter(p => (p.side || 'for') === 'for').reduce((sum, p) => sum + Number(p.totalFees || 0) - Number(p.paidAmount || 0), 0))}</td>
-                      </tr>
-                    </tfoot>
-                  </table>
-                </div>
-              ) : (
-                <p className="rounded-lg bg-muted/40 px-3 py-4 text-center text-sm text-muted-foreground">
-                  أضف طرفاً في مركز «في حقه» لإظهار كشف أتعابه هنا.
-                </p>
-              )}
-            </div>
-
-
             {/* منطوق الحكم وملاحظات */}
             <div>
               <h3 className="text-sm font-bold mb-3 text-teal-700 dark:text-teal-400">معلومات إضافية</h3>
@@ -2013,6 +1936,27 @@ export function Cases() {
                 </div>
               </div>
             </div>
+            {/* الأتعاب والوضع المالي — مستقلة عن سجلات الأطراف */}
+            <div>
+              <h3 className="text-sm font-bold mb-3 text-teal-700 dark:text-teal-400">الأتعاب والوضع المالي</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div>
+                  <Label className="text-xs">إجمالي الأتعاب للقضية (د.ج)</Label>
+                  <Input type="number" min="0" value={Number(formData.totalFees || 0)} onChange={(e) => setFormData({ ...formData, totalFees: e.target.value ? Number(e.target.value) : 0 })} className="h-11" />
+                </div>
+                <div>
+                  <Label className="text-xs">المبلغ المدفوع (د.ج)</Label>
+                  <Input type="number" min="0" value={Number(formData.paidAmount || 0)} onChange={(e) => setFormData({ ...formData, paidAmount: e.target.value ? Number(e.target.value) : 0 })} className="h-11" />
+                </div>
+                <div>
+                  <Label className="text-xs">المبلغ المتبقي (د.ج)</Label>
+                  <Input type="number" value={Math.max(0, Number(formData.totalFees || 0) - Number(formData.paidAmount || 0))} disabled className="bg-muted h-11" />
+                </div>
+              </div>
+              <p className="mt-2 text-xs text-muted-foreground">تُسجل أتعاب القضية على مستوى القضية، ولا تُجمع تلقائياً من بيانات الأطراف.</p>
+            </div>
+
+
           </div>
 
           <DialogFooter className="flex gap-2">
