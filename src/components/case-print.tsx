@@ -11,13 +11,11 @@ interface Case {
   id?: number;
   caseNumber?: string;
   subject?: string;
-  client?: { id: number; name?: string } | null;
   caseNature?: string;
   litigationStage?: string;
   origCaseNumber?: string;
   customStage?: string;
   status?: string;
-  clientId?: number;
   wilayaId?: number;
   judiciaryType?: string;
   courtLevel?: string;
