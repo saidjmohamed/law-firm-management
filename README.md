@@ -81,7 +81,7 @@ src/
 │   ├── api/                  # 27 مسار API (REST + MCP)
 │   │   ├── auth/             # login, logout, check
 │   │   ├── cases/            # CRUD قضايا + أطراف + آجال
-│   │   ├── clients/          # CRUD أطراف
+│   │   ├── parties/           # CRUD أطراف
 │   │   ├── sessions/         # CRUD جلسات
 │   │   ├── delays/           # CRUD تأجيلات
 │   │   ├── payments/         # CRUD مدفوعات
@@ -102,7 +102,7 @@ src/
 │   ├── app-shell.tsx         # الهيكل (شريط جانبي + محتوى)
 │   ├── dashboard.tsx         # لوحة التحكم
 │   ├── cases.tsx             # إدارة القضايا
-│   ├── clients.tsx           # إدارة الأطراف الذين نمثلهم
+│   ├── represented-parties.tsx # الأطراف الذين نمثلهم
 │   ├── sessions.tsx          # إدارة الجلسات
 │   ├── courts.tsx            # الهيئات القضائية
 │   ├── lawyers.tsx           # دفتر المحامين
