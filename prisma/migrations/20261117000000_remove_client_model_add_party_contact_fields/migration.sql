@@ -18,7 +18,7 @@ SET
 FROM "Case" AS c
 JOIN "Client" AS cl ON cl."id" = c."clientId"
 WHERE p."caseId" = c."id"
-  AND p."side" = 'for'
+  AND COALESCE(p."side", 'for') = 'for'
   AND LOWER(COALESCE(p."name", '')) = LOWER(COALESCE(cl."name", ''));
 
 -- Create the represented party when the case does not already contain it.
