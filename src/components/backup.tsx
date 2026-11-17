@@ -326,6 +326,29 @@ export function BackupManager() {
         }
       }
 
+      // حفظ الأشخاص الذين لم يرتبطوا بأي قضية في النسخة القديمة داخل سجل ترحيل غير ظاهر.
+      if (Array.isArray(data.clients)) {
+        const linkedLegacyIds = new Set((Array.isArray(data.cases) ? data.cases : []).map((item: any) => Number(item.clientId)).filter(Boolean));
+        const unassignedPeople = data.clients
+          .filter((person: any) => !linkedLegacyIds.has(Number(person.id)))
+          .map((person: any) => ({
+            name: person.name || '',
+            phone: person.phone || '',
+            phone2: person.phone2 || '',
+            address: person.address || '',
+            wilaya: person.wilaya ?? 16,
+            nationalId: person.nationalId || '',
+            notes: person.notes || '',
+          }));
+        if (unassignedPeople.length) {
+          await fetch('/api/settings', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ key: 'legacyUnassignedPartyData', value: JSON.stringify(unassignedPeople) }),
+          });
+        }
+      }
+
       // 7) المهام المرتبطة بالقضايا.
       if (Array.isArray(data.tasks)) {
         for (const task of data.tasks) {
