@@ -131,8 +131,7 @@ export async function createJudgmentFollowUpTasks(
 export async function createJudgmentExtractTask(
   caseId: number,
   caseResult: string,
-  caseNumber?: string,
-  clientId?: number | null
+  caseNumber?: string
 ): Promise<{ created: boolean; taskId?: number }> {
   try {
     // التحقق من عدم وجود مهمة سحب حكم سابقة
@@ -161,7 +160,6 @@ export async function createJudgmentExtractTask(
         sourceType: 'judgment',
         sourceId: caseId,
         relatedCaseId: caseId,
-        relatedClientId: clientId ?? null,
       },
     });
 
