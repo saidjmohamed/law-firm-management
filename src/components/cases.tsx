@@ -803,6 +803,58 @@ export function Cases() {
           </Button>
         </div>
 
+        {/* أطراف النزاع */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base font-bold flex items-center gap-2">
+              <UserPlus className="w-4 h-4" />
+              أطراف النزاع
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {caseParties && caseParties.length > 0 ? (
+              <div className="space-y-2">
+                {caseParties.map((p) => (
+                  <div key={p.id} className="flex items-center justify-between p-2.5 rounded-lg border">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="text-xs">{p.role || '—'}</Badge>
+                        {p.side && (
+                          <Badge className={`text-xs ${
+                            p.side === 'for'
+                              ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                              : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                          }`}>
+                            {p.side === 'for' ? 'في حقه' : 'ضده'}
+                          </Badge>
+                        )}
+                        <span className="text-sm font-medium">{p.name || '—'}</span>
+                      </div>
+                      <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                        {p.phone && <span>هاتف: {p.phone}</span>}
+                        {p.lawyerName && <span>محامي: {p.lawyerName}</span>}
+                        {p.lawyerPhone && <span>هاتف المحامي: {p.lawyerPhone}</span>}
+                      </div>
+                    </div>
+                    {caseParties.length > 1 && p.id && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 shrink-0 text-muted-foreground hover:text-destructive"
+                        onClick={() => setDeletePartyConfirm(p.id!)}
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </Button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground text-center py-3">لا توجد أطراف مسجلة</p>
+            )}
+          </CardContent>
+        </Card>
+
         {/* المعلومات الأساسية */}
         <Card>
           <CardHeader className="pb-3">
@@ -882,66 +934,6 @@ export function Cases() {
               <DetailField label="تاريخ المداولة" value={<DateDisplay value={selectedCase.delibDate as any} />} />
             </div>
 
-            {/* المالية - تفصيل الأتعاب للأطراف الذين نمثلهم */}
-            <Separator />
-            <div>
-              <h4 className="text-sm font-bold mb-2 flex items-center gap-1.5">
-                <Wallet className="w-4 h-4 text-teal-600 dark:text-teal-400" />
-                الأتعاب
-              </h4>
-              {/* أتعاب الأطراف الذين نمثلهم */}
-              {caseParties && caseParties.filter(p => (p.side || 'for') === 'for').length > 0 ? (
-                <div className="space-y-2 mb-3">
-                  {caseParties.filter(p => (p.side || 'for') === 'for').map((p) => {
-                    const pFees = (p as any).totalFees || 0;
-                    const pPaid = (p as any).paidAmount || 0;
-                    const pRemaining = pFees - pPaid;
-                    return (
-                      <div key={p.id} className="p-2.5 rounded-lg border bg-muted/30">
-                        <div className="flex items-center justify-between mb-1.5">
-                          <span className="text-xs font-bold">{p.name || '—'}</span>
-                          {pFees > 0 && (
-                            <span className={`text-xs font-bold ${pRemaining > 0 ? 'text-amber-600' : 'text-emerald-600'}`}>
-                              {pRemaining > 0 ? `متبقي: ${formatCurrency(pRemaining)}` : 'مسدد بالكامل'}
-                            </span>
-                          )}
-                        </div>
-                        <div className="grid grid-cols-3 gap-2">
-                          <div className="text-center p-1.5 bg-teal-50 dark:bg-teal-900/20 rounded">
-                            <p className="text-[10px] text-muted-foreground">الأتعاب</p>
-                            <p className="text-xs font-extrabold text-teal-700 dark:text-teal-400 tabular-nums">{formatCurrency(pFees)}</p>
-                          </div>
-                          <div className="text-center p-1.5 bg-emerald-50 dark:bg-emerald-900/20 rounded">
-                            <p className="text-[10px] text-muted-foreground">المدفوع</p>
-                            <p className="text-xs font-extrabold text-emerald-700 dark:text-emerald-400 tabular-nums">{formatCurrency(pPaid)}</p>
-                          </div>
-                          <div className={`text-center p-1.5 rounded ${pRemaining > 0 ? 'bg-amber-50 dark:bg-amber-900/20' : 'bg-emerald-50 dark:bg-emerald-900/20'}`}>
-                            <p className="text-[10px] text-muted-foreground">المتبقي</p>
-                            <p className={`text-xs font-extrabold tabular-nums ${pRemaining > 0 ? 'text-amber-700 dark:text-amber-400' : 'text-emerald-700 dark:text-emerald-400'}`}>{formatCurrency(pRemaining)}</p>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : null}
-              {/* الإجمالي */}
-              <div className="grid grid-cols-3 gap-3">
-                <div className="text-center p-3 bg-teal-50 dark:bg-teal-900/20 rounded-lg">
-                  <p className="text-xs text-muted-foreground">إجمالي الأتعاب</p>
-                  <p className="text-sm font-extrabold text-teal-700 dark:text-teal-400 tabular-nums">{formatCurrency(selectedCase.totalFees)}</p>
-                </div>
-                <div className="text-center p-3 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg">
-                  <p className="text-xs text-muted-foreground">إجمالي المدفوع</p>
-                  <p className="text-sm font-extrabold text-emerald-700 dark:text-emerald-400 tabular-nums">{formatCurrency(selectedCase.paidAmount)}</p>
-                </div>
-                <div className={`text-center p-3 rounded-lg ${remaining > 0 ? 'bg-amber-50 dark:bg-amber-900/20' : 'bg-emerald-50 dark:bg-emerald-900/20'}`}>
-                  <p className="text-xs text-muted-foreground">إجمالي المتبقي</p>
-                  <p className={`text-sm font-extrabold tabular-nums ${remaining > 0 ? 'text-amber-700 dark:text-amber-400' : 'text-emerald-700 dark:text-emerald-400'}`}>{formatCurrency(remaining)}</p>
-                </div>
-              </div>
-            </div>
-
             {/* منطوق الحكم */}
             {selectedCase.judgment && (
               <>
@@ -959,58 +951,6 @@ export function Cases() {
                 <Label className="text-xs text-muted-foreground">ملاحظات</Label>
                 <p className="text-sm mt-1 p-3 bg-muted/50 rounded-lg whitespace-pre-wrap leading-relaxed">{selectedCase.notes}</p>
               </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* أطراف النزاع */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base font-bold flex items-center gap-2">
-              <UserPlus className="w-4 h-4" />
-              أطراف النزاع
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {caseParties && caseParties.length > 0 ? (
-              <div className="space-y-2">
-                {caseParties.map((p) => (
-                  <div key={p.id} className="flex items-center justify-between p-2.5 rounded-lg border">
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <Badge variant="outline" className="text-xs">{p.role || '—'}</Badge>
-                        {p.side && (
-                          <Badge className={`text-xs ${
-                            p.side === 'for'
-                              ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                              : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-                          }`}>
-                            {p.side === 'for' ? 'في حقه' : 'ضده'}
-                          </Badge>
-                        )}
-                        <span className="text-sm font-medium">{p.name || '—'}</span>
-                      </div>
-                      <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
-                        {p.phone && <span>هاتف: {p.phone}</span>}
-                        {p.lawyerName && <span>محامي: {p.lawyerName}</span>}
-                        {p.lawyerPhone && <span>هاتف المحامي: {p.lawyerPhone}</span>}
-                      </div>
-                    </div>
-                    {caseParties.length > 1 && p.id && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 shrink-0 text-muted-foreground hover:text-destructive"
-                        onClick={() => setDeletePartyConfirm(p.id!)}
-                      >
-                        <X className="w-3.5 h-3.5" />
-                      </Button>
-                    )}
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground text-center py-3">لا توجد أطراف مسجلة</p>
             )}
           </CardContent>
         </Card>
@@ -1104,6 +1044,66 @@ export function Cases() {
             )}
           </CardContent>
         </Card>
+
+            {/* المالية - تفصيل الأتعاب للأطراف الذين نمثلهم */}
+            <Separator />
+            <div>
+              <h4 className="text-sm font-bold mb-2 flex items-center gap-1.5">
+                <Wallet className="w-4 h-4 text-teal-600 dark:text-teal-400" />
+                الأتعاب
+              </h4>
+              {/* أتعاب الأطراف الذين نمثلهم */}
+              {caseParties && caseParties.filter(p => (p.side || 'for') === 'for').length > 0 ? (
+                <div className="space-y-2 mb-3">
+                  {caseParties.filter(p => (p.side || 'for') === 'for').map((p) => {
+                    const pFees = (p as any).totalFees || 0;
+                    const pPaid = (p as any).paidAmount || 0;
+                    const pRemaining = pFees - pPaid;
+                    return (
+                      <div key={p.id} className="p-2.5 rounded-lg border bg-muted/30">
+                        <div className="flex items-center justify-between mb-1.5">
+                          <span className="text-xs font-bold">{p.name || '—'}</span>
+                          {pFees > 0 && (
+                            <span className={`text-xs font-bold ${pRemaining > 0 ? 'text-amber-600' : 'text-emerald-600'}`}>
+                              {pRemaining > 0 ? `متبقي: ${formatCurrency(pRemaining)}` : 'مسدد بالكامل'}
+                            </span>
+                          )}
+                        </div>
+                        <div className="grid grid-cols-3 gap-2">
+                          <div className="text-center p-1.5 bg-teal-50 dark:bg-teal-900/20 rounded">
+                            <p className="text-[10px] text-muted-foreground">الأتعاب</p>
+                            <p className="text-xs font-extrabold text-teal-700 dark:text-teal-400 tabular-nums">{formatCurrency(pFees)}</p>
+                          </div>
+                          <div className="text-center p-1.5 bg-emerald-50 dark:bg-emerald-900/20 rounded">
+                            <p className="text-[10px] text-muted-foreground">المدفوع</p>
+                            <p className="text-xs font-extrabold text-emerald-700 dark:text-emerald-400 tabular-nums">{formatCurrency(pPaid)}</p>
+                          </div>
+                          <div className={`text-center p-1.5 rounded ${pRemaining > 0 ? 'bg-amber-50 dark:bg-amber-900/20' : 'bg-emerald-50 dark:bg-emerald-900/20'}`}>
+                            <p className="text-[10px] text-muted-foreground">المتبقي</p>
+                            <p className={`text-xs font-extrabold tabular-nums ${pRemaining > 0 ? 'text-amber-700 dark:text-amber-400' : 'text-emerald-700 dark:text-emerald-400'}`}>{formatCurrency(pRemaining)}</p>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : null}
+              {/* الإجمالي */}
+              <div className="grid grid-cols-3 gap-3">
+                <div className="text-center p-3 bg-teal-50 dark:bg-teal-900/20 rounded-lg">
+                  <p className="text-xs text-muted-foreground">إجمالي الأتعاب</p>
+                  <p className="text-sm font-extrabold text-teal-700 dark:text-teal-400 tabular-nums">{formatCurrency(selectedCase.totalFees)}</p>
+                </div>
+                <div className="text-center p-3 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg">
+                  <p className="text-xs text-muted-foreground">إجمالي المدفوع</p>
+                  <p className="text-sm font-extrabold text-emerald-700 dark:text-emerald-400 tabular-nums">{formatCurrency(selectedCase.paidAmount)}</p>
+                </div>
+                <div className={`text-center p-3 rounded-lg ${remaining > 0 ? 'bg-amber-50 dark:bg-amber-900/20' : 'bg-emerald-50 dark:bg-emerald-900/20'}`}>
+                  <p className="text-xs text-muted-foreground">إجمالي المتبقي</p>
+                  <p className={`text-sm font-extrabold tabular-nums ${remaining > 0 ? 'text-amber-700 dark:text-amber-400' : 'text-emerald-700 dark:text-emerald-400'}`}>{formatCurrency(remaining)}</p>
+                </div>
+              </div>
+            </div>
 
         {/* أزرار الإجراءات */}
         <div className="flex flex-wrap gap-2">
@@ -1371,52 +1371,6 @@ export function Cases() {
                     </div>
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                       <div>
-                        <Label className="text-xs">المركز القانوني</Label>
-                        <SelectWithCustom
-                          field="partyRole"
-                          value={party.role || ''}
-                          onChange={v => {
-                            const updated = [...parties];
-                            updated[idx] = { ...updated[idx], role: v };
-                            setParties(updated);
-                          }}
-                          staticOptions={PARTY_ROLES.map(r => ({ value: r, label: r }))}
-                          placeholder="اختر المركز القانوني..."
-                        />
-                        <div className="flex gap-1 mt-1">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const updated = [...parties];
-                              updated[idx] = { ...updated[idx], side: 'for' };
-                              setParties(updated);
-                            }}
-                            className={`flex-1 h-8 rounded-md border text-xs font-medium transition-colors ${
-                              (party.side || 'for') === 'for'
-                                ? 'bg-green-500 text-white border-green-500'
-                                : 'border-border text-muted-foreground hover:border-green-400'
-                            }`}
-                          >
-                            في حقه
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const updated = [...parties];
-                              updated[idx] = { ...updated[idx], side: 'against' };
-                              setParties(updated);
-                            }}
-                            className={`flex-1 h-8 rounded-md border text-xs font-medium transition-colors ${
-                              party.side === 'against'
-                                ? 'bg-red-500 text-white border-red-500'
-                                : 'border-border text-muted-foreground hover:border-red-400'
-                            }`}
-                          >
-                            ضده
-                          </button>
-                        </div>
-                      </div>
-                      <div>
                         <Label className="text-xs">الاسم</Label>
                         <div className="flex gap-1">
                           <ComboboxInput
@@ -1452,19 +1406,6 @@ export function Cases() {
                         </div>
                       </div>
                       <div>
-                        <Label className="text-xs">الهاتف</Label>
-                        <Input
-                          value={party.phone || ''}
-                          onChange={(e) => {
-                            const updated = [...parties];
-                            updated[idx] = { ...updated[idx], phone: e.target.value };
-                            setParties(updated);
-                          }}
-                          placeholder="رقم الهاتف"
-                          className="h-10"
-                        />
-                      </div>
-                      <div>
                         <Label className="text-xs">اسم المحامي</Label>
                         <ComboboxInput
                           value={party.lawyerName || ''}
@@ -1493,6 +1434,19 @@ export function Cases() {
                           suggestions={lawyerNameSuggestions}
                           placeholder="ابدأ بكتابة اسم المحامي..."
                           addLabel="كاسم محامي"
+                          className="h-10"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs">الهاتف</Label>
+                        <Input
+                          value={party.phone || ''}
+                          onChange={(e) => {
+                            const updated = [...parties];
+                            updated[idx] = { ...updated[idx], phone: e.target.value };
+                            setParties(updated);
+                          }}
+                          placeholder="رقم الهاتف"
                           className="h-10"
                         />
                       </div>
@@ -2369,7 +2323,53 @@ function CaseTasksCard({ caseId, allTasks }: {
                         }`}>
                           {days < 0 ? `متأخرة ${Math.abs(days)}ي` : days === 0 ? 'اليوم' : days === 1 ? 'غداً' : `${days}ي`}
                         </span>
-                      )}
+                      )}<div>
+                        <Label className="text-xs">المركز القانوني</Label>
+                        <SelectWithCustom
+                          field="partyRole"
+                          value={party.role || ''}
+                          onChange={v => {
+                            const updated = [...parties];
+                            updated[idx] = { ...updated[idx], role: v };
+                            setParties(updated);
+                          }}
+                          staticOptions={PARTY_ROLES.map(r => ({ value: r, label: r }))}
+                          placeholder="اختر المركز القانوني..."
+                        />
+                        <div className="flex gap-1 mt-1">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const updated = [...parties];
+                              updated[idx] = { ...updated[idx], side: 'for' };
+                              setParties(updated);
+                            }}
+                            className={`flex-1 h-8 rounded-md border text-xs font-medium transition-colors ${
+                              (party.side || 'for') === 'for'
+                                ? 'bg-green-500 text-white border-green-500'
+                                : 'border-border text-muted-foreground hover:border-green-400'
+                            }`}
+                          >
+                            في حقه
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const updated = [...parties];
+                              updated[idx] = { ...updated[idx], side: 'against' };
+                              setParties(updated);
+                            }}
+                            className={`flex-1 h-8 rounded-md border text-xs font-medium transition-colors ${
+                              party.side === 'against'
+                                ? 'bg-red-500 text-white border-red-500'
+                                : 'border-border text-muted-foreground hover:border-red-400'
+                            }`}
+                          >
+                            ضده
+                          </button>
+                        </div>
+                      </div>
+                      
                     </div>
                   </div>
                   <Button
