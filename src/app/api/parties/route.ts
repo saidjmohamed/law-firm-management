@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { caseId, role, side, name, phone, lawyerName, lawyerPhone, totalFees, paidAmount } = body;
+    const { caseId, role, side, name, phone, lawyerName, lawyerPhone, totalFees, paidAmount, phone2, address, wilaya, nationalId, contactNotes } = body;
 
     const party = await prisma.party.create({
       data: {
@@ -44,6 +44,11 @@ export async function POST(request: NextRequest) {
         lawyerPhone: lawyerPhone ?? '',
         totalFees: totalFees ?? 0,
         paidAmount: paidAmount ?? 0,
+        phone2: phone2 ?? '',
+        address: address ?? null,
+        wilaya: wilaya ?? 16,
+        nationalId: nationalId ?? null,
+        contactNotes: contactNotes ?? null,
       },
     });
 
