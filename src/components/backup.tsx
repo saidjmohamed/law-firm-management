@@ -413,6 +413,9 @@ export function BackupManager() {
         <CardContent>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <StatBadge label="القضايا" count={stats.cases} />
+            <StatBadge label="المهام" count={stats.tasks} />
+            <StatBadge label="المحامون" count={stats.lawyers} />
+            <StatBadge label="الهيئات القضائية" count={stats.judicialBodies} />
             <StatBadge label="الأطراف" count={stats.parties} />
             <StatBadge label="الجلسات" count={stats.sessions} />
             <StatBadge label="المدفوعات" count={stats.payments} />
