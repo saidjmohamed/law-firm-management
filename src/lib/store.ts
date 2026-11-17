@@ -2,7 +2,7 @@ import { create } from 'zustand';
 
 type Section =
   | 'dashboard'
-  | 'clients'
+  | 'represented-parties'
   | 'cases'
   | 'sessions'
   | 'calendar'
