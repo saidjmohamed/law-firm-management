@@ -65,6 +65,7 @@ export async function POST(request: NextRequest) {
         registrationDate: toDateOrNull(body.registrationDate),
         firstSessionDate: toDateOrNull(body.firstSessionDate),
         delibDate: toDateOrNull(body.delibDate),
+        judgmentDate: toDateOrNull(body.judgmentDate),
         barPhone: body.barPhone || '',
         lawyer: body.lawyer || '',
         notes: body.notes || '',
