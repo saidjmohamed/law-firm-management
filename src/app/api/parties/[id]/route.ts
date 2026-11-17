@@ -12,6 +12,7 @@ export async function GET(
       include: {
         case: {
           select: {
+            id: true,
             caseNumber: true,
             subject: true,
           },
