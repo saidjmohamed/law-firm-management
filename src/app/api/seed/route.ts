@@ -12,14 +12,6 @@ import { toDateOrNull } from '@/lib/date-utils';
 // تسجيل الدخول، وليس عبر هذا المسار.
 // ============================================================================
 
-const SEED_CLIENTS: { name: string; phone?: string }[] = [
-  { name: 'موكل تجريبي 1', phone: '0550000001' },
-  { name: 'موكل تجريبي 2', phone: '0550000002' },
-  { name: 'موكل تجريبي 3', phone: '0550000003' },
-  { name: 'موكل تجريبي 4', phone: '0550000004' },
-  { name: 'موكل تجريبي 5', phone: '0550000005' },
-];
-
 const SEED_COURTS: {
   name: string;
   type: string;
@@ -58,7 +50,6 @@ interface SeedCase {
   litigationStage: string;
   origCaseNumber?: string;
   status: string;
-  clientName?: string;
   councilName?: string;
   courtName?: string;
   courtLevel?: string;
@@ -90,7 +81,6 @@ const DEMO_CASES: SeedCase[] = [
     caseNature: 'مدني',
     litigationStage: 'افتتاحية (ابتدائي)',
     status: 'جارية',
-    clientName: 'موكل تجريبي 1',
     councilName: 'مجلس قضاء الجزائر',
     courtName: 'محكمة بئرمرادراريس',
     courtLevel: 'court',
@@ -113,7 +103,6 @@ const DEMO_CASES: SeedCase[] = [
     litigationStage: 'استئنافية',
     origCaseNumber: 'تجريبي-2025-010',
     status: 'مؤرشفة',
-    clientName: 'موكل تجريبي 2',
     councilName: 'مجلس قضاء الجزائر',
     courtName: 'مجلس قضاء الجزائر',
     courtLevel: 'council',
@@ -136,7 +125,6 @@ const DEMO_CASES: SeedCase[] = [
     caseNature: 'جنحة',
     litigationStage: 'افتتاحية (ابتدائي)',
     status: 'جارية',
-    clientName: 'موكل تجريبي 3',
     councilName: 'المحكمة العليا',
     courtName: 'المحكمة العليا',
     courtLevel: 'supreme',
@@ -155,7 +143,6 @@ const DEMO_CASES: SeedCase[] = [
     caseNature: 'اداري استئنافي',
     litigationStage: 'افتتاحية (ابتدائي)',
     status: 'جارية',
-    clientName: 'موكل تجريبي 4',
     councilName: 'مجلس قضاء الجزائر',
     courtName: 'المحكمة الإدارية الاستئنافية بالجزائر',
     courtLevel: 'admin_appeal',
@@ -175,7 +162,6 @@ const DEMO_CASES: SeedCase[] = [
     caseNature: 'مدني',
     litigationStage: 'استئنافية',
     status: 'مؤرشفة',
-    clientName: 'موكل تجريبي 5',
     councilName: 'مجلس قضاء المدية',
     courtName: 'مجلس قضاء المدية',
     courtLevel: 'council',
@@ -280,11 +266,10 @@ export async function POST() {
             parties: {
               createMany: {
                 data: [
-                  ...(seedCase.clientName ? [{ role: '', side: 'for', name: seedCase.clientName, phone: '' }] : []),
                   ...(seedCase.parties ?? []),
                 ].map((p) => ({
                   role: p.role ?? '',
-                  side: p.side ?? 'against',
+                  side: p.side ?? (['مدعى عليه', 'مستأنف ضده', 'مستأنف عليه', 'مطلوب', 'متهم', 'مشتكى منه', 'معارض ضده'].includes(p.role ?? '') ? 'against' : 'for'),
                   name: p.name ?? '',
                   phone: p.phone ?? '',
                   lawyerName: p.lawyerName ?? '',
@@ -333,7 +318,6 @@ export async function POST() {
       }
 
       return {
-        clients: SEED_CLIENTS.length,
         cases: DEMO_CASES.length,
         courts: SEED_COURTS.length,
       };
