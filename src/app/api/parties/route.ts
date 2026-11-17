@@ -47,9 +47,6 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // إعادة حساب Case.totalFees و Case.paidAmount من أطراف القضية
-    await recalculateCaseFees(caseId);
-
     return NextResponse.json(party, { status: 201 });
   } catch (error) {
     console.error('Error creating party:', error);
@@ -57,15 +54,3 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// دالة مساعدة لإعادة حساب أتعاب القضية من أطرافها
-async function recalculateCaseFees(caseId: number) {
-  const parties = await prisma.party.findMany({
-    where: { caseId, side: 'for' },
-  });
-  const totalFees = parties.reduce((sum, p) => sum + (p.totalFees || 0), 0);
-  const paidAmount = parties.reduce((sum, p) => sum + (p.paidAmount || 0), 0);
-  await prisma.case.update({
-    where: { id: caseId },
-    data: { totalFees, paidAmount },
-  });
-}
