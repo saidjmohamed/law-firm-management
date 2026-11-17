@@ -158,8 +158,7 @@ export async function PATCH(
       await createJudgmentFollowUpTasks(
         parseInt(id),
         normalized.caseResult,
-        updatedCase.caseNumber || undefined,
-        updatedCase.clientId
+        updatedCase.caseNumber || undefined
       );
     }
 
