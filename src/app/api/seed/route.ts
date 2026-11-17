@@ -67,6 +67,7 @@ interface SeedCase {
   parties?: {
     role: string;
     name: string;
+    side?: string;
     phone?: string;
     lawyerName?: string;
     lawyerPhone?: string;
