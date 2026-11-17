@@ -1021,7 +1021,6 @@ export function Cases() {
                       `- **تاريخ التسجيل:** ${date(selectedCase.registrationDate)}`,
                       `- **تاريخ أول جلسة:** ${date(selectedCase.firstSessionDate)}`,
                       `- **تاريخ المداولة:** ${date(selectedCase.delibDate)}`,
-                      `- **تاريخ الحكم:** ${date((selectedCase as any).judgmentDate)}`,
                       `- **تاريخ الإنشاء:** ${date(selectedCase.createdAt)}`,
                       `- **آخر تحديث:** ${date(selectedCase.updatedAt)}`,
                       '',
@@ -1041,22 +1040,18 @@ export function Cases() {
                       '## 5. الوقائع والملاحظات',
                       selectedCase.notes || 'لا توجد ملاحظات مسجلة.',
                       '',
-                      '## 6. الأحكام والقرارات',
-                      `- **منطوق/بيانات الحكم:** ${selectedCase.judgment || 'لا توجد بيانات حكم.'}`,
-                      `- **تاريخ الحكم:** ${date((selectedCase as any).judgmentDate)}`,
-                      `- **نتيجة القضية:** ${selectedCase.caseResult || 'غير محددة'}`,
                       '',
-                      '## 7. الجلسات',
+                      '## 6. الجلسات',
                       ...(sessions.length ? sessions.map((session: any, index: number) =>
                         `### الجلسة ${index + 1} — ${date(session.date)}\n- الوقت: ${session.time || '—'}\n- المحكمة: ${session.court || '—'}\n- الغرفة: ${session.chamber || '—'}\n- القاعة: ${session.roomNumber || '—'}\n- الحالة: ${session.status || '—'}\n- النتيجة: ${session.result || '—'}\n- الملاحظات: ${session.notes || '—'}`
                       ) : ['لا توجد جلسات مسجلة.']),
                       '',
-                      '## 8. التأجيلات والآجال',
+                      '## 7. التأجيلات والآجال',
                       ...(delays.length ? delays.map((delay: any, index: number) =>
                         `### التأجيل ${index + 1}\n- التاريخ: ${date(delay.delayDate)}\n- السبب: ${delay.reason || '—'}\n- الملاحظات: ${delay.notes || '—'}`
                       ) : ['لا توجد تأجيلات مسجلة.']),
                       '',
-                      '## 9. المدفوعات والحسابات',
+                      '## 8. المدفوعات والحسابات',
                       ...(payments.length ? payments.map((payment: any, index: number) =>
                         `### العملية ${index + 1}\n- التاريخ: ${date(payment.date)}\n- النوع: ${payment.type || '—'}\n- التصنيف: ${payment.category || '—'}\n- المبلغ: ${payment.amount ?? 0}\n- الملاحظات: ${payment.notes || '—'}`
                       ) : ['لا توجد مدفوعات مسجلة أو غير متاحة في بيانات التصدير.']),
@@ -1064,12 +1059,12 @@ export function Cases() {
                       `- **المبلغ المدفوع:** ${selectedCase.paidAmount ?? 0}`,
                       `- **المتبقي:** ${(selectedCase.totalFees || 0) - (selectedCase.paidAmount || 0)}`,
                       '',
-                      '## 10. المهام والإجراءات المرتبطة',
+                      '## 9. المهام والإجراءات المرتبطة',
                       ...(caseTasks.length ? caseTasks.map((task: any, index: number) =>
                         `### المهمة ${index + 1} — ${task.title || 'دون عنوان'}\n- النوع: ${task.taskType || '—'}\n- الحالة: ${task.status || '—'}\n- الأولوية: ${task.priority || '—'}\n- تاريخ الاستحقاق: ${date(task.dueDate)}\n- بداية الإجراء: ${date(task.startDate)}\n- الأجل القانوني: ${date(task.legalDeadline)}\n- الوصف: ${task.description || '—'}\n- الملاحظات: ${task.notes || '—'}`
                       ) : ['لا توجد مهام مرتبطة بالقضية.']),
                       '',
-                      '## 11. بيانات النظام',
+                      '## 10. بيانات النظام',
                       `- **تاريخ الإنشاء في النظام:** ${date(selectedCase.createdAt)}`,
                       `- **آخر تحديث في النظام:** ${date(selectedCase.updatedAt)}`,
                       '',
