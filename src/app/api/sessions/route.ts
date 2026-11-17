@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
     if (sessionDate) {
       try {
         const relatedCase = caseId
-          ? await prisma.case.findUnique({ where: { id: caseId }, select: { caseNumber: true, subject: true, clientId: true } })
+          ? await prisma.case.findUnique({ where: { id: caseId }, select: { caseNumber: true, subject: true } })
           : null;
 
         await prisma.task.create({
@@ -67,7 +67,6 @@ export async function POST(request: NextRequest) {
             sourceType: 'session',
             sourceId: session.id,
             relatedCaseId: caseId ?? null,
-            relatedClientId: relatedCase?.clientId ?? null,
             notes: notes || null,
           },
         });
