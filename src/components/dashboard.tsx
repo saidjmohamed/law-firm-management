@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { useCases, useClients, useDelays, useSessions, usePayments, useParties, useTasks } from '@/lib/api';
+import { useCases, useDelays, useSessions, usePayments, useParties, useTasks } from '@/lib/api';
 import { formatCurrency, STATUS_COLORS, CASE_NATURES, formatDate } from '@/lib/constants';
 import { DateDisplay } from '@/components/ui/date-display';
 import { useAppStore } from '@/lib/store';
@@ -79,7 +79,6 @@ export function Dashboard() {
   const setSelectedCaseId = useAppStore((s) => s.setSelectedCaseId);
 
   const { cases, isLoading: casesLoading } = useCases();
-  const { clients, isLoading: clientsLoading } = useClients();
   const { delays } = useDelays();
   const { sessions } = useSessions();
   const { payments } = usePayments();
@@ -88,10 +87,10 @@ export function Dashboard() {
 
   const taskStats = React.useMemo(() => computeTaskStats(tasks), [tasks]);
 
-  const isLoading = casesLoading || clientsLoading;
+  const isLoading = casesLoading;
 
   const totalCases = cases.length;
-  const totalClients = clients.length;
+  const representedParties = parties.filter((p: any) => p.side === 'for').length;
   const activeCases = cases.filter((c: any) => c.status === 'جارية').length;
   const archivedCases = cases.filter((c: any) => c.status === 'مؤرشفة').length;
   const totalFees = cases.reduce((sum: number, c: any) => sum + (c.totalFees || 0), 0);
@@ -263,8 +262,8 @@ export function Dashboard() {
           color="teal"
         />
         <StatCard
-          title="الموكلون"
-          value={(totalClients).toLocaleString('en-US')}
+          title="الأطراف الذين نمثلهم"
+          value={(representedParties).toLocaleString('en-US')}
           icon={Users}
           color="blue"
         />
@@ -361,7 +360,7 @@ export function Dashboard() {
           className="touch-target hover:border-primary/40 hover:bg-accent/50"
         >
           <Plus className="w-4 h-4 ml-2" />
-          إضافة موكل
+          إضافة طرف إلى قضية
         </Button>
         <Button
           variant="outline"
