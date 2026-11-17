@@ -1625,423 +1625,6 @@ export function Cases() {
           </DialogHeader>
 
           <div className="space-y-6">
-            {/* المعلومات الأساسية */}
-            <div>
-              <h3 className="text-sm font-bold mb-3 text-teal-700 dark:text-teal-400">المعلومات الأساسية</h3>
-              {/* تنبيه تكرار رقم القضية */}
-              {(caseDuplicateWarning && caseDuplicateWarning.length > 0) ? (
-                <DuplicateAlert
-                  duplicates={caseDuplicateWarning}
-                  entityType="قضية"
-                  onForceProceed={() => { setForceSaveCase(true); saveCase(); }}
-                  onDismiss={() => setCaseDuplicateWarning(null)}
-                />
-              ) : caseNumberDuplicates.length > 0 && !editingCase?.id ? (
-                <DuplicateAlert
-                  duplicates={caseNumberDuplicates}
-                  entityType="قضية"
-                  onForceProceed={() => { setForceSaveCase(true); saveCase(); }}
-                  onDismiss={() => setCaseDuplicateWarning(null)}
-                  extraInfo="يوجد قضية بنفس الرقم:"
-                />
-              ) : null}
-              {/* تنبيه تكرار أسماء الأطراف */}
-              {partyNameDuplicates.length > 0 && (
-                <div className="rounded-lg border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 p-2.5 flex items-center gap-2">
-                  <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
-                  <p className="text-xs text-amber-700 dark:text-amber-400">
-                    أسماء مكررة في الأطراف: {partyNameDuplicates.map(d => d.name).join('، ')}
-                  </p>
-                </div>
-              )}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div>
-                  <Label className="text-xs">رقم القضية</Label>
-                  <Input
-                    value={formData.caseNumber || ''}
-                    onChange={(e) => { setFormData({ ...formData, caseNumber: e.target.value }); setCaseDuplicateWarning(null); setForceSaveCase(false); }}
-                    placeholder="رقم القضية"
-                    className={`h-11 ${caseNumberDuplicates.length > 0 && !editingCase?.id ? 'border-amber-400 focus-visible:ring-amber-400' : ''}`}
-                  />
-                </div>
-                <div>
-                  <Label className="text-xs">الموضوع</Label>
-                  <Input
-                    value={formData.subject || ''}
-                    onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
-                    placeholder="موضوع القضية"
-                    className="h-11"
-                  />
-                </div>
-                <div>
-                  <Label className="text-xs">طبيعة القضية</Label>
-                  <SelectWithCustom
-                    field="caseNature"
-                    value={formData.caseNature || ''}
-                    onChange={v => setFormData({ ...formData, caseNature: v })}
-                    staticOptions={CASE_NATURES.map(n => ({ value: n, label: n }))}
-                    placeholder="اختر طبيعة القضية..."
-                  />
-                </div>
-                <div>
-                  <Label className="text-xs">حالة القضية</Label>
-                  <SelectWithCustom
-                    field="caseStatus"
-                    value={formData.status || ''}
-                    onChange={v => setFormData({ ...formData, status: v })}
-                    staticOptions={CASE_STATUSES.map(s => ({ value: s, label: s }))}
-                    placeholder="اختر الحالة..."
-                  />
-                </div>
-                <div>
-                  <Label className="text-xs">مرحلة التقاضي</Label>
-                  <SelectWithCustom
-                    field="litigationStage"
-                    value={formData.litigationStage || ''}
-                    onChange={v => setFormData({ ...formData, litigationStage: v })}
-                    staticOptions={LITIGATION_STAGES.map(s => ({ value: s, label: s }))}
-                    placeholder="اختر مرحلة التقاضي..."
-                  />
-                </div>
-                <div>
-                  <Label className="text-xs">رقم القضية الأصلية</Label>
-                  <Input
-                    value={formData.origCaseNumber || ''}
-                    onChange={(e) => setFormData({ ...formData, origCaseNumber: e.target.value })}
-                    placeholder="للاستئناف/المعارضة"
-                    className="h-11"
-                  />
-                </div>
-
-              </div>
-            </div>
-
-            {/* التسلسل القضائي */}
-            <div>
-              <h3 className="text-sm font-bold mb-3 text-teal-700 dark:text-teal-400">التسلسل القضائي</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {/* نوع القضاء */}
-                <div>
-                  <Label className="text-xs">نوع القضاء</Label>
-                  <Select value={formData.judiciaryType || ''} onValueChange={(v) => {
-                    const newData: Partial<CaseType> = { ...formData, judiciaryType: v, courtLevel: undefined, courtId: undefined, wilayaId: undefined, chamber: '', councilName: '', courtName: '' };
-                    if (v === 'supreme') {
-                      newData.courtLevel = 'supreme';
-                      newData.councilName = 'المحكمة العليا';
-                      newData.courtName = 'المحكمة العليا';
-                      const supreme = judicialBodies?.find(b => b.type === 'supreme');
-                      if (supreme?.id) newData.courtId = supreme.id;
-                    } else if (v === 'commercial') {
-                      newData.courtLevel = 'commercial';
-                      newData.courtName = 'المحكمة التجارية المتخصصة';
-                    }
-                    setFormData(newData);
-                  }}>
-                    <SelectTrigger className="h-11"><SelectValue placeholder="اختر نوع القضاء" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="_empty">—</SelectItem>
-                      {JUDICIARY_TYPES.map((jt) => (
-                        <SelectItem key={jt.value} value={jt.value}>{jt.label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* مستوى المحكمة - يظهر فقط للقضاء العادي أو الإداري */}
-                {formData.judiciaryType === 'ordinary' && (
-                  <div>
-                    <Label className="text-xs">مستوى المحكمة</Label>
-                    <Select value={formData.courtLevel || ''} onValueChange={(v) => {
-                      setFormData({ ...formData, courtLevel: v, courtId: undefined, chamber: '', councilName: '', courtName: '' });
-                    }}>
-                      <SelectTrigger className="h-11"><SelectValue placeholder="اختر المستوى" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="_empty">—</SelectItem>
-                        {ORDINARY_COURT_LEVELS.map((cl) => (
-                          <SelectItem key={cl.value} value={cl.value}>{cl.label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
-                {formData.judiciaryType === 'admin' && (
-                  <div>
-                    <Label className="text-xs">نوع المحكمة الإدارية</Label>
-                    <Select value={formData.courtLevel || ''} onValueChange={(v) => {
-                      setFormData({ ...formData, courtLevel: v, courtId: undefined, chamber: '', councilName: '', courtName: '' });
-                    }}>
-                      <SelectTrigger className="h-11"><SelectValue placeholder="اختر النوع" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="_empty">—</SelectItem>
-                        {ADMIN_COURT_LEVELS.map((cl) => (
-                          <SelectItem key={cl.value} value={cl.value}>{cl.label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
-
-                {/* الولاية */}
-                {formData.judiciaryType && formData.judiciaryType !== 'supreme' && (
-                  <div>
-                    <Label className="text-xs">الولاية</Label>
-                    <Select value={formData.wilayaId?.toString() || ''} onValueChange={(v) => {
-                      setFormData({ ...formData, wilayaId: v ? Number(v) : undefined, courtId: undefined, chamber: '', councilName: '', courtName: '' });
-                    }}>
-                      <SelectTrigger className="h-11"><SelectValue placeholder="اختر الولاية" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="_empty">—</SelectItem>
-                        {WILAYAS.map((w) => (
-                          <SelectItem key={w.code} value={w.code.toString()}>{w.code} - {w.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
-
-                {/* الهيئة القضائية */}
-                {filteredBodies.length > 0 && formData.judiciaryType !== 'supreme' && (
-                  <div>
-                    <div className="flex items-center justify-between">
-                      <Label className="text-xs">الهيئة القضائية</Label>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-6 text-xs text-teal-600 hover:text-teal-700 px-1"
-                        onClick={() => {
-                          setNewCourtData({
-                            type: formData.courtLevel || '',
-                            wilayaId: formData.wilayaId,
-                          });
-                          setShowNewCourtDialog(true);
-                        }}
-                      >
-                        <Building2 className="w-3 h-3 ml-0.5" />
-                        هيئة جديدة
-                      </Button>
-                    </div>
-                    <Select value={formData.courtId?.toString() || ''} onValueChange={(v) => {
-                      const body = judicialBodies?.find(b => b.id === Number(v));
-                      // استخراج أول رقم هاتف من الهيئة القضائية لملء هاتف قاعة المحامين تلقائياً
-                      let autoBarPhone = '';
-                      if (body?.phones) {
-                        try {
-                          const p = JSON.parse(body.phones);
-                          if (Array.isArray(p) && p.length > 0) {
-                            autoBarPhone = p.filter((x: string) => x.trim())[0] || '';
-                          }
-                        } catch {}
-                      }
-                      setFormData({
-                        ...formData,
-                        courtId: Number(v),
-                        courtName: body?.name || '',
-                        councilName: body?.type === 'council' ? body.name : formData.councilName,
-                        chamber: '',
-                        barPhone: autoBarPhone || formData.barPhone,
-                      });
-                    }}>
-                      <SelectTrigger className="h-11"><SelectValue placeholder="اختر الهيئة" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="_empty">—</SelectItem>
-                        {filteredBodies.map((b) => (
-                          <SelectItem key={b.id} value={b.id!.toString()}>{b.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    {formData.courtId && (() => {
-                      const selectedBody = judicialBodies?.find(b => b.id === formData.courtId);
-                      const bodyPhones = selectedBody?.phones ? (() => { try { const p = JSON.parse(selectedBody.phones); return Array.isArray(p) ? p.filter((x: string) => x.trim()) : []; } catch { return []; } })() : [];
-                      return bodyPhones.length > 0 ? (
-                        <div className="mt-1.5 flex items-center gap-1.5 flex-wrap">
-                          <Phone className="w-3 h-3 text-teal-600 dark:text-teal-400" />
-                          {bodyPhones.map((ph: string, i: number) => (
-                            <span key={i} className="text-xs font-mono text-teal-700 dark:text-teal-400 dir-ltr">{ph}{i < bodyPhones.length - 1 ? ' /' : ''}</span>
-                          ))}
-                        </div>
-                      ) : null;
-                    })()}
-                  </div>
-                )}
-
-                {/* الغرفة/القسم */}
-                <div>
-                  <Label className="text-xs">الغرفة/القسم</Label>
-                  <SelectWithCustom
-                    field="chamber"
-                    value={formData.chamber || ''}
-                    onChange={v => setFormData({ ...formData, chamber: v })}
-                    staticOptions={availableChambers.map(c => ({ value: c, label: c }))}
-                    placeholder="اختر الغرفة..."
-                  />
-                </div>
-
-                {/* المجلس - يدوياً أو من الهيئة */}
-                <div>
-                  <Label className="text-xs">المجلس</Label>
-                  <Input
-                    value={formData.councilName || ''}
-                    onChange={(e) => setFormData({ ...formData, councilName: e.target.value })}
-                    placeholder="اسم المجلس"
-                    className="h-11"
-                  />
-                </div>
-
-                {/* المحكمة - يدوياً أو من الهيئة */}
-                <div>
-                  <Label className="text-xs">المحكمة</Label>
-                  <Input
-                    value={formData.courtName || ''}
-                    onChange={(e) => setFormData({ ...formData, courtName: e.target.value })}
-                    placeholder="اسم المحكمة"
-                    className="h-11"
-                  />
-                </div>
-
-                <div>
-                  <Label className="text-xs">هاتف قاعة المحامين</Label>
-                  <Input
-                    value={formData.barPhone || ''}
-                    onChange={(e) => setFormData({ ...formData, barPhone: e.target.value })}
-                    placeholder="رقم الهاتف"
-                    className="h-11"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* المالية - ملخص محسوب من الأطراف */}
-            <div>
-              <h3 className="text-sm font-bold mb-3 text-teal-700 dark:text-teal-400">المالية (إجمالي)</h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <div>
-                  <Label className="text-xs">إجمالي الأتعاب (د.ج)</Label>
-                  <Input
-                    type="number"
-                    value={parties.filter(p => (p.side || 'for') === 'for').reduce((sum, p) => sum + (p.totalFees || 0), 0).toLocaleString('en-US')}
-                    disabled
-                    className="bg-muted h-11"
-                  />
-                </div>
-                <div>
-                  <Label className="text-xs">إجمالي المدفوع (د.ج)</Label>
-                  <Input
-                    type="number"
-                    value={parties.filter(p => (p.side || 'for') === 'for').reduce((sum, p) => sum + (p.paidAmount || 0), 0).toLocaleString('en-US')}
-                    disabled
-                    className="bg-muted h-11"
-                  />
-                </div>
-                <div>
-                  <Label className="text-xs">إجمالي المتبقي (د.ج)</Label>
-                  <Input
-                    type="number"
-                    value={(() => {
-                      const forP = parties.filter(p => (p.side || 'for') === 'for');
-                      const total = forP.reduce((s, p) => s + (p.totalFees || 0), 0);
-                      const paid = forP.reduce((s, p) => s + (p.paidAmount || 0), 0);
-                      return (total - paid).toLocaleString('en-US');
-                    })()}
-                    disabled
-                    className="bg-muted h-11"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* كشف أتعاب كل موكل - مرتبط مباشرة بالملخص المالي */}
-            <div className="rounded-xl border border-border bg-card p-3 sm:p-4 space-y-3">
-              <div className="flex items-center justify-between gap-2">
-                <div>
-                  <h3 className="text-sm font-bold text-foreground">كشف أتعاب كل موكل</h3>
-                  <p className="text-xs text-muted-foreground mt-1">تفصيل مستقل للمبالغ المسجلة لكل موكل في حقه</p>
-                </div>
-                <Badge variant="secondary">
-                  {parties.filter(p => (p.side || 'for') === 'for').length} موكل
-                </Badge>
-              </div>
-              {parties.filter(p => (p.side || 'for') === 'for').length > 0 ? (
-                <div className="overflow-x-auto rounded-lg border">
-                  <table className="w-full min-w-[620px] text-sm text-right">
-                    <thead className="bg-muted/60 text-muted-foreground">
-                      <tr>
-                        <th className="px-3 py-2.5 font-semibold">الموكل</th>
-                        <th className="px-3 py-2.5 font-semibold">الأتعاب</th>
-                        <th className="px-3 py-2.5 font-semibold">المدفوع</th>
-                        <th className="px-3 py-2.5 font-semibold">المتبقي</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {parties.filter(p => (p.side || 'for') === 'for').map((party, index) => {
-                        const fees = Number(party.totalFees || 0);
-                        const paid = Number(party.paidAmount || 0);
-                        const remaining = fees - paid;
-                        return (
-                          <tr key={party.id} className={index % 2 === 0 ? 'bg-background' : 'bg-muted/20'}>
-                            <td className="px-3 py-2.5 font-medium">{party.name?.trim() || 'موكل دون اسم'}</td>
-                            <td className="px-3 py-2.5 tabular-nums">{formatCurrency(fees)}</td>
-                            <td className="px-3 py-2.5 tabular-nums text-emerald-700 dark:text-emerald-400">{formatCurrency(paid)}</td>
-                            <td className={`px-3 py-2.5 tabular-nums font-semibold ${remaining > 0 ? 'text-amber-700 dark:text-amber-400' : 'text-emerald-700 dark:text-emerald-400'}`}>
-                              {formatCurrency(remaining)}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                    <tfoot className="border-t bg-muted/50 font-bold">
-                      <tr>
-                        <td className="px-3 py-2.5">إجمالي القضية</td>
-                        <td className="px-3 py-2.5 tabular-nums">{formatCurrency(parties.filter(p => (p.side || 'for') === 'for').reduce((sum, p) => sum + Number(p.totalFees || 0), 0))}</td>
-                        <td className="px-3 py-2.5 tabular-nums">{formatCurrency(parties.filter(p => (p.side || 'for') === 'for').reduce((sum, p) => sum + Number(p.paidAmount || 0), 0))}</td>
-                        <td className="px-3 py-2.5 tabular-nums">{formatCurrency(parties.filter(p => (p.side || 'for') === 'for').reduce((sum, p) => sum + Number(p.totalFees || 0) - Number(p.paidAmount || 0), 0))}</td>
-                      </tr>
-                    </tfoot>
-                  </table>
-                </div>
-              ) : (
-                <p className="rounded-lg bg-muted/40 px-3 py-4 text-center text-sm text-muted-foreground">
-                  أضف موكلاً بصفة «في حقه» لإظهار كشف أتعابه هنا.
-                </p>
-              )}
-            </div>
-
-            {/* التواريخ */}
-            <div>
-              <h3 className="text-sm font-bold mb-3 text-teal-700 dark:text-teal-400">التواريخ</h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <div>
-                  <Label className="text-xs">تاريخ التسجيل</Label>
-                  <Input
-                    type="date"
-                    dir="ltr"
-                    value={toDateInputValue(formData.registrationDate as any)}
-                    onChange={(e) => setFormData({ ...formData, registrationDate: e.target.value })}
-                    className="h-11"
-                  />
-                </div>
-                <div>
-                  <Label className="text-xs">أول جلسة</Label>
-                  <Input
-                    type="date"
-                    dir="ltr"
-                    value={toDateInputValue(formData.firstSessionDate as any)}
-                    onChange={(e) => setFormData({ ...formData, firstSessionDate: e.target.value })}
-                    className="h-11"
-                  />
-                </div>
-                <div>
-                  <Label className="text-xs">تاريخ المداولة</Label>
-                  <Input
-                    type="date"
-                    dir="ltr"
-                    value={toDateInputValue(formData.delibDate as any)}
-                    onChange={(e) => setFormData({ ...formData, delibDate: e.target.value })}
-                    className="h-11"
-                  />
-                </div>
-              </div>
-            </div>
-
             {/* أطراف النزاع */}
             <div>
               <div className="flex items-center justify-between mb-3">
@@ -2266,6 +1849,332 @@ export function Cases() {
               </div>
             </div>
 
+
+            {/* المعلومات الأساسية */}
+            <div>
+              <h3 className="text-sm font-bold mb-3 text-teal-700 dark:text-teal-400">المعلومات الأساسية</h3>
+              {/* تنبيه تكرار رقم القضية */}
+              {(caseDuplicateWarning && caseDuplicateWarning.length > 0) ? (
+                <DuplicateAlert
+                  duplicates={caseDuplicateWarning}
+                  entityType="قضية"
+                  onForceProceed={() => { setForceSaveCase(true); saveCase(); }}
+                  onDismiss={() => setCaseDuplicateWarning(null)}
+                />
+              ) : caseNumberDuplicates.length > 0 && !editingCase?.id ? (
+                <DuplicateAlert
+                  duplicates={caseNumberDuplicates}
+                  entityType="قضية"
+                  onForceProceed={() => { setForceSaveCase(true); saveCase(); }}
+                  onDismiss={() => setCaseDuplicateWarning(null)}
+                  extraInfo="يوجد قضية بنفس الرقم:"
+                />
+              ) : null}
+              {/* تنبيه تكرار أسماء الأطراف */}
+              {partyNameDuplicates.length > 0 && (
+                <div className="rounded-lg border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 p-2.5 flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
+                  <p className="text-xs text-amber-700 dark:text-amber-400">
+                    أسماء مكررة في الأطراف: {partyNameDuplicates.map(d => d.name).join('، ')}
+                  </p>
+                </div>
+              )}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-xs">رقم القضية</Label>
+                  <Input
+                    value={formData.caseNumber || ''}
+                    onChange={(e) => { setFormData({ ...formData, caseNumber: e.target.value }); setCaseDuplicateWarning(null); setForceSaveCase(false); }}
+                    placeholder="رقم القضية"
+                    className={`h-11 ${caseNumberDuplicates.length > 0 && !editingCase?.id ? 'border-amber-400 focus-visible:ring-amber-400' : ''}`}
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs">الموضوع</Label>
+                  <Input
+                    value={formData.subject || ''}
+                    onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
+                    placeholder="موضوع القضية"
+                    className="h-11"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs">طبيعة القضية</Label>
+                  <SelectWithCustom
+                    field="caseNature"
+                    value={formData.caseNature || ''}
+                    onChange={v => setFormData({ ...formData, caseNature: v })}
+                    staticOptions={CASE_NATURES.map(n => ({ value: n, label: n }))}
+                    placeholder="اختر طبيعة القضية..."
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs">حالة القضية</Label>
+                  <SelectWithCustom
+                    field="caseStatus"
+                    value={formData.status || ''}
+                    onChange={v => setFormData({ ...formData, status: v })}
+                    staticOptions={CASE_STATUSES.map(s => ({ value: s, label: s }))}
+                    placeholder="اختر الحالة..."
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs">مرحلة التقاضي</Label>
+                  <SelectWithCustom
+                    field="litigationStage"
+                    value={formData.litigationStage || ''}
+                    onChange={v => setFormData({ ...formData, litigationStage: v })}
+                    staticOptions={LITIGATION_STAGES.map(s => ({ value: s, label: s }))}
+                    placeholder="اختر مرحلة التقاضي..."
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs">رقم القضية الأصلية</Label>
+                  <Input
+                    value={formData.origCaseNumber || ''}
+                    onChange={(e) => setFormData({ ...formData, origCaseNumber: e.target.value })}
+                    placeholder="للاستئناف/المعارضة"
+                    className="h-11"
+                  />
+                </div>
+
+              </div>
+            </div>
+
+
+            {/* التواريخ */}
+            <div>
+              <h3 className="text-sm font-bold mb-3 text-teal-700 dark:text-teal-400">التواريخ</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div>
+                  <Label className="text-xs">تاريخ التسجيل</Label>
+                  <Input
+                    type="date"
+                    dir="ltr"
+                    value={toDateInputValue(formData.registrationDate as any)}
+                    onChange={(e) => setFormData({ ...formData, registrationDate: e.target.value })}
+                    className="h-11"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs">أول جلسة</Label>
+                  <Input
+                    type="date"
+                    dir="ltr"
+                    value={toDateInputValue(formData.firstSessionDate as any)}
+                    onChange={(e) => setFormData({ ...formData, firstSessionDate: e.target.value })}
+                    className="h-11"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs">تاريخ المداولة</Label>
+                  <Input
+                    type="date"
+                    dir="ltr"
+                    value={toDateInputValue(formData.delibDate as any)}
+                    onChange={(e) => setFormData({ ...formData, delibDate: e.target.value })}
+                    className="h-11"
+                  />
+                </div>
+              </div>
+            </div>
+
+
+            {/* التسلسل القضائي */}
+            <div>
+              <h3 className="text-sm font-bold mb-3 text-teal-700 dark:text-teal-400">التسلسل القضائي</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {/* نوع القضاء */}
+                <div>
+                  <Label className="text-xs">نوع القضاء</Label>
+                  <Select value={formData.judiciaryType || ''} onValueChange={(v) => {
+                    const newData: Partial<CaseType> = { ...formData, judiciaryType: v, courtLevel: undefined, courtId: undefined, wilayaId: undefined, chamber: '', councilName: '', courtName: '' };
+                    if (v === 'supreme') {
+                      newData.courtLevel = 'supreme';
+                      newData.councilName = 'المحكمة العليا';
+                      newData.courtName = 'المحكمة العليا';
+                      const supreme = judicialBodies?.find(b => b.type === 'supreme');
+                      if (supreme?.id) newData.courtId = supreme.id;
+                    } else if (v === 'commercial') {
+                      newData.courtLevel = 'commercial';
+                      newData.courtName = 'المحكمة التجارية المتخصصة';
+                    }
+                    setFormData(newData);
+                  }}>
+                    <SelectTrigger className="h-11"><SelectValue placeholder="اختر نوع القضاء" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="_empty">—</SelectItem>
+                      {JUDICIARY_TYPES.map((jt) => (
+                        <SelectItem key={jt.value} value={jt.value}>{jt.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* مستوى المحكمة - يظهر فقط للقضاء العادي أو الإداري */}
+                {formData.judiciaryType === 'ordinary' && (
+                  <div>
+                    <Label className="text-xs">مستوى المحكمة</Label>
+                    <Select value={formData.courtLevel || ''} onValueChange={(v) => {
+                      setFormData({ ...formData, courtLevel: v, courtId: undefined, chamber: '', councilName: '', courtName: '' });
+                    }}>
+                      <SelectTrigger className="h-11"><SelectValue placeholder="اختر المستوى" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="_empty">—</SelectItem>
+                        {ORDINARY_COURT_LEVELS.map((cl) => (
+                          <SelectItem key={cl.value} value={cl.value}>{cl.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+                {formData.judiciaryType === 'admin' && (
+                  <div>
+                    <Label className="text-xs">نوع المحكمة الإدارية</Label>
+                    <Select value={formData.courtLevel || ''} onValueChange={(v) => {
+                      setFormData({ ...formData, courtLevel: v, courtId: undefined, chamber: '', councilName: '', courtName: '' });
+                    }}>
+                      <SelectTrigger className="h-11"><SelectValue placeholder="اختر النوع" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="_empty">—</SelectItem>
+                        {ADMIN_COURT_LEVELS.map((cl) => (
+                          <SelectItem key={cl.value} value={cl.value}>{cl.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                {/* الولاية */}
+                {formData.judiciaryType && formData.judiciaryType !== 'supreme' && (
+                  <div>
+                    <Label className="text-xs">الولاية</Label>
+                    <Select value={formData.wilayaId?.toString() || ''} onValueChange={(v) => {
+                      setFormData({ ...formData, wilayaId: v ? Number(v) : undefined, courtId: undefined, chamber: '', councilName: '', courtName: '' });
+                    }}>
+                      <SelectTrigger className="h-11"><SelectValue placeholder="اختر الولاية" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="_empty">—</SelectItem>
+                        {WILAYAS.map((w) => (
+                          <SelectItem key={w.code} value={w.code.toString()}>{w.code} - {w.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                {/* الهيئة القضائية */}
+                {filteredBodies.length > 0 && formData.judiciaryType !== 'supreme' && (
+                  <div>
+                    <div className="flex items-center justify-between">
+                      <Label className="text-xs">الهيئة القضائية</Label>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 text-xs text-teal-600 hover:text-teal-700 px-1"
+                        onClick={() => {
+                          setNewCourtData({
+                            type: formData.courtLevel || '',
+                            wilayaId: formData.wilayaId,
+                          });
+                          setShowNewCourtDialog(true);
+                        }}
+                      >
+                        <Building2 className="w-3 h-3 ml-0.5" />
+                        هيئة جديدة
+                      </Button>
+                    </div>
+                    <Select value={formData.courtId?.toString() || ''} onValueChange={(v) => {
+                      const body = judicialBodies?.find(b => b.id === Number(v));
+                      // استخراج أول رقم هاتف من الهيئة القضائية لملء هاتف قاعة المحامين تلقائياً
+                      let autoBarPhone = '';
+                      if (body?.phones) {
+                        try {
+                          const p = JSON.parse(body.phones);
+                          if (Array.isArray(p) && p.length > 0) {
+                            autoBarPhone = p.filter((x: string) => x.trim())[0] || '';
+                          }
+                        } catch {}
+                      }
+                      setFormData({
+                        ...formData,
+                        courtId: Number(v),
+                        courtName: body?.name || '',
+                        councilName: body?.type === 'council' ? body.name : formData.councilName,
+                        chamber: '',
+                        barPhone: autoBarPhone || formData.barPhone,
+                      });
+                    }}>
+                      <SelectTrigger className="h-11"><SelectValue placeholder="اختر الهيئة" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="_empty">—</SelectItem>
+                        {filteredBodies.map((b) => (
+                          <SelectItem key={b.id} value={b.id!.toString()}>{b.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {formData.courtId && (() => {
+                      const selectedBody = judicialBodies?.find(b => b.id === formData.courtId);
+                      const bodyPhones = selectedBody?.phones ? (() => { try { const p = JSON.parse(selectedBody.phones); return Array.isArray(p) ? p.filter((x: string) => x.trim()) : []; } catch { return []; } })() : [];
+                      return bodyPhones.length > 0 ? (
+                        <div className="mt-1.5 flex items-center gap-1.5 flex-wrap">
+                          <Phone className="w-3 h-3 text-teal-600 dark:text-teal-400" />
+                          {bodyPhones.map((ph: string, i: number) => (
+                            <span key={i} className="text-xs font-mono text-teal-700 dark:text-teal-400 dir-ltr">{ph}{i < bodyPhones.length - 1 ? ' /' : ''}</span>
+                          ))}
+                        </div>
+                      ) : null;
+                    })()}
+                  </div>
+                )}
+
+                {/* الغرفة/القسم */}
+                <div>
+                  <Label className="text-xs">الغرفة/القسم</Label>
+                  <SelectWithCustom
+                    field="chamber"
+                    value={formData.chamber || ''}
+                    onChange={v => setFormData({ ...formData, chamber: v })}
+                    staticOptions={availableChambers.map(c => ({ value: c, label: c }))}
+                    placeholder="اختر الغرفة..."
+                  />
+                </div>
+
+                {/* المجلس - يدوياً أو من الهيئة */}
+                <div>
+                  <Label className="text-xs">المجلس</Label>
+                  <Input
+                    value={formData.councilName || ''}
+                    onChange={(e) => setFormData({ ...formData, councilName: e.target.value })}
+                    placeholder="اسم المجلس"
+                    className="h-11"
+                  />
+                </div>
+
+                {/* المحكمة - يدوياً أو من الهيئة */}
+                <div>
+                  <Label className="text-xs">المحكمة</Label>
+                  <Input
+                    value={formData.courtName || ''}
+                    onChange={(e) => setFormData({ ...formData, courtName: e.target.value })}
+                    placeholder="اسم المحكمة"
+                    className="h-11"
+                  />
+                </div>
+
+                <div>
+                  <Label className="text-xs">هاتف قاعة المحامين</Label>
+                  <Input
+                    value={formData.barPhone || ''}
+                    onChange={(e) => setFormData({ ...formData, barPhone: e.target.value })}
+                    placeholder="رقم الهاتف"
+                    className="h-11"
+                  />
+                </div>
+              </div>
+            </div>
+
+
             {/* التأجيلات */}
             <div>
               <div className="flex items-center justify-between mb-3">
@@ -2316,6 +2225,104 @@ export function Cases() {
                 </div>
               )}
             </div>
+
+
+            {/* المالية - ملخص محسوب من الأطراف */}
+            <div>
+              <h3 className="text-sm font-bold mb-3 text-teal-700 dark:text-teal-400">المالية (إجمالي)</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div>
+                  <Label className="text-xs">إجمالي الأتعاب (د.ج)</Label>
+                  <Input
+                    type="number"
+                    value={parties.filter(p => (p.side || 'for') === 'for').reduce((sum, p) => sum + (p.totalFees || 0), 0).toLocaleString('en-US')}
+                    disabled
+                    className="bg-muted h-11"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs">إجمالي المدفوع (د.ج)</Label>
+                  <Input
+                    type="number"
+                    value={parties.filter(p => (p.side || 'for') === 'for').reduce((sum, p) => sum + (p.paidAmount || 0), 0).toLocaleString('en-US')}
+                    disabled
+                    className="bg-muted h-11"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs">إجمالي المتبقي (د.ج)</Label>
+                  <Input
+                    type="number"
+                    value={(() => {
+                      const forP = parties.filter(p => (p.side || 'for') === 'for');
+                      const total = forP.reduce((s, p) => s + (p.totalFees || 0), 0);
+                      const paid = forP.reduce((s, p) => s + (p.paidAmount || 0), 0);
+                      return (total - paid).toLocaleString('en-US');
+                    })()}
+                    disabled
+                    className="bg-muted h-11"
+                  />
+                </div>
+              </div>
+            </div>
+
+
+            {/* كشف أتعاب كل موكل - مرتبط مباشرة بالملخص المالي */}
+            <div className="rounded-xl border border-border bg-card p-3 sm:p-4 space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <div>
+                  <h3 className="text-sm font-bold text-foreground">كشف أتعاب كل موكل</h3>
+                  <p className="text-xs text-muted-foreground mt-1">تفصيل مستقل للمبالغ المسجلة لكل موكل في حقه</p>
+                </div>
+                <Badge variant="secondary">
+                  {parties.filter(p => (p.side || 'for') === 'for').length} موكل
+                </Badge>
+              </div>
+              {parties.filter(p => (p.side || 'for') === 'for').length > 0 ? (
+                <div className="overflow-x-auto rounded-lg border">
+                  <table className="w-full min-w-[620px] text-sm text-right">
+                    <thead className="bg-muted/60 text-muted-foreground">
+                      <tr>
+                        <th className="px-3 py-2.5 font-semibold">الموكل</th>
+                        <th className="px-3 py-2.5 font-semibold">الأتعاب</th>
+                        <th className="px-3 py-2.5 font-semibold">المدفوع</th>
+                        <th className="px-3 py-2.5 font-semibold">المتبقي</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {parties.filter(p => (p.side || 'for') === 'for').map((party, index) => {
+                        const fees = Number(party.totalFees || 0);
+                        const paid = Number(party.paidAmount || 0);
+                        const remaining = fees - paid;
+                        return (
+                          <tr key={party.id} className={index % 2 === 0 ? 'bg-background' : 'bg-muted/20'}>
+                            <td className="px-3 py-2.5 font-medium">{party.name?.trim() || 'موكل دون اسم'}</td>
+                            <td className="px-3 py-2.5 tabular-nums">{formatCurrency(fees)}</td>
+                            <td className="px-3 py-2.5 tabular-nums text-emerald-700 dark:text-emerald-400">{formatCurrency(paid)}</td>
+                            <td className={`px-3 py-2.5 tabular-nums font-semibold ${remaining > 0 ? 'text-amber-700 dark:text-amber-400' : 'text-emerald-700 dark:text-emerald-400'}`}>
+                              {formatCurrency(remaining)}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                    <tfoot className="border-t bg-muted/50 font-bold">
+                      <tr>
+                        <td className="px-3 py-2.5">إجمالي القضية</td>
+                        <td className="px-3 py-2.5 tabular-nums">{formatCurrency(parties.filter(p => (p.side || 'for') === 'for').reduce((sum, p) => sum + Number(p.totalFees || 0), 0))}</td>
+                        <td className="px-3 py-2.5 tabular-nums">{formatCurrency(parties.filter(p => (p.side || 'for') === 'for').reduce((sum, p) => sum + Number(p.paidAmount || 0), 0))}</td>
+                        <td className="px-3 py-2.5 tabular-nums">{formatCurrency(parties.filter(p => (p.side || 'for') === 'for').reduce((sum, p) => sum + Number(p.totalFees || 0) - Number(p.paidAmount || 0), 0))}</td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              ) : (
+                <p className="rounded-lg bg-muted/40 px-3 py-4 text-center text-sm text-muted-foreground">
+                  أضف موكلاً بصفة «في حقه» لإظهار كشف أتعابه هنا.
+                </p>
+              )}
+            </div>
+
 
             {/* منطوق الحكم وملاحظات */}
             <div>
