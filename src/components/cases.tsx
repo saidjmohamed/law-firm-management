@@ -477,7 +477,7 @@ export function Cases() {
   async function saveCase() {
     try {
     // تنظيف البيانات من الحقول العلاقية قبل الإرسال
-    const { client, parties: _p, delays: _d, sessions: _s, payments: _pay, archives: _a, createdAt: _ca, updatedAt: _ua, ...cleanFormData } = formData as any;
+    const { parties: _p, delays: _d, sessions: _s, payments: _pay, archives: _a, createdAt: _ca, updatedAt: _ua, ...cleanFormData } = formData as any;
 
     // حساب إجمالي الأتعاب من الأطراف "في حقه"
     const forParties = parties.filter(p => (p.side || 'for') === 'for');
@@ -783,7 +783,7 @@ export function Cases() {
   }
 
   // Loading state
-  if (casesLoading || clientsLoading || bodiesLoading) {
+  if (casesLoading || bodiesLoading) {
     return <CasesSkeleton />;
   }
 
@@ -882,14 +882,14 @@ export function Cases() {
               <DetailField label="تاريخ المداولة" value={<DateDisplay value={selectedCase.delibDate as any} />} />
             </div>
 
-            {/* المالية - تفصيل حسب كل موكل */}
+            {/* المالية - تفصيل الأتعاب للأطراف الذين نمثلهم */}
             <Separator />
             <div>
               <h4 className="text-sm font-bold mb-2 flex items-center gap-1.5">
                 <Wallet className="w-4 h-4 text-teal-600 dark:text-teal-400" />
                 الأتعاب
               </h4>
-              {/* أتعاب كل موكل */}
+              {/* أتعاب الأطراف الذين نمثلهم */}
               {caseParties && caseParties.filter(p => (p.side || 'for') === 'for').length > 0 ? (
                 <div className="space-y-2 mb-3">
                   {caseParties.filter(p => (p.side || 'for') === 'for').map((p) => {
@@ -1231,7 +1231,7 @@ export function Cases() {
                   <CardContent className="p-4 space-y-3">
                     {(() => {
                       const casePartiesForCard = c.parties || allParties?.filter((p: any) => p.caseId === c.id) || [];
-                      const clientsForCard = casePartiesForCard.filter((p: any) => (p.side || 'for') === 'for');
+                      const representedPartiesForCard = casePartiesForCard.filter((p: any) => (p.side || 'for') === 'for');
                       const opponentsForCard = casePartiesForCard.filter((p: any) => p.side === 'against');
                       const caseSessionsForCard = c.sessions || allSessions?.filter((s: any) => s.caseId === c.id) || [];
                       const caseDelaysForCard = c.delays || allDelays?.filter((d: any) => d.caseId === c.id) || [];
@@ -1249,8 +1249,8 @@ export function Cases() {
                       if (c.delibDate) dateRows.push({ label: 'المداولة', value: c.delibDate, kind: 'base' });
                       if (c.judgmentDate) dateRows.push({ label: 'صدور الحكم', value: c.judgmentDate, detail: c.caseResult === 'won' ? 'حكم لصالح الطرف الذي نمثله' : c.caseResult === 'lost' ? 'حكم ضد الطرف الذي نمثله' : undefined, kind: 'judgment' });
                       dateRows.sort((a, b) => new Date(a.value).getTime() - new Date(b.value).getTime());
-                      const totalFeesCard = clientsForCard.length
-                        ? clientsForCard.reduce((sum: number, p: any) => sum + Number(p.totalFees || 0), 0)
+                      const totalFeesCard = representedPartiesForCard.length
+                        ? representedPartiesForCard.reduce((sum: number, p: any) => sum + Number(p.totalFees || 0), 0)
                         : Number(c.totalFees || 0);
                       const paidCard = clientsForCard.length
                         ? clientsForCard.reduce((sum: number, p: any) => sum + Number(p.paidAmount || 0), 0)
@@ -1286,7 +1286,7 @@ export function Cases() {
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                             <div className="rounded-lg border p-2.5 space-y-1.5">
                               <p className="text-xs font-bold text-teal-700 dark:text-teal-400">الأطراف الذين نمثلهم ومحاموهم</p>
-                              {clientsForCard.length ? clientsForCard.map((p: any) => (
+                              {clientsForCard.length ? representedPartiesForCard.map((p: any) => (
                                 <div key={p.id} className="text-xs flex flex-wrap gap-x-2 gap-y-0.5">
                                   <span className="font-semibold">{p.name || 'اسم غير محدد'}</span>
                                   <span className="text-muted-foreground">المحامي: {p.lawyerName || 'غير محدد'}</span>
