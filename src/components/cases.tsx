@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { Calendar as CalendarIcon, FileDown } from 'lucide-react';
-import { useCases, useClients, useParties, useDelays, useSessions, useJudicialBodies, useLawyers, useTasks, createCase, updateCase, deleteCase as apiDeleteCase, createParty, updateParty as apiUpdateParty, deleteParty as apiDeleteParty, createDelay, updateDelay as apiUpdateDelay, deleteDelay as apiDeleteDelay, createClient, createJudicialBody, createArchive, syncPartiesToClients } from '@/lib/api';
+import { Calendar as CalendarIcon } from 'lucide-react';
+import { useCases, useParties, useDelays, useSessions, useJudicialBodies, useLawyers, useTasks, createCase, updateCase, deleteCase as apiDeleteCase, createParty, updateParty as apiUpdateParty, deleteParty as apiDeleteParty, createDelay, updateDelay as apiUpdateDelay, deleteDelay as apiDeleteDelay, createJudicialBody, createArchive } from '@/lib/api';
 import { mutate } from 'swr';
 import { formatCurrency, STATUS_COLORS, CASE_NATURES, CASE_STATUSES, LITIGATION_STAGES, PARTY_ROLES, JUDICIAL_CHAMBERS, WILAYAS, JUDICIARY_TYPES, ORDINARY_COURT_LEVELS, ADMIN_COURT_LEVELS, CHAMBER_NUMBERS, formatDate } from '@/lib/constants';
 import { CasePrintButton } from '@/components/case-print';
@@ -124,7 +124,6 @@ interface CaseType {
   origCaseNumber?: string;
   customStage?: string;
   status?: string;
-  clientId?: number;
   wilayaId?: number;
   judiciaryType?: string;
   courtLevel?: string;
@@ -146,17 +145,9 @@ interface CaseType {
   caseResult?: string | null; // 'won' | 'lost' | null
   createdAt: string;
   updatedAt: string;
-  client?: { id: number; name?: string; googleDriveFolderId?: string | null };
   parties?: PartyType[];
   delays?: DelayType[];
   sessions?: SessionType[];
-}
-
-interface ClientType {
-  id: number;
-  name?: string;
-  phone?: string;
-  googleDriveFolderId?: string | null;
 }
 
 interface JudicialBodyType {
@@ -828,126 +819,7 @@ export function Cases() {
                   sessions={caseSessions || []}
                   courtPhones={judicialBodies?.find(b => b.id === selectedCase.courtId)?.phones}
                 />
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="touch-target"
-                  onClick={() => {
-                    const date = (value: unknown) => {
-                      if (!value) return '—';
-                      const parsed = new Date(String(value));
-                      return Number.isNaN(parsed.getTime()) ? String(value) : parsed.toLocaleDateString('ar-DZ');
-                    };
-                    const caseNumber = selectedCase.caseNumber || `بدون-رقم-${selectedCase.id}`;
-                    const caseTasks = (allTasks || []).filter((task: any) => task.relatedCaseId === selectedCase.id);
-                    const parties = caseParties || [];
-                    const delays = caseDelays || [];
-                    const sessions = caseSessions || [];
-                    const payments = (selectedCase as any).payments || [];
-                    const lines = [
-                      '---',
-                      'document_type: algerian_law_office_case',
-                      'document_version: 2',
-                      `case_id: ${selectedCase.id}`,
-                      `case_number: "${caseNumber.replace(/"/g, '\\"')}"`,
-                      `exported_at: "${new Date().toISOString()}"`,
-                      '---',
-                      '',
-                      `# ملف القضية: ${caseNumber}`,
-                      '',
-                      '## 1. الفهرسة والتعريف',
-                      `- **رقم القضية:** ${caseNumber}`,
-                      `- **رقم القضية الأصلية:** ${selectedCase.origCaseNumber || '—'}`,
-                      `- **المعرّف الداخلي للقضية:** ${selectedCase.id}`,
-                      '',
-                      '## 2. البيانات القضائية والإدارية',
-                      `- **الموضوع:** ${selectedCase.subject || '—'}`,
-                      `- **الحالة:** ${selectedCase.status || '—'}`,
-                      `- **طبيعة القضية:** ${selectedCase.caseNature || '—'}`,
-                      `- **مرحلة التقاضي:** ${selectedCase.litigationStage || '—'}`,
-                      `- **المرحلة المخصصة:** ${selectedCase.customStage || '—'}`,
-                      `- **نوع الجهة القضائية:** ${selectedCase.judiciaryType || '—'}`,
-                      `- **مستوى المحكمة:** ${selectedCase.courtLevel || '—'}`,
-                      `- **المجلس:** ${selectedCase.councilName || '—'}`,
-                      `- **المحكمة/الجهة القضائية:** ${selectedCase.courtName || '—'}`,
-                      `- **معرّف الهيئة القضائية:** ${selectedCase.courtId ?? '—'}`,
-                      `- **الغرفة:** ${selectedCase.chamber || '—'}`,
-                      `- **رقم الغرفة:** ${selectedCase.chamberNumber ?? '—'}`,
-                      `- **الولاية القضائية:** ${selectedCase.wilayaId ?? '—'}`,
-                      `- **المحامي المكلف:** ${selectedCase.lawyer || '—'}`,
-                      `- **هاتف قاعة المحامين:** ${selectedCase.barPhone || '—'}`,
-                      '',
-                      '## 3. التواريخ',
-                      `- **تاريخ التسجيل:** ${date(selectedCase.registrationDate)}`,
-                      `- **تاريخ أول جلسة:** ${date(selectedCase.firstSessionDate)}`,
-                      `- **تاريخ المداولة:** ${date(selectedCase.delibDate)}`,
-                      `- **تاريخ الإنشاء:** ${date(selectedCase.createdAt)}`,
-                      `- **آخر تحديث:** ${date(selectedCase.updatedAt)}`,
-                      '',
-                      '## 4. الأطراف',
-                      ...(parties.length ? parties.flatMap((party: any, index: number) => [
-                        `### 4.${index + 1} — ${party.name || 'طرف غير مسمى'}`,
-                        `- **معرّف الطرف:** ${party.id ?? '—'}`,
-                        `- **الصفة:** ${party.role || '—'}`,
-                        `- **الجهة:** ${party.side === 'against' ? 'ضده' : 'في حقه'}`,
-                        `- **الهاتف:** ${party.phone || '—'}`,
-                        `- **المحامي:** ${party.lawyerName || '—'}`,
-                        `- **هاتف المحامي:** ${party.lawyerPhone || '—'}`,
-                        `- **الأتعاب:** ${party.totalFees ?? 0}`,
-                        `- **المبلغ المدفوع:** ${party.paidAmount ?? 0}`,
-                        ''
-                      ]) : ['لا توجد أطراف مسجلة.', '']),
-                      '## 5. الوقائع والملاحظات',
-                      selectedCase.notes || 'لا توجد ملاحظات مسجلة.',
-                      '',
-                      '',
-                      '## 6. الجلسات',
-                      ...(sessions.length ? sessions.map((session: any, index: number) =>
-                        `### الجلسة ${index + 1} — ${date(session.date)}\n- الوقت: ${session.time || '—'}\n- المحكمة: ${session.court || '—'}\n- الغرفة: ${session.chamber || '—'}\n- القاعة: ${session.roomNumber || '—'}\n- الحالة: ${session.status || '—'}\n- النتيجة: ${session.result || '—'}\n- الملاحظات: ${session.notes || '—'}`
-                      ) : ['لا توجد جلسات مسجلة.']),
-                      '',
-                      '## 7. التأجيلات والآجال',
-                      ...(delays.length ? delays.map((delay: any, index: number) =>
-                        `### التأجيل ${index + 1}\n- التاريخ: ${date(delay.delayDate)}\n- السبب: ${delay.reason || '—'}\n- الملاحظات: ${delay.notes || '—'}`
-                      ) : ['لا توجد تأجيلات مسجلة.']),
-                      '',
-                      '## 8. المدفوعات والحسابات',
-                      ...(payments.length ? payments.map((payment: any, index: number) =>
-                        `### العملية ${index + 1}\n- التاريخ: ${date(payment.date)}\n- النوع: ${payment.type || '—'}\n- التصنيف: ${payment.category || '—'}\n- المبلغ: ${payment.amount ?? 0}\n- الملاحظات: ${payment.notes || '—'}`
-                      ) : ['لا توجد مدفوعات مسجلة أو غير متاحة في بيانات التصدير.']),
-                      `- **إجمالي الأتعاب:** ${selectedCase.totalFees ?? 0}`,
-                      `- **المبلغ المدفوع:** ${selectedCase.paidAmount ?? 0}`,
-                      `- **المتبقي:** ${(selectedCase.totalFees || 0) - (selectedCase.paidAmount || 0)}`,
-                      '',
-                      '## 9. المهام والإجراءات المرتبطة',
-                      ...(caseTasks.length ? caseTasks.map((task: any, index: number) =>
-                        `### المهمة ${index + 1} — ${task.title || 'دون عنوان'}\n- النوع: ${task.taskType || '—'}\n- الحالة: ${task.status || '—'}\n- الأولوية: ${task.priority || '—'}\n- تاريخ الاستحقاق: ${date(task.dueDate)}\n- بداية الإجراء: ${date(task.startDate)}\n- الأجل القانوني: ${date(task.legalDeadline)}\n- الوصف: ${task.description || '—'}\n- الملاحظات: ${task.notes || '—'}`
-                      ) : ['لا توجد مهام مرتبطة بالقضية.']),
-                      '',
-                      '## 10. بيانات النظام',
-                      `- **تاريخ الإنشاء في النظام:** ${date(selectedCase.createdAt)}`,
-                      `- **آخر تحديث في النظام:** ${date(selectedCase.updatedAt)}`,
-                      '',
-                      '---',
-                      '> ملف مولّد آلياً من تطبيق إدارة مكتب المحاماة. البيانات تعكس ما هو مسجل ومتاح في التطبيق وقت التصدير.',
-                      `> تاريخ التصدير: ${new Date().toLocaleString('ar-DZ')}`,
-                      ''
-                    ];
-                    const blob = new Blob([String.fromCharCode(0xFEFF) + lines.join(String.fromCharCode(10))], { type: 'text/markdown;charset=utf-8' });
-                    const url = URL.createObjectURL(blob);
-                    const link = document.createElement('a');
-                    link.href = url;
-                    link.download = `القضية-${selectedCase.id}.md`;
-                    document.body.appendChild(link);
-                    link.click();
-                    link.remove();
-                    URL.revokeObjectURL(url);
-                    toast.success('تم تصدير بيانات القضية');
-                  }}
-                >
-                  <FileDown className="w-3 h-3 ml-1" />
-                  تصدير MD
-                </Button>
+                
                 <CaseAnnouncementButton
                   caseData={selectedCase}
                   parties={caseParties || []}
@@ -1375,7 +1247,7 @@ export function Cases() {
                         detail: [x.reason, x.notes].filter(Boolean).join(' — '), kind: 'delay'
                       }));
                       if (c.delibDate) dateRows.push({ label: 'المداولة', value: c.delibDate, kind: 'base' });
-                      if (c.judgmentDate) dateRows.push({ label: 'صدور الحكم', value: c.judgmentDate, detail: c.caseResult === 'won' ? 'حكم لصالح الموكل' : c.caseResult === 'lost' ? 'حكم ضد الموكل' : undefined, kind: 'judgment' });
+                      if (c.judgmentDate) dateRows.push({ label: 'صدور الحكم', value: c.judgmentDate, detail: c.caseResult === 'won' ? 'حكم لصالح الطرف الذي نمثله' : c.caseResult === 'lost' ? 'حكم ضد الطرف الذي نمثله' : undefined, kind: 'judgment' });
                       dateRows.sort((a, b) => new Date(a.value).getTime() - new Date(b.value).getTime());
                       const totalFeesCard = clientsForCard.length
                         ? clientsForCard.reduce((sum: number, p: any) => sum + Number(p.totalFees || 0), 0)
@@ -1413,13 +1285,13 @@ export function Cases() {
 
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                             <div className="rounded-lg border p-2.5 space-y-1.5">
-                              <p className="text-xs font-bold text-teal-700 dark:text-teal-400">الموكلون ومحاموهم</p>
+                              <p className="text-xs font-bold text-teal-700 dark:text-teal-400">الأطراف الذين نمثلهم ومحاموهم</p>
                               {clientsForCard.length ? clientsForCard.map((p: any) => (
                                 <div key={p.id} className="text-xs flex flex-wrap gap-x-2 gap-y-0.5">
                                   <span className="font-semibold">{p.name || 'اسم غير محدد'}</span>
                                   <span className="text-muted-foreground">المحامي: {p.lawyerName || 'غير محدد'}</span>
                                 </div>
-                              )) : <p className="text-xs text-muted-foreground">لا توجد بيانات موكل مسجلة</p>}
+                              )) : <p className="text-xs text-muted-foreground">لا توجد أطراف نمثلها مسجلة</p>}
                             </div>
                             <div className="rounded-lg border p-2.5 space-y-1.5">
                               <p className="text-xs font-bold text-rose-700 dark:text-rose-400">الخصوم ومحاموهم</p>
@@ -1559,16 +1431,6 @@ export function Cases() {
                               // ملء الهاتف تلقائياً عند اختيار اسم من القائمة
                               if (v) {
                                 const nameKey = v.trim().toLowerCase();
-                                // أولاً: البحث في جدول الموكلين
-                                if (clientByNameMap[nameKey]) {
-                                  const existingClient = clientByNameMap[nameKey];
-                                  if (existingClient.phone && !updated[idx].phone) {
-                                    updated[idx] = { ...updated[idx], phone: existingClient.phone };
-                                  }
-                                  if (existingClient.phone2 && !updated[idx].phone) {
-                                    updated[idx] = { ...updated[idx], phone: existingClient.phone2 };
-                                  }
-                                }
                                 // ثانياً: البحث في أطراف القضايا السابقة
                                 if (partyPhoneMap[nameKey] && !updated[idx].phone) {
                                   updated[idx] = { ...updated[idx], phone: partyPhoneMap[nameKey] };
@@ -2091,7 +1953,7 @@ export function Cases() {
                   <Label className="text-xs">إجمالي الأتعاب (د.ج)</Label>
                   <Input
                     type="number"
-                    value={parties.filter(p => (p.side || 'for') === 'for').reduce((sum, p) => sum + (p.totalFees || 0), 0).toLocaleString('en-US')}
+                    value={Number(formData.totalFees || 0).toLocaleString('en-US')}
                     disabled
                     className="bg-muted h-11"
                   />
@@ -2100,7 +1962,7 @@ export function Cases() {
                   <Label className="text-xs">إجمالي المدفوع (د.ج)</Label>
                   <Input
                     type="number"
-                    value={parties.filter(p => (p.side || 'for') === 'for').reduce((sum, p) => sum + (p.paidAmount || 0), 0).toLocaleString('en-US')}
+                    value={Number(formData.paidAmount || 0).toLocaleString('en-US')}
                     disabled
                     className="bg-muted h-11"
                   />
@@ -2111,8 +1973,8 @@ export function Cases() {
                     type="number"
                     value={(() => {
                       const forP = parties.filter(p => (p.side || 'for') === 'for');
-                      const total = forP.reduce((s, p) => s + (p.totalFees || 0), 0);
-                      const paid = forP.reduce((s, p) => s + (p.paidAmount || 0), 0);
+                      const total = Number(formData.totalFees || 0);
+                      const paid = Number(formData.paidAmount || 0);
                       return (total - paid).toLocaleString('en-US');
                     })()}
                     disabled
@@ -2123,15 +1985,15 @@ export function Cases() {
             </div>
 
 
-            {/* كشف أتعاب كل موكل - مرتبط مباشرة بالملخص المالي */}
+            {/* كشف الأتعاب للأطراف الذين نمثلهم */}
             <div className="rounded-xl border border-border bg-card p-3 sm:p-4 space-y-3">
               <div className="flex items-center justify-between gap-2">
                 <div>
-                  <h3 className="text-sm font-bold text-foreground">كشف أتعاب كل موكل</h3>
-                  <p className="text-xs text-muted-foreground mt-1">تفصيل مستقل للمبالغ المسجلة لكل موكل في حقه</p>
+                  <h3 className="text-sm font-bold text-foreground">كشف الأتعاب للأطراف الذين نمثلهم</h3>
+                  <p className="text-xs text-muted-foreground mt-1">تفصيل مستقل للمبالغ المسجلة للأطراف الذين نمثلهم</p>
                 </div>
                 <Badge variant="secondary">
-                  {parties.filter(p => (p.side || 'for') === 'for').length} موكل
+                  {parties.filter(p => (p.side || 'for') === 'for').length} طرفاً
                 </Badge>
               </div>
               {parties.filter(p => (p.side || 'for') === 'for').length > 0 ? (
@@ -2139,7 +2001,7 @@ export function Cases() {
                   <table className="w-full min-w-[620px] text-sm text-right">
                     <thead className="bg-muted/60 text-muted-foreground">
                       <tr>
-                        <th className="px-3 py-2.5 font-semibold">الموكل</th>
+                        <th className="px-3 py-2.5 font-semibold">الطرف</th>
                         <th className="px-3 py-2.5 font-semibold">الأتعاب</th>
                         <th className="px-3 py-2.5 font-semibold">المدفوع</th>
                         <th className="px-3 py-2.5 font-semibold">المتبقي</th>
@@ -2152,7 +2014,7 @@ export function Cases() {
                         const remaining = fees - paid;
                         return (
                           <tr key={party.id} className={index % 2 === 0 ? 'bg-background' : 'bg-muted/20'}>
-                            <td className="px-3 py-2.5 font-medium">{party.name?.trim() || 'موكل دون اسم'}</td>
+                            <td className="px-3 py-2.5 font-medium">{party.name?.trim() || 'طرف دون اسم'}</td>
                             <td className="px-3 py-2.5 tabular-nums">{formatCurrency(fees)}</td>
                             <td className="px-3 py-2.5 tabular-nums text-emerald-700 dark:text-emerald-400">{formatCurrency(paid)}</td>
                             <td className={`px-3 py-2.5 tabular-nums font-semibold ${remaining > 0 ? 'text-amber-700 dark:text-amber-400' : 'text-emerald-700 dark:text-emerald-400'}`}>
@@ -2174,7 +2036,7 @@ export function Cases() {
                 </div>
               ) : (
                 <p className="rounded-lg bg-muted/40 px-3 py-4 text-center text-sm text-muted-foreground">
-                  أضف موكلاً بصفة «في حقه» لإظهار كشف أتعابه هنا.
+                  أضف طرفاً في مركز «في حقه» لإظهار كشف أتعابه هنا.
                 </p>
               )}
             </div>
