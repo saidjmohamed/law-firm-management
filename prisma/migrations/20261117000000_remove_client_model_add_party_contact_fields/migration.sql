@@ -55,7 +55,7 @@ SELECT
     'wilaya', cl."wilaya",
     'nationalId', cl."nationalId",
     'notes', cl."notes"
-  )), '[]'::json)::text,
+  )), '[]'::json)::text
 FROM "Client" AS cl
 WHERE NOT EXISTS (SELECT 1 FROM "Case" AS c WHERE c."clientId" = cl."id")
 HAVING COUNT(*) > 0
