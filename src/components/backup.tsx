@@ -359,7 +359,7 @@ export function BackupManager() {
         sessions: expectedCounts.sessions - importedCounts.sessions,
         payments: expectedCounts.payments - importedCounts.payments,
         delays: expectedCounts.delays - importedCounts.delays,
-        parties: expectedCounts.parties - importedCounts.parties,
+        parties: Math.max(0, expectedCounts.parties - importedCounts.parties),
         archives: expectedCounts.archives - importedCounts.archives,
         tasks: expectedCounts.tasks - importedCounts.tasks,
         lawyers: expectedCounts.lawyers - importedCounts.lawyers,
