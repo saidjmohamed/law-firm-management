@@ -206,9 +206,8 @@ export async function POST() {
 
     // فحص إضافي: حتى لو لم يكن seedVersion، تحقق من وجود بيانات
     const existingCases = await prisma.case.count();
-    const existingClients = await prisma.client.count();
 
-    if (existingCases > 0 || existingClients > 0) {
+    if (existingCases > 0) {
       return NextResponse.json(
         { message: 'البيانات موجودة مسبقاً — لا يمكن إعادة البذرة' },
         { status: 200 }
@@ -249,23 +248,8 @@ export async function POST() {
         courtIdMap[seedCourt.name] = court.id;
       }
 
-      // 3. إدراج الموكلين (وهميون بالكامل)
-      const clientIdMap: Record<string, number> = {};
-      for (const seedClient of SEED_CLIENTS) {
-        const client = await tx.client.create({
-          data: {
-            name: seedClient.name,
-            phone: seedClient.phone ?? '',
-          },
-        });
-        clientIdMap[seedClient.name] = client.id;
-      }
-
-      // 4. إدراج القضايا مع الأطراف والآجال والأرشيف (وهمية بالكامل)
+      // 3. إدراج القضايا مع الأطراف والآجال والأرشيف (وهمية بالكامل)
       for (const seedCase of DEMO_CASES) {
-        const clientId = seedCase.clientName
-          ? clientIdMap[seedCase.clientName]
-          : undefined;
 
         const courtId = seedCase.courtName
           ? courtIdMap[seedCase.courtName]
@@ -279,7 +263,6 @@ export async function POST() {
             litigationStage: seedCase.litigationStage,
             origCaseNumber: seedCase.origCaseNumber ?? '',
             status: seedCase.status,
-            clientId: clientId,
             wilayaId: seedCase.wilayaId ?? 16,
             courtLevel: seedCase.courtLevel ?? '',
             courtId: courtId,
@@ -296,8 +279,12 @@ export async function POST() {
             judgment: seedCase.judgment ?? '',
             parties: {
               createMany: {
-                data: (seedCase.parties ?? []).map((p) => ({
+                data: [
+                  ...(seedCase.clientName ? [{ role: '', side: 'for', name: seedCase.clientName, phone: '' }] : []),
+                  ...(seedCase.parties ?? []),
+                ].map((p) => ({
                   role: p.role ?? '',
+                  side: p.side ?? 'against',
                   name: p.name ?? '',
                   phone: p.phone ?? '',
                   lawyerName: p.lawyerName ?? '',
