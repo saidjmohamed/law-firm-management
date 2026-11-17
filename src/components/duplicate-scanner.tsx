@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { useClients, useLawyers, useJudicialBodies, useCases, useParties, deleteClient, deleteLawyer, deleteJudicialBody } from '@/lib/api';
+import { useLawyers, useJudicialBodies, useCases, useParties, deleteParty, deleteLawyer, deleteJudicialBody } from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -45,53 +45,39 @@ export function DuplicateScanner() {
   const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<{ type: string; id: number } | null>(null);
 
-  const { clients, isLoading: clientsLoading } = useClients();
   const { lawyers, isLoading: lawyersLoading } = useLawyers();
   const { judicialBodies, isLoading: bodiesLoading } = useJudicialBodies();
   const { cases, isLoading: casesLoading } = useCases();
   const { parties } = useParties();
 
-  const isLoading = clientsLoading || lawyersLoading || bodiesLoading || casesLoading;
+  const isLoading = lawyersLoading || bodiesLoading || casesLoading;
 
   // كشف جميع التكرارات
   const duplicateGroups = useMemo(() => {
     const groups: DuplicateGroup[] = [];
 
-    // 1. تكرار الموكلين بالاسم
-    const clientNameMap: Record<string, any[]> = {};
-    clients?.forEach((c: any) => {
-      if (!c.name?.trim()) return;
-      const key = c.name.trim().toLowerCase();
-      if (!clientNameMap[key]) clientNameMap[key] = [];
-      clientNameMap[key].push(c);
+    // 1. تكرار الأطراف داخل القضية نفسها فقط؛ تكرار الاسم عبر قضايا مختلفة ليس تكراراً.
+    const partyNameMap: Record<string, any[]> = {};
+    parties?.forEach((party: any) => {
+      if (!party.name?.trim()) return;
+      const key = `${party.caseId}:${party.name.trim().toLowerCase()}`;
+      if (!partyNameMap[key]) partyNameMap[key] = [];
+      partyNameMap[key].push(party);
     });
-    Object.entries(clientNameMap).forEach(([key, items]) => {
-      if (items.length > 1) {
-        groups.push({
-          key: `client-name-${key}`,
-          entityType: 'موكلون',
-          field: 'الاسم',
-          items,
-        });
-      }
+    Object.entries(partyNameMap).forEach(([key, items]) => {
+      if (items.length > 1) groups.push({ key: `party-name-${key}`, entityType: 'أطراف', field: 'الاسم داخل القضية', items });
     });
 
-    // 2. تكرار الموكلين بالهاتف
-    const clientPhoneMap: Record<string, any[]> = {};
-    clients?.forEach((c: any) => {
-      if (!c.phone?.trim()) return;
-      if (!clientPhoneMap[c.phone.trim()]) clientPhoneMap[c.phone.trim()] = [];
-      clientPhoneMap[c.phone.trim()].push(c);
+    // 2. تكرار الهاتف داخل القضية نفسها.
+    const partyPhoneMap: Record<string, any[]> = {};
+    parties?.forEach((party: any) => {
+      if (!party.phone?.trim()) return;
+      const key = `${party.caseId}:${party.phone.trim()}`;
+      if (!partyPhoneMap[key]) partyPhoneMap[key] = [];
+      partyPhoneMap[key].push(party);
     });
-    Object.entries(clientPhoneMap).forEach(([key, items]) => {
-      if (items.length > 1) {
-        groups.push({
-          key: `client-phone-${key}`,
-          entityType: 'موكلون',
-          field: 'الهاتف',
-          items,
-        });
-      }
+    Object.entries(partyPhoneMap).forEach(([key, items]) => {
+      if (items.length > 1) groups.push({ key: `party-phone-${key}`, entityType: 'أطراف', field: 'الهاتف داخل القضية', items });
     });
 
     // 3. تكرار المحامين بالاسم
@@ -169,13 +155,13 @@ export function DuplicateScanner() {
     });
 
     return groups;
-  }, [clients, lawyers, judicialBodies, cases, parties]);
+  }, [lawyers, judicialBodies, cases, parties]);
 
   const totalDuplicates = duplicateGroups.length;
 
   const entityIcon = (type: string) => {
     switch (type) {
-      case 'موكلون': return Users;
+      case 'أطراف': return Users;
       case 'محامون': return Scale;
       case 'هيئات قضائية': return Building2;
       case 'قضايا': return Briefcase;
@@ -185,7 +171,7 @@ export function DuplicateScanner() {
 
   const entityColor = (type: string) => {
     switch (type) {
-      case 'موكلون': return 'text-teal-600 dark:text-teal-400';
+      case 'أطراف': return 'text-teal-600 dark:text-teal-400';
       case 'محامون': return 'text-indigo-600 dark:text-indigo-400';
       case 'هيئات قضائية': return 'text-rose-600 dark:text-rose-400';
       case 'قضايا': return 'text-amber-600 dark:text-amber-400';
@@ -196,8 +182,8 @@ export function DuplicateScanner() {
   async function handleDeleteDuplicate(type: string, id: number) {
     try {
       switch (type) {
-        case 'موكلون':
-          await deleteClient(id);
+        case 'أطراف':
+          await deleteParty(id);
           break;
         case 'محامون':
           await deleteLawyer(id);
