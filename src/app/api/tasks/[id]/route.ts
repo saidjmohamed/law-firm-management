@@ -7,7 +7,7 @@ const ALLOWED_FIELDS = [
   'title', 'description', 'taskType', 'priority', 'status',
   'dueDate', 'startDate', 'legalDeadline',
   'reminderOffsets', 'sourceType', 'sourceId',
-  'relatedCaseId', 'relatedClientId',
+  'relatedCaseId',
   'assignedTo', 'notes', 'completedAt',
 ];
 
@@ -26,7 +26,6 @@ export async function GET(
       where: { id: parseInt(id) },
       include: {
         relatedCase: { select: { id: true, caseNumber: true, subject: true } },
-        relatedClient: { select: { id: true, name: true, phone: true } },
       },
     });
 
@@ -62,8 +61,6 @@ export async function PUT(
         const val = body[key];
         cleanData[key] = typeof val === 'string' ? val : JSON.stringify(val ?? [7, 1, 0]);
       } else if (key === 'relatedCaseId' || key === 'sourceId') {
-        cleanData[key] = body[key] === '' || body[key] === null ? null : parseInt(String(body[key]));
-      } else if (key === 'relatedClientId') {
         cleanData[key] = body[key] === '' || body[key] === null ? null : parseInt(String(body[key]));
       } else if (key === 'status') {
         // عند التحويل إلى completed، سجّل completedAt تلقائياً
