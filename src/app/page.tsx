@@ -4,7 +4,7 @@ import React, { Component } from 'react';
 import { useAppStore } from '@/lib/store';
 import { AppShell } from '@/components/app-shell';
 import { Dashboard } from '@/components/dashboard';
-import { Clients } from '@/components/clients';
+import { RepresentedParties } from '@/components/represented-parties';
 import { Cases } from '@/components/cases';
 import { CourtsManager } from '@/components/courts';
 import { Lawyers } from '@/components/lawyers';
@@ -110,7 +110,7 @@ function AppContent() {
       case 'cases':
         return <Cases />;
       case 'represented-parties':
-        return <Clients />;
+        return <RepresentedParties />;
       case 'sessions':
         return <Sessions />;
       case 'courts':
