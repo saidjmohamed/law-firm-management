@@ -10,11 +10,12 @@ ALTER TABLE "Party"
 -- Enrich an already existing represented party with legacy contact data.
 UPDATE "Party" AS p
 SET
+  "phone" = COALESCE(NULLIF(p."phone", ''), cl."phone"),
   "phone2" = COALESCE(NULLIF(p."phone2", ''), cl."phone2"),
-  "address" = COALESCE(p."address", cl."address"),
+  "address" = COALESCE(NULLIF(p."address", ''), cl."address"),
   "wilaya" = cl."wilaya",
-  "nationalId" = COALESCE(p."nationalId", cl."nationalId"),
-  "contactNotes" = COALESCE(p."contactNotes", cl."notes")
+  "nationalId" = COALESCE(NULLIF(p."nationalId", ''), cl."nationalId"),
+  "contactNotes" = COALESCE(NULLIF(p."contactNotes", ''), cl."notes")
 FROM "Case" AS c
 JOIN "Client" AS cl ON cl."id" = c."clientId"
 WHERE p."caseId" = c."id"
