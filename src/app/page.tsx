@@ -109,7 +109,7 @@ function AppContent() {
         return <Dashboard />;
       case 'cases':
         return <Cases />;
-      case 'clients':
+      case 'represented-parties':
         return <Clients />;
       case 'sessions':
         return <Sessions />;
