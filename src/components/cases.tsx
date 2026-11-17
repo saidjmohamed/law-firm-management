@@ -1957,6 +1957,62 @@ export function Cases() {
               </div>
             </div>
 
+            {/* كشف أتعاب كل موكل - مرتبط مباشرة بالملخص المالي */}
+            <div className="rounded-xl border border-border bg-card p-3 sm:p-4 space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <div>
+                  <h3 className="text-sm font-bold text-foreground">كشف أتعاب كل موكل</h3>
+                  <p className="text-xs text-muted-foreground mt-1">تفصيل مستقل للمبالغ المسجلة لكل موكل في حقه</p>
+                </div>
+                <Badge variant="secondary">
+                  {parties.filter(p => (p.side || 'for') === 'for').length} موكل
+                </Badge>
+              </div>
+              {parties.filter(p => (p.side || 'for') === 'for').length > 0 ? (
+                <div className="overflow-x-auto rounded-lg border">
+                  <table className="w-full min-w-[620px] text-sm text-right">
+                    <thead className="bg-muted/60 text-muted-foreground">
+                      <tr>
+                        <th className="px-3 py-2.5 font-semibold">الموكل</th>
+                        <th className="px-3 py-2.5 font-semibold">الأتعاب</th>
+                        <th className="px-3 py-2.5 font-semibold">المدفوع</th>
+                        <th className="px-3 py-2.5 font-semibold">المتبقي</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {parties.filter(p => (p.side || 'for') === 'for').map((party, index) => {
+                        const fees = Number(party.totalFees || 0);
+                        const paid = Number(party.paidAmount || 0);
+                        const remaining = fees - paid;
+                        return (
+                          <tr key={party.id} className={index % 2 === 0 ? 'bg-background' : 'bg-muted/20'}>
+                            <td className="px-3 py-2.5 font-medium">{party.name?.trim() || 'موكل دون اسم'}</td>
+                            <td className="px-3 py-2.5 tabular-nums">{formatCurrency(fees)}</td>
+                            <td className="px-3 py-2.5 tabular-nums text-emerald-700 dark:text-emerald-400">{formatCurrency(paid)}</td>
+                            <td className={`px-3 py-2.5 tabular-nums font-semibold ${remaining > 0 ? 'text-amber-700 dark:text-amber-400' : 'text-emerald-700 dark:text-emerald-400'}`}>
+                              {formatCurrency(remaining)}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                    <tfoot className="border-t bg-muted/50 font-bold">
+                      <tr>
+                        <td className="px-3 py-2.5">إجمالي القضية</td>
+                        <td className="px-3 py-2.5 tabular-nums">{formatCurrency(parties.filter(p => (p.side || 'for') === 'for').reduce((sum, p) => sum + Number(p.totalFees || 0), 0))}</td>
+                        <td className="px-3 py-2.5 tabular-nums">{formatCurrency(parties.filter(p => (p.side || 'for') === 'for').reduce((sum, p) => sum + Number(p.paidAmount || 0), 0))}</td>
+                        <td className="px-3 py-2.5 tabular-nums">{formatCurrency(parties.filter(p => (p.side || 'for') === 'for').reduce((sum, p) => sum + Number(p.totalFees || 0) - Number(p.paidAmount || 0), 0))}</td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              ) : (
+                <p className="rounded-lg bg-muted/40 px-3 py-4 text-center text-sm text-muted-foreground">
+                  أضف موكلاً بصفة «في حقه» لإظهار كشف أتعابه هنا.
+                </p>
+              )}
+            </div>
+
             {/* التواريخ */}
             <div>
               <h3 className="text-sm font-bold mb-3 text-teal-700 dark:text-teal-400">التواريخ</h3>
