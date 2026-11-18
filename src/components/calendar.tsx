@@ -53,7 +53,7 @@ function getCalendarDateKey(value?: string | Date | null): string | null {
     return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, '0')}-${String(value.getDate()).padStart(2, '0')}`;
   }
   const raw = String(value).trim();
-  const isoDate = raw.match(/^(\\d{4}-\\d{2}-\\d{2})/);
+  const isoDate = raw.match(/^(\d{4}-\d{2}-\d{2})/);
   if (isoDate) return isoDate[1];
   const parsed = new Date(raw);
   if (Number.isNaN(parsed.getTime())) return null;
