@@ -104,29 +104,29 @@ function CalendarMonthView() {
     <div className="space-y-4">
       <section className="flex flex-wrap items-center justify-between gap-3" aria-label="التنقل بين أشهر التقويم">
         <div className="flex items-center gap-2">
-          <Button variant="outlined" size="icon" aria-label="الشهر السابق" onClick={() => changeMonth(-1)}>
+          <Button variant="outline" size="icon" aria-label="الشهر السابق" onClick={() => changeMonth(-1)}>
             <ChevronRight className="h-4 w-4" />
           </Button>
           <div className="min-w-36 text-center">
-            <h2 className="text-title-large font-bold text-foreground">{ARABIC_MONTHS[month]} {year}</h2>
+            <h2 className="text-lg font-bold text-foreground">{ARABIC_MONTHS[month]} {year}</h2>
           </div>
-          <Button variant="outlined" size="icon" aria-label="الشهر التالي" onClick={() => changeMonth(1)}>
+          <Button variant="outline" size="icon" aria-label="الشهر التالي" onClick={() => changeMonth(1)}>
             <ChevronLeft className="h-4 w-4" />
           </Button>
         </div>
-        <Button variant="tonal" onClick={goToToday}>العودة إلى اليوم</Button>
+        <Button variant="secondary" onClick={goToToday}>العودة إلى اليوم</Button>
       </section>
 
       <Card className="overflow-hidden border-border shadow-none">
         <CardContent className="p-2 sm:p-4">
           <div className="mb-2 grid grid-cols-7 gap-1" role="row">
             {['السبت', 'الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة'].map(day => (
-              <div key={day} className="py-2 text-center text-label-small font-semibold text-muted-foreground">{day}</div>
+              <div key={day} className="py-2 text-center text-xs font-semibold text-muted-foreground">{day}</div>
             ))}
           </div>
           <div className="grid grid-cols-7 gap-1">
             {days.map((day, index) => {
-              if (day === null) return <div key={`empty-${index}`} className="min-h-24 sm:min-h-32 rounded-lg bg-surface-container-low/40" aria-hidden="true" />;
+              if (day === null) return <div key={`empty-${index}`} className="min-h-24 sm:min-h-32 rounded-lg bg-muted/40" aria-hidden="true" />;
               const key = dateKey(day);
               const daySessions = sessionsByDate[key] || [];
               const dayDelays = delaysByDate[key] || [];
@@ -141,11 +141,11 @@ function CalendarMonthView() {
                   aria-label={`${day} ${ARABIC_MONTHS[month]}: ${daySessions.length} جلسات، ${dayDelays.length} تأجيلات`}
                   onClick={() => setSelectedDate(isSelected ? null : key)}
                   className={`group min-h-24 sm:min-h-32 min-w-0 rounded-lg border p-1.5 text-right transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 sm:p-2
-                    ${isSelected ? 'border-primary bg-primary/8' : 'border-outline-variant/60 bg-surface hover:bg-surface-container-low'}
+                    ${isSelected ? 'border-primary bg-primary/8' : 'border-border bg-card hover:bg-muted/60'}
                     ${isToday ? 'ring-1 ring-inset ring-primary/60' : ''}`}
                 >
                   <div className="mb-1 flex items-center justify-between gap-1">
-                    <span className={`inline-flex h-7 min-w-7 items-center justify-center rounded-full px-1 text-label-medium font-semibold ${isToday ? 'bg-primary text-primary-foreground' : 'text-foreground'}`}>{day}</span>
+                    <span className={`inline-flex h-7 min-w-7 items-center justify-center rounded-full px-1 text-sm font-semibold ${isToday ? 'bg-primary text-primary-foreground' : 'text-foreground'}`}>{day}</span>
                     {total > 0 && <span className="text-[10px] font-medium text-muted-foreground">{total.toLocaleString('ar-DZ')}</span>}
                   </div>
                   <div className="space-y-1">
@@ -163,7 +163,7 @@ function CalendarMonthView() {
                     {dayDelays.slice(0, 1).map((delay, i) => {
                       const linkedCase = (cases || []).find((item: any) => item.id === delay.caseId);
                       return (
-                        <div key={delay.id ?? `delay-${i}`} className="truncate rounded-md bg-tertiary/10 px-1 py-1 text-[9px] leading-tight text-tertiary-foreground sm:text-[11px]" title={`تأجيل: ${linkedCase?.caseNumber || ''} ${delay.reason || ''}`}>
+                        <div key={delay.id ?? `delay-${i}`} className="truncate rounded-md bg-amber-100 px-1 py-1 text-[9px] leading-tight text-amber-900 dark:bg-amber-900/30 dark:text-amber-200 sm:text-[11px]" title={`تأجيل: ${linkedCase?.caseNumber || ''} ${delay.reason || ''}`}>
                           <span className="font-semibold">{linkedCase?.caseNumber || 'تأجيل'}</span>
                           <span className="hidden sm:inline"> · {delay.reason || 'موعد مؤجل'}</span>
                         </div>
@@ -182,10 +182,10 @@ function CalendarMonthView() {
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <CalendarDays className="h-5 w-5 text-primary" />
-            <h3 className="text-title-medium font-bold">{selectedDate ? `مواعيد يوم ${formatDate(selectedDate)}` : 'تفاصيل المواعيد'}</h3>
+            <h3 className="text-base font-bold">{selectedDate ? `مواعيد يوم ${formatDate(selectedDate)}` : 'تفاصيل المواعيد'}</h3>
             {selectedDate && <Badge variant="secondary">{selectedEventsCount.toLocaleString('ar-DZ')} موعد</Badge>}
           </div>
-          {selectedDate && <Button variant="text" size="sm" onClick={() => setSelectedDate(null)}>إلغاء التحديد</Button>}
+          {selectedDate && <Button variant="ghost" size="sm" onClick={() => setSelectedDate(null)}>إلغاء التحديد</Button>}
         </div>
 
         {!selectedDate ? (
@@ -202,8 +202,8 @@ function CalendarMonthView() {
                   <CardContent className="space-y-3 p-4">
                     <div className="flex flex-wrap items-start justify-between gap-2">
                       <div className="min-w-0">
-                        <p className="text-label-small text-muted-foreground">جلسة قضائية</p>
-                        <h4 className="break-words text-title-medium font-bold">{session.caseNumber || caseData?.caseNumber || 'قضية غير مرتبطة'}</h4>
+                        <p className="text-xs text-muted-foreground">جلسة قضائية</p>
+                        <h4 className="break-words text-base font-bold">{session.caseNumber || caseData?.caseNumber || 'قضية غير مرتبطة'}</h4>
                       </div>
                       <Badge className={STATUS_STYLES[status] || 'bg-secondary text-secondary-foreground'}>{STATUS_LABELS[status] || status}</Badge>
                     </div>
@@ -214,10 +214,10 @@ function CalendarMonthView() {
                       <div className="flex items-start gap-2 text-sm"><Clock3 className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" /><span>{session.time || 'دون توقيت محدد'}{session.roomNumber ? ` · القاعة ${session.roomNumber}` : ''}</span></div>
                     </div>
                     {(session.chamber || caseData?.chamber) && <p className="text-sm text-muted-foreground">الغرفة: {session.chamber || caseData?.chamber}</p>}
-                    {caseData?.parties?.length > 0 && <div className="border-t border-outline-variant pt-2"><p className="mb-1 text-label-small font-semibold text-muted-foreground">الأطراف</p><p className="text-sm">{caseData.parties.map((party: any) => party.name).filter(Boolean).join('، ')}</p></div>}
+                    {caseData?.parties?.length > 0 && <div className="border-t border-border pt-2"><p className="mb-1 text-xs font-semibold text-muted-foreground">الأطراف</p><p className="text-sm">{caseData.parties.map((party: any) => party.name).filter(Boolean).join('، ')}</p></div>}
                     {session.result && <p className="text-sm"><span className="font-semibold">نتيجة الجلسة: </span>{session.result}</p>}
                     {session.notes && <p className="whitespace-pre-wrap text-sm text-muted-foreground">{session.notes}</p>}
-                    {session.caseId && <Button variant="outlined" className="w-full sm:w-auto" onClick={() => openCase(session.caseId)}><FolderOpen className="ml-2 h-4 w-4" />فتح ملف القضية</Button>}
+                    {session.caseId && <Button variant="outline" className="w-full sm:w-auto" onClick={() => openCase(session.caseId)}><FolderOpen className="ml-2 h-4 w-4" />فتح ملف القضية</Button>}
                   </CardContent>
                 </Card>
               );
@@ -225,17 +225,17 @@ function CalendarMonthView() {
             {selectedDelays.map((delay, index) => {
               const caseData = (cases || []).find((item: any) => item.id === delay.caseId);
               return (
-                <Card key={delay.id ?? `delay-detail-${index}`} className="border-outline-variant shadow-none">
+                <Card key={delay.id ?? `delay-detail-${index}`} className="border-border shadow-none">
                   <CardContent className="space-y-3 p-4">
                     <div className="flex flex-wrap items-start justify-between gap-2">
-                      <div><p className="text-label-small text-muted-foreground">تأجيل / موعد جديد</p><h4 className="text-title-medium font-bold">{caseData?.caseNumber || 'قضية غير مرتبطة'}</h4></div>
+                      <div><p className="text-xs text-muted-foreground">تأجيل / موعد جديد</p><h4 className="text-base font-bold">{caseData?.caseNumber || 'قضية غير مرتبطة'}</h4></div>
                       <Badge variant="secondary">تأجيل</Badge>
                     </div>
                     <p className="text-sm">{caseData?.subject || 'موضوع القضية غير متوفر'}</p>
                     <p className="text-sm text-muted-foreground">{delay.reason || 'سبب التأجيل غير محدد'}</p>
                     {(caseData?.courtName || caseData?.councilName) && <p className="text-sm text-muted-foreground">{caseData.courtName || caseData.councilName}</p>}
                     {delay.notes && <p className="whitespace-pre-wrap text-sm text-muted-foreground">{delay.notes}</p>}
-                    {delay.caseId && <Button variant="outlined" className="w-full sm:w-auto" onClick={() => openCase(delay.caseId)}><FolderOpen className="ml-2 h-4 w-4" />فتح ملف القضية</Button>}
+                    {delay.caseId && <Button variant="outline" className="w-full sm:w-auto" onClick={() => openCase(delay.caseId)}><FolderOpen className="ml-2 h-4 w-4" />فتح ملف القضية</Button>}
                   </CardContent>
                 </Card>
               );
