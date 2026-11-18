@@ -199,9 +199,19 @@ export function Sessions() {
               {todaySessions.map((session) => (
                 <div
                   key={session.id}
-                  className="flex items-center justify-between p-2 rounded-lg bg-white dark:bg-background cursor-pointer hover:shadow-sm transition-shadow"
+                  role="button"
+                  tabIndex={session.caseId ? 0 : -1}
+                  aria-label={`فتح القضية المرتبطة بالجلسة ${session.caseNumber || ''}`}
+                  className="flex items-center justify-between rounded-lg bg-white p-3 text-right transition-shadow hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary dark:bg-background"
                   onClick={() => {
                     if (session.caseId) {
+                      setSelectedCaseId(session.caseId);
+                      setActiveSection('cases');
+                    }
+                  }}
+                  onKeyDown={(event) => {
+                    if (session.caseId && (event.key === 'Enter' || event.key === ' ')) {
+                      event.preventDefault();
                       setSelectedCaseId(session.caseId);
                       setActiveSection('cases');
                     }
