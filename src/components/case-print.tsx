@@ -59,7 +59,7 @@ export function CasePrintButton({ caseData, parties }: CasePrintProps) {
 @page{size:A4 portrait;margin:9mm}
 *{box-sizing:border-box}html,body{margin:0;padding:0}
 body{font-family:Tahoma,"Arial",sans-serif;color:#111;background:#fff;font-size:11.5px;line-height:1.5}
-.sheet{height:270mm;max-height:270mm;overflow:hidden;border:1.5px solid #111;padding:7mm;display:flex;flex-direction:column;gap:8px}
+.sheet{min-height:270mm;border:1.5px solid #111;padding:7mm;display:flex;flex-direction:column;gap:8px}\n.section{break-inside:avoid;page-break-inside:avoid}\n.head,.main-title{break-inside:avoid;page-break-inside:avoid}
 .head{text-align:center;border-bottom:3px double #111;padding:0 0 8px}
 .head h1{font-size:19px;margin:0 0 2px;font-weight:800}.head h2{font-size:12px;margin:0 0 3px;font-weight:600}
 .contact{font-size:9.5px;color:#333}.main-title{border:2px solid #111;text-align:center;padding:8px 10px;font-size:17px;font-weight:800;letter-spacing:.2px}
@@ -70,9 +70,9 @@ body{font-family:Tahoma,"Arial",sans-serif;color:#111;background:#fff;font-size:
 .field{display:flex;gap:5px;min-width:0;padding:2px 0;border-bottom:1px dotted #aaa}
 .label{font-weight:800;white-space:nowrap}.value{font-weight:500;overflow-wrap:anywhere}
 .party-line{padding:3px 0;border-bottom:1px dotted #aaa}.party-line:last-child{border:0}
-.notes{white-space:pre-wrap;overflow-wrap:anywhere;max-height:34mm;overflow:hidden}
+.notes{white-space:pre-wrap;overflow-wrap:anywhere}
 .footer{margin-top:auto;border-top:1px solid #222;padding-top:5px;display:flex;justify-content:space-between;gap:8px;font-size:9px}
-@media print{html,body{width:auto;height:auto;min-height:0;margin:0;padding:0}.sheet{height:270mm;max-height:270mm;break-inside:avoid;page-break-inside:avoid;page-break-after:avoid}}
+@media print{html,body{width:auto;height:auto;min-height:0;margin:0;padding:0}.sheet{min-height:270mm;break-inside:auto;page-break-inside:auto}.section{break-inside:avoid;page-break-inside:avoid}}
 </style></head><body><main class="sheet">
 <header class="head"><h1>${escapeHtml(lawyerName)}</h1><h2>${escapeHtml(lawyerTitle)}</h2>
 <div class="contact">${[lawyerAddress, lawyerPhone ? 'الهاتف: '+lawyerPhone : '', lawyerEmail].filter(Boolean).map(escapeHtml).join(' | ')}</div></header>
@@ -85,7 +85,7 @@ body{font-family:Tahoma,"Arial",sans-serif;color:#111;background:#fff;font-size:
 <div class="field"><span class="label">مرحلة التقاضي:</span><span class="value">${escapeHtml(caseData.litigationStage || caseData.customStage)}</span></div>
 <div class="field"><span class="label">الحالة:</span><span class="value">${escapeHtml(caseData.status)}</span></div>
 <div class="field"><span class="label">تاريخ التسجيل:</span><span class="value">${escapeHtml(formatDate(caseData.registrationDate))}</span></div>
-<div class="field"><span class="label">أول جلسة:</span><span class="value">${escapeHtml(formatDate(caseData.firstSessionDate))}</span></div>
+<div class="field"><span class="label">أول جلسة:</span><span class="value">${escapeHtml(formatDate(caseData.firstSessionDate))}</span></div>\n<div class="field"><span class="label">تاريخ المداولة:</span><span class="value">${escapeHtml(formatDate(caseData.delibDate))}</span></div>\n<div class="field"><span class="label">تاريخ الحكم:</span><span class="value">${escapeHtml(formatDate(caseData.judgmentDate))}</span></div>\n<div class="field"><span class="label">نتيجة القضية:</span><span class="value">${escapeHtml(caseData.caseResult)}</span></div>\n<div class="field"><span class="label">المحامي المكلف:</span><span class="value">${escapeHtml(caseData.lawyer)}</span></div>
 </div></section>
 <section class="section"><div class="section-title">الجهة القضائية</div><div class="grid">
 <div class="field"><span class="label">الولاية:</span><span class="value">${escapeHtml(wilayaName)}</span></div>
@@ -94,7 +94,7 @@ body{font-family:Tahoma,"Arial",sans-serif;color:#111;background:#fff;font-size:
 <div class="field"><span class="label">هاتف قاعة المحامين:</span><span class="value">${escapeHtml(caseData.barPhone)}</span></div>
 </div></section>
 <section class="section"><div class="section-title">أطراف القضية</div>${partyHtml}</section>
-${caseData.notes ? `<section class="section"><div class="section-title">ملاحظات مختصرة</div><div class="notes">${escapeHtml(caseData.notes)}</div></section>` : ''}
+${sessions.length ? `<section class="section"><div class="section-title">الجلسات المسجلة</div>${sessions.map((s, i) => `<div class="party-line"><b>الجلسة ${i + 1} — ${escapeHtml(formatDate(s.date))}${s.time ? '، ' + escapeHtml(s.time) : ''}</b><br>${[s.court, s.chamber, s.roomNumber ? 'القاعة ' + s.roomNumber : '', s.status, s.result, s.notes].filter(Boolean).map(escapeHtml).join(' — ')}</div>`).join('')}</section>` : ''}\n${delays.length ? `<section class="section"><div class="section-title">التأجيلات</div>${delays.map((d, i) => `<div class="party-line"><b>التأجيل ${i + 1} — ${escapeHtml(formatDate(d.delayDate))}</b><br>${[d.reason, d.notes].filter(Boolean).map(escapeHtml).join(' — ') || '—'}</div>`).join('')}</section>` : ''}\n${caseData.notes ? `<section class="section"><div class="section-title">ملاحظات مختصرة</div><div class="notes">${escapeHtml(caseData.notes)}</div></section>` : ''}
 <footer class="footer"><span>مكتب الأستاذ ${escapeHtml(lawyerName)} — ${escapeHtml(lawyerTitle)}</span><span>تاريخ الطباعة: ${new Date().toLocaleDateString('ar-DZ')}</span></footer>
 </main></body></html>`;
 
