@@ -149,6 +149,12 @@ export function AppShell({ children }: AppShellProps) {
 
   return (
     <div dir="rtl" className="min-h-screen bg-background text-foreground antialiased">
+      <a
+        href="#main-content"
+        className="sr-only z-[100] rounded-md bg-primary px-4 py-2 text-primary-foreground shadow-lg focus:not-sr-only focus:fixed focus:right-4 focus:top-4"
+      >
+        الانتقال إلى المحتوى الرئيسي
+      </a>
       <aside className="fixed inset-y-0 start-0 z-40 hidden w-[288px] flex-col border-e border-sidebar-border bg-sidebar lg:flex">
         <SidebarContent />
       </aside>
@@ -204,7 +210,12 @@ export function AppShell({ children }: AppShellProps) {
           </div>
         </header>
 
-        <main className="min-h-[calc(100vh-72px)] flex-1 bg-background p-4 sm:p-6 lg:p-8">
+        <main
+          id="main-content"
+          tabIndex={-1}
+          aria-label="المحتوى الرئيسي"
+          className="min-h-[calc(100vh-72px)] flex-1 bg-background p-4 sm:p-6 lg:p-8 focus:outline-none"
+        >
           <div className="mx-auto w-full max-w-[1600px]">
             {children}
           </div>
