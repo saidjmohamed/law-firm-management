@@ -7,6 +7,9 @@ import { useAppStore } from '@/lib/store';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Sessions } from '@/components/sessions';
+import { DelaysManager } from '@/components/delays';
 import {
   ChevronRight,
   ChevronLeft,
@@ -41,7 +44,7 @@ const STATUS_LABELS: Record<string, string> = {
   cancelled: 'ملغاة',
 };
 
-export function CalendarView() {
+function CalendarMonthView() {
   const { setSelectedCaseId, setActiveSection } = useAppStore();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
@@ -308,5 +311,22 @@ export function CalendarView() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+
+// مركز موحد: التقويم والجلسات والتأجيلات في مساحة واحدة دون نقل أو حذف السجلات.
+export function CalendarView() {
+  return (
+    <Tabs defaultValue="calendar" dir="rtl" className="space-y-4">
+      <TabsList className="grid w-full grid-cols-3 h-auto">
+        <TabsTrigger value="calendar" className="py-2">التقويم العام</TabsTrigger>
+        <TabsTrigger value="sessions" className="py-2">الجلسات</TabsTrigger>
+        <TabsTrigger value="deadlines" className="py-2">الآجال والتأجيلات</TabsTrigger>
+      </TabsList>
+      <TabsContent value="calendar"><CalendarMonthView /></TabsContent>
+      <TabsContent value="sessions"><Sessions /></TabsContent>
+      <TabsContent value="deadlines"><DelaysManager /></TabsContent>
+    </Tabs>
   );
 }
