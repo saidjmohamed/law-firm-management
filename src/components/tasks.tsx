@@ -275,6 +275,8 @@ export function TasksManager() {
             <div className="flex-1 min-w-[200px] relative">
               <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
+                type="search"
+                aria-label="البحث في المهام"
                 placeholder="ابحث في المهام..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
