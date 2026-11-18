@@ -12,7 +12,6 @@ import {
   useParties,
   useArchives,
   useSettings,
-  seedDatabase,
   refreshAll,
   getSettingValue,
 } from '@/lib/api';
@@ -45,8 +44,6 @@ export function BackupManager() {
   const [importing, setImporting] = useState(false);
   const [importConfirm, setImportConfirm] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [resetConfirm, setResetConfirm] = useState(false);
-  const [resetting, setResetting] = useState(false);
   const jsonInputRef = useRef<HTMLInputElement>(null);
 
   const { cases } = useCases();
@@ -416,21 +413,6 @@ export function BackupManager() {
     }
   }
 
-  async function handleReset() {
-    try {
-      setResetting(true);
-      await seedDatabase();
-      toast.success('تم إعادة تعيين قاعدة البيانات بنجاح');
-      setResetConfirm(false);
-      window.location.reload();
-    } catch (err) {
-      toast.error('حدث خطأ أثناء إعادة التعيين');
-      console.error(err);
-    } finally {
-      setResetting(false);
-    }
-  }
-
   return (
     <div className="space-y-6">
       {/* إحصائيات قاعدة البيانات */}
@@ -451,7 +433,6 @@ export function BackupManager() {
             <StatBadge label="الجلسات" count={stats.sessions} />
             <StatBadge label="المدفوعات" count={stats.payments} />
             <StatBadge label="التأجيلات" count={stats.delays} />
-            <StatBadge label="الأطراف" count={stats.parties} />
             <StatBadge label="الأرشيف" count={stats.archives} />
           </div>
           {lastBackupDate && (
@@ -540,53 +521,17 @@ export function BackupManager() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* إعادة تعيين قاعدة البيانات */}
-      <Card className="border-destructive/30">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base flex items-center gap-2 text-destructive">
-            <AlertTriangle className="w-4 h-4" />
-            إعادة تعيين قاعدة البيانات
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground mb-3">
-            حذف جميع البيانات وإعادة تحميل البيانات الأولية. استخدم هذا الخيار إذا كانت البيانات مفقودة أو تالفة.
-          </p>
-          <Button
-            variant="destructive"
-            onClick={() => setResetConfirm(true)}
-            disabled={resetting}
-          >
-            <AlertTriangle className="w-4 h-4 ml-2" />
-            {resetting ? 'جاري إعادة التعيين...' : 'إعادة تعيين قاعدة البيانات'}
-          </Button>
+      <Card className="border-amber-200 bg-amber-50/50 dark:border-amber-900/50 dark:bg-amber-950/20">
+        <CardContent className="flex items-start gap-3 p-4">
+          <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-700 dark:text-amber-400" />
+          <div>
+            <p className="text-sm font-semibold">حماية بيانات المكتب</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              تم تعطيل إعادة تعيين قاعدة البيانات من الواجهة حتى لا تُحذف القضايا أو سجلات الموكلين بطريق الخطأ. استخدم النسخ الاحتياطي للتصدير والاستعادة فقط.
+            </p>
+          </div>
         </CardContent>
       </Card>
-
-      {/* تأكيد إعادة التعيين */}
-      <AlertDialog open={resetConfirm} onOpenChange={setResetConfirm}>
-        <AlertDialogContent dir="rtl">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2">
-              <AlertTriangle className="w-5 h-5 text-destructive" />
-              تأكيد إعادة التعيين
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              سيتم حذف جميع البيانات الحالية وإعادة تحميل البيانات الأولية. هل أنت متأكد؟
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>إلغاء</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleReset}
-              disabled={resetting}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {resetting ? 'جاري إعادة التعيين...' : 'إعادة تعيين'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }
