@@ -50,7 +50,7 @@ export function RepresentedParties() {
       <div className="flex flex-col gap-2 sm:flex-row">
         <div className="relative flex-1">
           <Search className="absolute right-3 top-3 h-4 w-4 text-muted-foreground" />
-          <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="ابحث بالاسم أو رقم القضية أو المحامي..." className="pr-9" />
+          <Input type="search" aria-label="البحث عن طرف بالاسم أو رقم القضية أو المحامي" value={search} onChange={e => setSearch(e.target.value)} placeholder="ابحث بالاسم أو رقم القضية أو المحامي..." className="pr-9" />
         </div>
         <Badge variant="secondary" className="w-fit self-start sm:self-center">{represented.length} طرفاً</Badge>
       </div>
