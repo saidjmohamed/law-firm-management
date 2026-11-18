@@ -237,8 +237,8 @@ th {
   ::placeholder { color: #78879a !important; opacity: 1; }
 }
 
-[data-slot="card"] p.text-\\[10px\\],
-[data-slot="card"] p.text-\\[11px\\],
+[data-slot="card"] p[class~="text-[10px]"],
+[data-slot="card"] p[class~="text-[11px]"],
 [data-slot="card"] p.text-xs,
 [data-slot="card"] span.text-xs,
 [data-slot="card"] div.text-xs {
