@@ -250,6 +250,19 @@ export function Dashboard() {
 
   return (
     <div className="space-y-6">
+      <section className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-5" aria-labelledby="dashboard-heading">
+        <div className="min-w-0">
+          <p className="text-xs font-semibold text-muted-foreground">نظرة عامة على نشاط المكتب</p>
+          <h1 id="dashboard-heading" className="mt-1 text-xl font-extrabold tracking-tight text-foreground sm:text-2xl">لوحة التحكم</h1>
+          <p className="mt-1 text-sm text-muted-foreground">متابعة القضايا والجلسات والمهام والمستحقات من مكان واحد</p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="rounded-lg bg-muted px-3 py-2 text-xs font-medium text-muted-foreground">{new Date().toLocaleDateString('ar-DZ', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span>
+          <Button onClick={() => { setSelectedCaseId(null); setActiveSection('cases'); }} className="touch-target">
+            <Plus className="ml-1 h-4 w-4" /> إضافة قضية
+          </Button>
+        </div>
+      </section>
       {/* تنبيهات فورية في الأعلى — ثابتة دائماً */}
       <FlashNotifications />
 
@@ -690,7 +703,7 @@ export function Dashboard() {
         <CardContent>
           <div className="space-y-2 max-h-72 overflow-y-auto smooth-scroll">
             {cases.length > 0 ? (
-              cases
+              [...cases]
                 .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
                 .slice(0, 8)
                 .map((c: any) => (
