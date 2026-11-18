@@ -214,7 +214,7 @@ function CalendarMonthView() {
                       <div className="flex items-start gap-2 text-sm"><Clock3 className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" /><span>{session.time || 'دون توقيت محدد'}{session.roomNumber ? ` · القاعة ${session.roomNumber}` : ''}</span></div>
                     </div>
                     {(session.chamber || caseData?.chamber) && <p className="text-sm text-muted-foreground">الغرفة: {session.chamber || caseData?.chamber}</p>}
-                    {caseData?.parties?.length > 0 && <div className="border-t border-border pt-2"><p className="mb-1 text-xs font-semibold text-muted-foreground">الأطراف</p><p className="text-sm">{caseData.parties.map((party: any) => party.name).filter(Boolean).join('، ')}</p></div>}
+                    {Boolean(caseData?.parties?.length) && <div className="border-t border-border pt-2"><p className="mb-1 text-xs font-semibold text-muted-foreground">الأطراف</p><p className="text-sm">{caseData.parties.map((party: any) => party.name).filter(Boolean).join('، ')}</p></div>}
                     {session.result && <p className="text-sm"><span className="font-semibold">نتيجة الجلسة: </span>{session.result}</p>}
                     {session.notes && <p className="whitespace-pre-wrap text-sm text-muted-foreground">{session.notes}</p>}
                     {session.caseId && <Button variant="outline" className="w-full sm:w-auto" onClick={() => openCase(session.caseId)}><FolderOpen className="ml-2 h-4 w-4" />فتح ملف القضية</Button>}
