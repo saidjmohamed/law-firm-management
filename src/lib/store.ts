@@ -31,7 +31,7 @@ interface AppState {
 
 export const useAppStore = create<AppState>((set) => ({
   activeSection: 'dashboard',
-  setActiveSection: (section) => set({ activeSection: section, sidebarOpen: false }),
+  setActiveSection: (section) => set({ activeSection: section === 'sessions' || section === 'delays' ? 'calendar' : section, sidebarOpen: false }),
   sidebarOpen: false,
   setSidebarOpen: (open) => set({ sidebarOpen: open }),
   selectedCaseId: null,
