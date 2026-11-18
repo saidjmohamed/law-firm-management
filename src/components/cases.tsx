@@ -7,6 +7,7 @@ import { mutate } from 'swr';
 import { formatCurrency, STATUS_COLORS, CASE_NATURES, CASE_STATUSES, LITIGATION_STAGES, PARTY_ROLES, JUDICIAL_CHAMBERS, WILAYAS, JUDICIARY_TYPES, ORDINARY_COURT_LEVELS, ADMIN_COURT_LEVELS, CHAMBER_NUMBERS, formatDate } from '@/lib/constants';
 import { CasePrintButton } from '@/components/case-print';
 import { CaseAnnouncementButton } from '@/components/case-announcement';
+import { CaseMarkdownExportButton } from '@/components/case-markdown-export';
 import { SelectWithCustom } from '@/components/ui/select-with-custom';
 import { ComboboxInput } from '@/components/ui/combobox-input';
 import { DuplicateAlert, findDuplicateCaseNumbers, findDuplicatePartyNames } from '@/components/ui/duplicate-alert';
@@ -597,7 +598,6 @@ export function Cases() {
       const delaysToUpdate: { row: DelayRow; existing: DelayType }[] = [];
       const delaysToCreate: DelayRow[] = [];
       const updatedDelayIds = new Set<number>();
-
       for (const row of delays) {
         if (!row.delayDate && !row.reason) continue;
         if (isNumericId(row.id)) {
@@ -880,6 +880,7 @@ export function Cases() {
                   caseData={selectedCase}
                   parties={caseParties || []}
                 />
+                <CaseMarkdownExportButton caseId={selectedCase.id} tasks={allTasks || []} />
                 <Button variant="outline" size="sm" onClick={() => openEditForm(selectedCase)} className="touch-target">
                   <Pencil className="w-3 h-3 ml-1" />
                   تعديل
@@ -1197,8 +1198,7 @@ export function Cases() {
       </div>
 
       {/* تبويبات الفلترة */}
-      <div className="flex gap-1 p-1 bg-muted rounded-lg">
-        {[
+      <div className="flex gap-1 p-1 bg-muted rounded-lg">        {[
           { id: 'active' as const,   label: 'الجارية',            filter: (c: CaseType) => c.status === 'جارية' },
           { id: 'archived' as const, label: 'مؤرشفة / مفصول فيها', filter: (c: CaseType) => c.status === 'مؤرشفة' || c.status === 'مفصول فيها' },
           { id: 'pending' as const,  label: 'للجدولة',             filter: (c: CaseType) => c.status === 'للجدولة' || !c.caseNumber },
@@ -1797,8 +1797,7 @@ export function Cases() {
                       const selectedBody = judicialBodies?.find(b => b.id === formData.courtId);
                       const bodyPhones = selectedBody?.phones ? (() => { try { const p = JSON.parse(selectedBody.phones); return Array.isArray(p) ? p.filter((x: string) => x.trim()) : []; } catch { return []; } })() : [];
                       return bodyPhones.length > 0 ? (
-                        <div className="mt-1.5 flex items-center gap-1.5 flex-wrap">
-                          <Phone className="w-3 h-3 text-teal-600 dark:text-teal-400" />
+                        <div className="mt-1.5 flex items-center gap-1.5 flex-wrap">                          <Phone className="w-3 h-3 text-teal-600 dark:text-teal-400" />
                           {bodyPhones.map((ph: string, i: number) => (
                             <span key={i} className="text-xs font-mono text-teal-700 dark:text-teal-400 dir-ltr">{ph}{i < bodyPhones.length - 1 ? ' /' : ''}</span>
                           ))}
