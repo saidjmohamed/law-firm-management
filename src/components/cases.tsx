@@ -1234,10 +1234,20 @@ export function Cases() {
               return (
                 <Card
                   key={c.id}
-                  className={`group cursor-pointer overflow-hidden transition-all duration-200 border-r-[5px] ${borderColor} bg-card hover:-translate-y-0.5 hover:shadow-lg`}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`فتح ملف القضية ${c.caseNumber || c.subject || c.id}`}
+                  className={`group cursor-pointer overflow-hidden transition-all duration-200 border-r-[5px] ${borderColor} bg-card hover:-translate-y-0.5 hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2`}
                   onClick={() => {
                     setSelectedCaseId(c.id ?? null);
                     setView('detail');
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault();
+                      setSelectedCaseId(c.id ?? null);
+                      setView('detail');
+                    }
                   }}
                 >
                   <CardContent className="p-5 sm:p-6 space-y-4">
