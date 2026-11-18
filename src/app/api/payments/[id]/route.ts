@@ -39,12 +39,6 @@ export async function PUT(
     const { id } = await params;
     const body = await request.json();
 
-    // جلب بيانات الدفعة قبل التحديث لإعادة حساب paidAmount
-    const oldPayment = await prisma.payment.findUnique({
-      where: { id: parseInt(id) },
-    });
-
-    // تنظيف البيانات - فقط الحقول المسموح بتحديثها
     const { id: _id, createdAt: _ca, updatedAt: _ua, case: _case, ...updateData } = body;
     if (updateData.amount !== undefined && updateData.amount !== null) {
       updateData.amount = parseInt(String(updateData.amount));
@@ -53,28 +47,41 @@ export async function PUT(
       updateData.date = toDateOrNull(updateData.date);
     }
     if (updateData.caseId !== undefined) {
-      updateData.caseId = updateData.caseId === '' ? null : updateData.caseId;
+      updateData.caseId = updateData.caseId === '' || updateData.caseId === null
+        ? null
+        : parseInt(String(updateData.caseId));
     }
 
-    const payment = await prisma.payment.update({
-      where: { id: parseInt(id) },
-      data: updateData,
+    const payment = await prisma.$transaction(async (tx) => {
+      const oldPayment = await tx.payment.findUnique({ where: { id: parseInt(id) } });
+      if (!oldPayment) return null;
+
+      const updated = await tx.payment.update({
+        where: { id: parseInt(id) },
+        data: updateData,
+      });
+
+      // عند نقل الدفعة أو تغيير نوعها، أعد حساب رصيد القضية القديمة والجديدة معاً.
+      const affectedCaseIds = [...new Set(
+        [oldPayment.caseId, updated.caseId].filter((caseId): caseId is number => caseId !== null)
+      )];
+
+      for (const caseId of affectedCaseIds) {
+        const totalPaid = await tx.payment.aggregate({
+          where: { caseId, type: 'income' },
+          _sum: { amount: true },
+        });
+        await tx.case.update({
+          where: { id: caseId },
+          data: { paidAmount: totalPaid._sum.amount || 0 },
+        });
+      }
+
+      return updated;
     });
 
-    // إعادة حساب paidAmount إذا تغير المبلغ أو النوع أو القضية
-    const caseId = payment.caseId || oldPayment?.caseId;
-    if (caseId) {
-      const totalPaid = await prisma.payment.aggregate({
-        where: {
-          caseId,
-          type: 'income',
-        },
-        _sum: { amount: true },
-      });
-      await prisma.case.update({
-        where: { id: caseId },
-        data: { paidAmount: totalPaid._sum.amount || 0 },
-      });
+    if (!payment) {
+      return NextResponse.json({ error: 'Payment not found' }, { status: 404 });
     }
 
     return NextResponse.json(payment);
@@ -91,28 +98,28 @@ export async function DELETE(
   try {
     const { id } = await params;
 
-    // جلب بيانات الدفعة قبل الحذف لإعادة حساب paidAmount
-    const payment = await prisma.payment.findUnique({
-      where: { id: parseInt(id) },
+    const result = await prisma.$transaction(async (tx) => {
+      const payment = await tx.payment.findUnique({ where: { id: parseInt(id) } });
+      if (!payment) return null;
+
+      await tx.payment.delete({ where: { id: parseInt(id) } });
+
+      if (payment.caseId && payment.type === 'income') {
+        const totalPaid = await tx.payment.aggregate({
+          where: { caseId: payment.caseId, type: 'income' },
+          _sum: { amount: true },
+        });
+        await tx.case.update({
+          where: { id: payment.caseId },
+          data: { paidAmount: totalPaid._sum.amount || 0 },
+        });
+      }
+
+      return payment;
     });
 
-    await prisma.payment.delete({
-      where: { id: parseInt(id) },
-    });
-
-    // إعادة حساب paidAmount للقضية
-    if (payment?.caseId && payment.type === 'income') {
-      const totalPaid = await prisma.payment.aggregate({
-        where: {
-          caseId: payment.caseId,
-          type: 'income',
-        },
-        _sum: { amount: true },
-      });
-      await prisma.case.update({
-        where: { id: payment.caseId },
-        data: { paidAmount: totalPaid._sum.amount || 0 },
-      });
+    if (!result) {
+      return NextResponse.json({ error: 'Payment not found' }, { status: 404 });
     }
 
     return NextResponse.json({ message: 'Payment deleted' });
