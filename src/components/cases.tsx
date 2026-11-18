@@ -805,6 +805,41 @@ export function Cases() {
           </Button>
         </div>
 
+        <Card className="overflow-hidden border-primary/20 shadow-sm">
+          <CardContent className="space-y-4 p-4 sm:p-5">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-medium text-muted-foreground">بطاقة ملف القضية</p>
+                <h2 className="mt-1 break-words text-xl font-extrabold tracking-tight text-foreground">{selectedCase.caseNumber || 'قضية دون رقم'}</h2>
+                <p className="mt-1 text-sm leading-6 text-muted-foreground">{selectedCase.subject || 'لم يُسجل موضوع القضية بعد'}</p>
+              </div>
+              <Badge className={STATUS_COLORS[selectedCase.status || ''] || ''}>{selectedCase.status || 'الحالة غير محددة'}</Badge>
+            </div>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              <div className="rounded-xl bg-muted/60 p-3">
+                <p className="text-xs text-muted-foreground">طبيعة القضية</p>
+                <p className="mt-1 text-sm font-semibold">{selectedCase.caseNature || '—'}</p>
+              </div>
+              <div className="rounded-xl bg-muted/60 p-3">
+                <p className="text-xs text-muted-foreground">مرحلة التقاضي</p>
+                <p className="mt-1 text-sm font-semibold">{selectedCase.litigationStage || '—'}</p>
+              </div>
+              <div className="rounded-xl bg-muted/60 p-3">
+                <p className="text-xs text-muted-foreground">الأطراف المسجلة</p>
+                <p className="mt-1 text-sm font-semibold tabular-nums">{(caseParties || []).length.toLocaleString('ar-DZ')}</p>
+              </div>
+              <div className="rounded-xl bg-muted/60 p-3">
+                <p className="text-xs text-muted-foreground">الجلسات المسجلة</p>
+                <p className="mt-1 text-sm font-semibold tabular-nums">{(caseSessions || []).length.toLocaleString('ar-DZ')}</p>
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-border pt-3 text-sm">
+              <span className="text-muted-foreground">الجهة القضائية: <strong className="font-semibold text-foreground">{[selectedCase.councilName, selectedCase.courtName].filter(Boolean).join(' — ') || 'غير محددة'}</strong></span>
+              <span className="text-muted-foreground">المتبقي من الأتعاب: <strong className="font-semibold text-foreground">{formatCurrency(remaining)}</strong></span>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* أطراف النزاع */}
         <Card>
           <CardHeader className="pb-3">
