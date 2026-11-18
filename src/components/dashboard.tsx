@@ -690,7 +690,7 @@ export function Dashboard() {
         <CardContent>
           <div className="space-y-2 max-h-72 overflow-y-auto smooth-scroll">
             {cases.length > 0 ? (
-              cases
+              [...cases]
                 .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
                 .slice(0, 8)
                 .map((c: any) => (
@@ -782,7 +782,7 @@ function TaskStatBox({ label, value, icon: Icon, color, onClick }: {
     emerald: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
   };
   return (
-    <button onClick={onClick} className="text-right">
+    <button type="button" onClick={onClick} aria-label={label} className="w-full rounded-xl text-right focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
       <Card className="stat-card-hover hover:shadow-elevated cursor-pointer">
         <CardContent className="p-4">
           <div className="flex items-center gap-3">
