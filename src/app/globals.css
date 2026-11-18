@@ -285,3 +285,81 @@ th {
   body { font-size: 15px; }
   [data-slot="card"] { border-radius: 14px; }
 }
+
+/* Accessibility, mobile ergonomics and print-safe defaults. */
+@layer base {
+  :where(a, button, input, select, textarea, [role="button"], [tabindex]):focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 3px;
+  }
+
+  button, [role="button"] {
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+
+  :where(input, textarea, select) {
+    min-height: 44px;
+  }
+
+  :where(img, video, canvas, svg) {
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 640px) {
+  body {
+    overflow-x: hidden;
+  }
+
+  main {
+    min-width: 0;
+  }
+
+  :where(button, [role="button"], a.touch-target) {
+    min-height: 44px;
+  }
+
+  :where(input, textarea, select) {
+    font-size: 16px !important;
+  }
+
+  [data-slot="card"] {
+    min-width: 0;
+  }
+}
+
+@media print {
+  :root, .dark {
+    color-scheme: light;
+    --background: #fff;
+    --foreground: #000;
+    --card: #fff;
+    --card-foreground: #000;
+    --muted: #f2f2f2;
+    --muted-foreground: #333;
+    --border: #777;
+  }
+
+  html, body {
+    background: #fff !important;
+    color: #000 !important;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  :where(button, [role="button"], nav, header, aside, [data-no-print], .no-print) {
+    display: none !important;
+  }
+
+  a {
+    color: #000 !important;
+    text-decoration: none !important;
+  }
+
+  [data-slot="card"] {
+    box-shadow: none !important;
+    break-inside: avoid;
+  }
+}
+

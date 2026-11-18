@@ -250,6 +250,19 @@ export function Dashboard() {
 
   return (
     <div className="space-y-6">
+      <section className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-5" aria-labelledby="dashboard-heading">
+        <div className="min-w-0">
+          <p className="text-xs font-semibold text-muted-foreground">نظرة عامة على نشاط المكتب</p>
+          <h1 id="dashboard-heading" className="mt-1 text-xl font-extrabold tracking-tight text-foreground sm:text-2xl">لوحة التحكم</h1>
+          <p className="mt-1 text-sm text-muted-foreground">متابعة القضايا والجلسات والمهام والمستحقات من مكان واحد</p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="rounded-lg bg-muted px-3 py-2 text-xs font-medium text-muted-foreground">{new Date().toLocaleDateString('ar-DZ', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span>
+          <Button onClick={() => { setSelectedCaseId(null); setActiveSection('cases'); }} className="touch-target">
+            <Plus className="ml-1 h-4 w-4" /> إضافة قضية
+          </Button>
+        </div>
+      </section>
       {/* تنبيهات فورية في الأعلى — ثابتة دائماً */}
       <FlashNotifications />
 
@@ -557,7 +570,19 @@ export function Dashboard() {
                 return (
                   <div
                     key={`${item.source}-${item.id}`}
-                    className={`p-5 rounded-xl border-2 cursor-pointer transition-all duration-200 hover:shadow-lg hover:scale-[1.02] ${
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`فتح ملف القضية ${caseData?.caseNumber || caseData?.subject || ''} - ${item.reason || 'موعد قادم'}`}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        if (item.caseId) {
+                          setSelectedCaseId(item.caseId);
+                          setActiveSection('cases');
+                        }
+                      }
+                    }}
+                    className={`p-5 rounded-xl border-2 cursor-pointer transition-all duration-200 hover:shadow-lg hover:scale-[1.02] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
                       isToday
                         ? 'bg-destructive/5 border-destructive/35 hover:border-destructive/60'
                         : isTomorrow
@@ -654,7 +679,17 @@ export function Dashboard() {
                 return (
                   <div
                     key={delay.id}
-                    className="flex items-center justify-between p-2.5 rounded-lg bg-amber-50 dark:bg-amber-900/20 cursor-pointer hover:bg-amber-100 dark:hover:bg-amber-900/30 transition-colors"
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`فتح القضية المرتبطة بالتأجيل ${caseData?.caseNumber || caseData?.subject || ''}`}
+                    className="flex items-center justify-between p-2.5 rounded-lg bg-amber-50 dark:bg-amber-900/20 cursor-pointer hover:bg-amber-100 dark:hover:bg-amber-900/30 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    onKeyDown={(event) => {
+                      if ((event.key === 'Enter' || event.key === ' ') && delay.caseId) {
+                        event.preventDefault();
+                        setSelectedCaseId(delay.caseId);
+                        setActiveSection('cases');
+                      }
+                    }}
                     onClick={() => {
                       if (delay.caseId) {
                         setSelectedCaseId(delay.caseId);
@@ -690,13 +725,23 @@ export function Dashboard() {
         <CardContent>
           <div className="space-y-2 max-h-72 overflow-y-auto smooth-scroll">
             {cases.length > 0 ? (
-              cases
+              [...cases]
                 .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
                 .slice(0, 8)
                 .map((c: any) => (
                   <div
                     key={c.id}
-                    className="flex items-center justify-between p-2.5 rounded-lg border cursor-pointer hover:bg-muted/50 transition-colors"
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`فتح ملف القضية ${c.caseNumber || c.subject || ''}`}
+                    className="flex items-center justify-between p-2.5 rounded-lg border cursor-pointer hover:bg-muted/50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        setSelectedCaseId(c.id);
+                        setActiveSection('cases');
+                      }
+                    }}
                     onClick={() => {
                       if (c.id) {
                         setSelectedCaseId(c.id);
