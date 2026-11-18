@@ -1354,7 +1354,7 @@ export function Cases() {
                           </div>
                         </div>
                       );
-                    })()}}
+                    })()}
                   </CardContent>
                 </Card>
               );
