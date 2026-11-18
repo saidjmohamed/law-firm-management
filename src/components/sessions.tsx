@@ -49,7 +49,7 @@ interface Session {
 function getCalendarDateKey(value?: string | Date | null): string | null {
   if (!value) return null;
   if (typeof value === 'string') {
-    const match = value.match(/^(\\d{4}-\\d{2}-\\d{2})/);
+    const match = value.match(/^(\d{4}-\d{2}-\d{2})/);
     if (match) return match[1];
   }
   const date = value instanceof Date ? value : new Date(value);
