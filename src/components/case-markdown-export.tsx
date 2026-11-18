@@ -144,10 +144,10 @@ export function CaseMarkdownExportButton({ caseId, tasks = [] }: Props) {
       ];
 
       const markdown = lines.join('\n').replace(/\n{3,}/g, '\n\n').trim() + '\n';
-      const blob = new Blob(['\\uFEFF', markdown], { type: 'text/markdown;charset=utf-8' });
+      const blob = new Blob(['\uFEFF', markdown], { type: 'text/markdown;charset=utf-8' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
-      const safeNumber = String(c.caseNumber || caseId).replace(/[^\\p{L}\\p{N}._-]+/gu, '_');
+      const safeNumber = String(c.caseNumber || caseId).replace(/[^\p{L}\p{N}._-]+/gu, '_');
       link.href = url;
       link.download = `ملف_القضية_${safeNumber}.md`;
       document.body.appendChild(link);
