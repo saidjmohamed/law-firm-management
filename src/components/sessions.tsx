@@ -46,6 +46,17 @@ interface Session {
   updatedAt?: Date;
 }
 
+function getCalendarDateKey(value?: string | Date | null): string | null {
+  if (!value) return null;
+  if (typeof value === 'string') {
+    const match = value.match(/^(\\d{4}-\\d{2}-\\d{2})/);
+    if (match) return match[1];
+  }
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
 const STATUS_LABELS: Record<string, string> = {
   scheduled: 'مجدولة',
   completed: 'مكتملة',
@@ -69,43 +80,35 @@ export function Sessions() {
 
   const { sessions } = useSessions();
 
-  // الجلسات القادمة فقط (تاريخها في المستقبل وحالتها ليست مكتملة أو ملغاة)
+  const todayStr = getCalendarDateKey(new Date())!;
+
+  // لا نحوّل تاريخ YYYY-MM-DD إلى UTC؛ التاريخ القضائي يوم محلي وليس لحظة زمنية.
   const upcomingSessions = useMemo(() => {
-    const now = new Date();
-    now.setHours(0, 0, 0, 0);
-    return sessions
-      .filter((s) => {
-        if (!s.date) return false;
-        const sessionDate = new Date(s.date as any);
-        if (isNaN(sessionDate.getTime())) return false;
-        sessionDate.setHours(0, 0, 0, 0);
-        return sessionDate >= now && s.status !== 'completed' && s.status !== 'cancelled';
+    return [...sessions]
+      .filter((session) => {
+        const key = getCalendarDateKey(session.date as any);
+        return Boolean(key && key >= todayStr && session.status !== 'completed' && session.status !== 'cancelled');
       })
       .sort((a, b) => {
-        const da = a.date ? new Date(a.date as any).getTime() : 0;
-        const db = b.date ? new Date(b.date as any).getTime() : 0;
-        return da - db;
+        const dateOrder = (getCalendarDateKey(a.date as any) || '').localeCompare(getCalendarDateKey(b.date as any) || '');
+        return dateOrder || (a.time || '').localeCompare(b.time || '');
       });
-  }, [sessions]);
+  }, [sessions, todayStr]);
 
-  // كل الجلسات (عند تفعيل "عرض الكل")
   const allSessionsSorted = useMemo(() => {
     return [...sessions].sort((a, b) => {
-      const da = a.date ? new Date(a.date as any).getTime() : 0;
-      const db = b.date ? new Date(b.date as any).getTime() : 0;
-      return db - da;
+      const dateOrder = (getCalendarDateKey(b.date as any) || '').localeCompare(getCalendarDateKey(a.date as any) || '');
+      return dateOrder || (a.time || '').localeCompare(b.time || '');
     });
   }, [sessions]);
 
   const displaySessions = showAll ? allSessionsSorted : upcomingSessions;
 
-  // تجميع حسب التاريخ
   const groupedSessions = useMemo(() => {
     const groups: Record<string, typeof displaySessions> = {};
     for (const session of displaySessions) {
-      const key = session.date ? new Date(session.date as any).toISOString().slice(0, 10) : 'بدون تاريخ';
-      if (!groups[key]) groups[key] = [];
-      groups[key].push(session);
+      const key = getCalendarDateKey(session.date as any) || 'بدون تاريخ';
+      (groups[key] ||= []).push(session);
     }
     return groups;
   }, [displaySessions]);
@@ -154,14 +157,7 @@ export function Sessions() {
     }
   }
 
-  // حساب الجلسات القادمة اليوم
-  const todayStr = new Date().toISOString().split('T')[0];
-  const todaySessions = upcomingSessions.filter(s => {
-    if (!s.date) return false;
-    const sd = new Date(s.date as any);
-    if (isNaN(sd.getTime())) return false;
-    return sd.toISOString().split('T')[0] === todayStr;
-  });
+  const todaySessions = upcomingSessions.filter(s => getCalendarDateKey(s.date as any) === todayStr);
 
   return (
     <div className="space-y-4">
@@ -232,9 +228,9 @@ export function Sessions() {
       {/* الجلسات مج.grouped */}
       <div className="space-y-4">
         {Object.entries(groupedSessions).map(([date, dateSessions]) => {
-          const sessionDate = date === 'بدون تاريخ' ? null : new Date(date);
+          const sessionDate = date === 'بدون تاريخ' ? null : new Date(`${date}T12:00:00`);
           const isToday = date === todayStr;
-          const isPast = sessionDate ? sessionDate < new Date(todayStr) : false;
+          const isPast = date !== 'بدون تاريخ' && date < todayStr;
           return (
             <div key={date}>
               <h3 className={`text-sm font-semibold mb-2 flex items-center gap-2 ${isToday ? 'text-teal-700 dark:text-teal-400' : isPast ? 'text-muted-foreground' : 'text-foreground'}`}>
