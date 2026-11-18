@@ -570,7 +570,19 @@ export function Dashboard() {
                 return (
                   <div
                     key={`${item.source}-${item.id}`}
-                    className={`p-5 rounded-xl border-2 cursor-pointer transition-all duration-200 hover:shadow-lg hover:scale-[1.02] ${
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`فتح ملف القضية ${caseData?.caseNumber || caseData?.subject || ''} - ${item.reason || 'موعد قادم'}`}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        if (item.caseId) {
+                          setSelectedCaseId(item.caseId);
+                          setActiveSection('cases');
+                        }
+                      }
+                    }}
+                    className={`p-5 rounded-xl border-2 cursor-pointer transition-all duration-200 hover:shadow-lg hover:scale-[1.02] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
                       isToday
                         ? 'bg-destructive/5 border-destructive/35 hover:border-destructive/60'
                         : isTomorrow
@@ -667,7 +679,17 @@ export function Dashboard() {
                 return (
                   <div
                     key={delay.id}
-                    className="flex items-center justify-between p-2.5 rounded-lg bg-amber-50 dark:bg-amber-900/20 cursor-pointer hover:bg-amber-100 dark:hover:bg-amber-900/30 transition-colors"
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`فتح القضية المرتبطة بالتأجيل ${caseData?.caseNumber || caseData?.subject || ''}`}
+                    className="flex items-center justify-between p-2.5 rounded-lg bg-amber-50 dark:bg-amber-900/20 cursor-pointer hover:bg-amber-100 dark:hover:bg-amber-900/30 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    onKeyDown={(event) => {
+                      if ((event.key === 'Enter' || event.key === ' ') && delay.caseId) {
+                        event.preventDefault();
+                        setSelectedCaseId(delay.caseId);
+                        setActiveSection('cases');
+                      }
+                    }}
                     onClick={() => {
                       if (delay.caseId) {
                         setSelectedCaseId(delay.caseId);
@@ -709,7 +731,17 @@ export function Dashboard() {
                 .map((c: any) => (
                   <div
                     key={c.id}
-                    className="flex items-center justify-between p-2.5 rounded-lg border cursor-pointer hover:bg-muted/50 transition-colors"
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`فتح ملف القضية ${c.caseNumber || c.subject || ''}`}
+                    className="flex items-center justify-between p-2.5 rounded-lg border cursor-pointer hover:bg-muted/50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        setSelectedCaseId(c.id);
+                        setActiveSection('cases');
+                      }
+                    }}
                     onClick={() => {
                       if (c.id) {
                         setSelectedCaseId(c.id);
