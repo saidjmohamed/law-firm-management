@@ -31,7 +31,7 @@ function escapeHtml(value: unknown): string {
   })[char] || char);
 }
 
-export function CasePrintButton({ caseData, parties }: CasePrintProps) {
+export function CasePrintButton({ caseData, parties, delays, sessions }: CasePrintProps) {
   const [loading, setLoading] = React.useState(false);
   const { settings } = useSettings();
 
