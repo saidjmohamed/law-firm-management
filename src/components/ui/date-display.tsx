@@ -55,6 +55,10 @@ export const DateInput = React.forwardRef<
  */
 export function toDateInputValue(value: string | Date | null | undefined): string {
   if (!value) return '';
+  if (typeof value === 'string') {
+    const isoMatch = value.trim().match(/^(\d{4}-\d{2}-\d{2})/);
+    if (isoMatch) return isoMatch[1];
+  }
   const d = typeof value === 'string' ? new Date(value) : value;
   if (isNaN(d.getTime())) return '';
   const yyyy = d.getFullYear();
