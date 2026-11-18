@@ -265,6 +265,13 @@ export function Cases() {
   const [delays, setDelays] = useState<DelayRow[]>([]);
   const [caseDuplicateWarning, setCaseDuplicateWarning] = useState<any[] | null>(null);
   const [forceSaveCase, setForceSaveCase] = useState(false);
+  const [quickDelayOpen, setQuickDelayOpen] = useState(false);
+  const [quickDelayCase, setQuickDelayCase] = useState<CaseType | null>(null);
+  const [quickDelayDate, setQuickDelayDate] = useState('');
+  const [quickDelayReason, setQuickDelayReason] = useState('');
+  const [quickDelayNotes, setQuickDelayNotes] = useState('');
+  const [savingQuickDelay, setSavingQuickDelay] = useState(false);
+
 
   const { cases, isLoading: casesLoading } = useCases();
   const { parties: allParties } = useParties();
@@ -1242,100 +1249,110 @@ export function Cases() {
                 >
                   <CardContent className="p-5 sm:p-6 space-y-4">
                     {(() => {
-                      const casePartiesForCard = c.parties || allParties?.filter((p: any) => p.caseId === c.id) || [];
-                      const representedPartiesForCard = casePartiesForCard.filter((p: any) => (p.side || 'for') === 'for');
-                      const opponentsForCard = casePartiesForCard.filter((p: any) => p.side === 'against');
-                      const caseSessionsForCard = c.sessions || allSessions?.filter((s: any) => s.caseId === c.id) || [];
-                      const caseDelaysForCard = c.delays || allDelays?.filter((d: any) => d.caseId === c.id) || [];
-                      const dateRows: { label: string; value: any; detail?: string; kind: string }[] = [];
-                      if (c.registrationDate) dateRows.push({ label: 'التسجيل', value: c.registrationDate, kind: 'base' });
-                      if (c.firstSessionDate) dateRows.push({ label: 'أول جلسة', value: c.firstSessionDate, kind: 'base' });
-                      caseSessionsForCard.filter((x: any) => x.date).forEach((x: any) => dateRows.push({
-                        label: 'جلسة', value: x.date,
-                        detail: [x.time, x.court, x.chamber, x.result, x.status].filter(Boolean).join(' • '), kind: 'session'
-                      }));
-                      caseDelaysForCard.filter((x: any) => x.delayDate).forEach((x: any) => dateRows.push({
-                        label: 'تأجيل', value: x.delayDate,
-                        detail: [x.reason, x.notes].filter(Boolean).join(' — '), kind: 'delay'
-                      }));
-                      if (c.delibDate) dateRows.push({ label: 'المداولة', value: c.delibDate, kind: 'base' });
-                      if (c.judgmentDate) dateRows.push({ label: 'صدور الحكم', value: c.judgmentDate, detail: c.caseResult === 'won' ? 'حكم لصالح الطرف الذي نمثله' : c.caseResult === 'lost' ? 'حكم ضد الطرف الذي نمثله' : undefined, kind: 'judgment' });
-                      dateRows.sort((a, b) => new Date(a.value).getTime() - new Date(b.value).getTime());
+                      const partiesForCard = c.parties || allParties?.filter((p: any) => p.caseId === c.id) || [];
+                      const represented = partiesForCard.filter((p: any) => (p.side || 'for') === 'for');
+                      const opponents = partiesForCard.filter((p: any) => p.side === 'against');
+                      const sessionsForCard = (c.sessions || allSessions?.filter((s: any) => s.caseId === c.id) || [])
+                        .filter((s: any) => s.date)
+                        .sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime());
+                      const delaysForCard = (c.delays || allDelays?.filter((d: any) => d.caseId === c.id) || [])
+                        .filter((d: any) => d.delayDate)
+                        .sort((a: any, b: any) => new Date(b.delayDate).getTime() - new Date(a.delayDate).getTime());
+                      const today = new Date(); today.setHours(0,0,0,0);
+                      const upcomingSession = sessionsForCard.find((s: any) => {
+                        const date = new Date(s.date); date.setHours(0,0,0,0);
+                        return date >= today && !['completed','cancelled'].includes(s.status || '');
+                      });
+                      const fallbackFirst = c.firstSessionDate && new Date(c.firstSessionDate) >= today ? c.firstSessionDate : null;
+                      const nextSessionDate = upcomingSession?.date || fallbackFirst;
+                      const events = [
+                        ...sessionsForCard.map((s: any) => ({ date: s.date, label: s.status === 'postponed' ? 'جلسة مؤجلة' : 'جلسة', detail: [s.time, s.result, s.notes].filter(Boolean).join(' — '), stamp: new Date(s.date).getTime() })),
+                        ...delaysForCard.map((d: any) => ({ date: d.delayDate, label: 'تأجيل', detail: [d.reason, d.notes].filter(Boolean).join(' — '), stamp: new Date(d.delayDate).getTime() })),
+                      ].sort((a, b) => b.stamp - a.stamp);
+                      const lastEvent = events[0];
                       const totalFeesCard = Number(c.totalFees || 0);
                       const paidCard = Number(c.paidAmount || 0);
                       const remainingCard = totalFeesCard - paidCard;
-                      const judiciaryLabel = [c.litigationStage, c.courtLevel, c.judiciaryType].filter(Boolean).join(' • ');
+                      const courtLabel = [c.courtName, c.councilName, c.chamber].filter(Boolean).join(' • ');
                       return (
-                        <>
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="min-w-0 flex-1 space-y-1">
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <span className="text-base sm:text-lg font-extrabold tracking-tight text-foreground">{c.caseNumber || '—'}</span>
-                                <Badge className={`${STATUS_COLORS[c.status || ''] || ''} text-xs`}>{c.status || '—'}</Badge>
-                                {c.caseResult === 'won' && <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400 text-xs">ربحت</Badge>}
-                                {c.caseResult === 'lost' && <Badge className="bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400 text-xs">خسرت</Badge>}
-                                {c.caseNature && <Badge variant="outline" className="text-xs">{c.caseNature}</Badge>}
+                        <div className="space-y-3">
+                          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                            <div className="min-w-0 flex-1 space-y-1.5">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span className="text-xl font-black tracking-tight">{c.caseNumber || 'رقم غير مسجل'}</span>
+                                <Badge className={STATUS_COLORS[c.status || ''] || ''}>{c.status || 'غير محددة'}</Badge>
+                                {c.caseNature && <Badge variant="outline">{c.caseNature}</Badge>}
                               </div>
-                              <p className="text-[15px] sm:text-base font-semibold text-foreground/90">{c.subject || '—'}</p>
-                              <div className="text-[13px] text-muted-foreground flex flex-wrap gap-x-4 gap-y-2">
-                                <span className="font-semibold text-foreground">الجهة القضائية: {c.courtName || c.councilName || 'غير محددة'}</span>
-                                {judiciaryLabel && <span>درجة/نوع التقاضي: {judiciaryLabel}</span>}
-                                {c.chamber && <span>القسم/الغرفة: {c.chamber}</span>}
-                              </div>
+                              <p className="text-sm sm:text-base font-bold leading-relaxed">{c.subject || 'لم يُسجل موضوع/تهمة القضية'}</p>
+                              <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                                <Building2 className="w-3.5 h-3.5 shrink-0"/>
+                                <span>{courtLabel || 'الجهة القضائية غير محددة'}</span>
+                              </p>
+                              <p className="text-[11px] text-muted-foreground">
+                                {[c.litigationStage, c.judiciaryType, c.courtLevel].filter(Boolean).join(' • ')}
+                              </p>
                             </div>
-                            <div className="text-left shrink-0 space-y-1 min-w-[112px]">
-                              <p className="text-[11px] text-muted-foreground">مجموع الأتعاب</p>
-                              <p className="text-sm font-extrabold tabular-nums">{formatCurrency(totalFeesCard)}</p>
-                              <p className="text-[11px] text-muted-foreground">المتبقي</p>
-                              <p className={`text-sm font-bold tabular-nums ${remainingCard > 0 ? 'text-amber-700 dark:text-amber-400' : 'text-emerald-700 dark:text-emerald-400'}`}>{formatCurrency(remainingCard)}</p>
+                            <div className="sm:text-left shrink-0 rounded-lg bg-muted/50 px-3 py-2 min-w-[125px]">
+                              <p className="text-[11px] text-muted-foreground">المتبقي من الأتعاب</p>
+                              <p className={`text-sm font-extrabold tabular-nums ${remainingCard > 0 ? 'text-amber-700' : 'text-emerald-700'}`}>{formatCurrency(remainingCard)}</p>
                             </div>
                           </div>
 
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                            <div className="rounded-xl border bg-muted/30 p-3 sm:p-4 space-y-2">
-                              <p className="text-xs font-bold text-teal-700 dark:text-teal-400">الأطراف الذين نمثلهم ومحاموهم</p>
-                              {representedPartiesForCard.length ? representedPartiesForCard.map((p: any) => (
-                                <div key={p.id} className="text-xs flex flex-wrap gap-x-2 gap-y-0.5">
-                                  <span className="font-semibold">{p.name || 'اسم غير محدد'}</span>
-                                  <span className="text-muted-foreground">المحامي: {p.lawyerName || 'غير محدد'}</span>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            <div className="rounded-lg border border-teal-200/70 dark:border-teal-900 p-3 space-y-1.5">
+                              <p className="text-xs font-bold text-teal-700 dark:text-teal-400">موكلونا ومحاموهم</p>
+                              {represented.length ? represented.map((p: any) => (
+                                <div key={p.id} className="text-xs leading-relaxed">
+                                  <span className="font-semibold">{p.name || 'اسم غير مسجل'}</span>
+                                  <span className="text-muted-foreground"> — المحامي: {p.lawyerName || 'غير مسجل'}</span>
                                 </div>
-                              )) : <p className="text-xs text-muted-foreground">لا توجد أطراف نمثلها مسجلة</p>}
+                              )) : <p className="text-xs text-muted-foreground">لم تُسجل أسماء الأطراف الذين نمثلهم</p>}
                             </div>
-                            <div className="rounded-lg border p-2.5 space-y-1.5">
+                            <div className="rounded-lg border border-rose-200/70 dark:border-rose-900 p-3 space-y-1.5">
                               <p className="text-xs font-bold text-rose-700 dark:text-rose-400">الخصوم ومحاموهم</p>
-                              {opponentsForCard.length ? opponentsForCard.map((p: any) => (
-                                <div key={p.id} className="text-xs flex flex-wrap gap-x-2 gap-y-0.5">
-                                  <span className="font-semibold">{p.name || 'اسم غير محدد'}</span>
-                                  <span className="text-muted-foreground">المحامي: {p.lawyerName || 'غير محدد'}</span>
+                              {opponents.length ? opponents.map((p: any) => (
+                                <div key={p.id} className="text-xs leading-relaxed">
+                                  <span className="font-semibold">{p.name || 'اسم غير مسجل'}</span>
+                                  <span className="text-muted-foreground"> — المحامي: {p.lawyerName || 'غير مسجل'}</span>
                                 </div>
-                              )) : <p className="text-xs text-muted-foreground">لا توجد بيانات خصم مسجلة</p>}
+                              )) : <p className="text-xs text-muted-foreground">لم تُسجل بيانات الخصوم</p>}
                             </div>
                           </div>
 
-                          <div className="rounded-xl border bg-muted/30 p-3 sm:p-4 space-y-3">
-                            <div className="flex items-center justify-between gap-2">
-                              <p className="text-xs font-bold">التواريخ والإجراءات الزمنية</p>
-                              <span className="text-[11px] text-muted-foreground">{dateRows.length} تاريخ/إجراء</span>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            <div className="rounded-lg bg-muted/40 border p-3">
+                              <p className="text-[11px] text-muted-foreground mb-1">آخر إجراء مسجل</p>
+                              {lastEvent ? (
+                                <>
+                                  <p className="text-sm font-bold">{lastEvent.label} — <DateDisplay value={lastEvent.date as any}/></p>
+                                  {lastEvent.detail && <p className="text-xs text-muted-foreground mt-1">{lastEvent.detail}</p>}
+                                </>
+                              ) : <p className="text-xs text-muted-foreground">لا توجد جلسات أو تأجيلات مسجلة</p>}
                             </div>
-                            {dateRows.length ? (
-                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2">
-                                {dateRows.map((item, index) => (
-                                  <div key={`${item.kind}-${index}`} className="min-w-0 flex items-start gap-2 text-xs">
-                                    <span className="shrink-0 font-semibold text-foreground">{item.label}:</span>
-                                    <span className="min-w-0">
-                                      <DateDisplay value={item.value as any} />
-                                      {item.detail && <span className="block text-muted-foreground mt-0.5 break-words">{item.detail}</span>}
-                                    </span>
-                                  </div>
-                                ))}
-                              </div>
-                            ) : <p className="text-xs text-muted-foreground">لا توجد تواريخ أو جلسات أو تأجيلات مسجلة</p>}
+                            <div className="rounded-lg bg-emerald-50/70 dark:bg-emerald-950/20 border border-emerald-200/70 dark:border-emerald-900 p-3">
+                              <p className="text-[11px] text-muted-foreground mb-1">الجلسة القادمة</p>
+                              {nextSessionDate ? (
+                                <p className="text-base font-black text-emerald-700 dark:text-emerald-400"><DateDisplay value={nextSessionDate as any}/>{upcomingSession?.time ? ` — ${upcomingSession.time}` : ''}</p>
+                              ) : <p className="text-xs text-muted-foreground">لا يوجد موعد جلسة قادمة مسجل</p>}
+                              {upcomingSession?.chamber && <p className="text-xs text-muted-foreground mt-1">{upcomingSession.chamber}</p>}
+                            </div>
                           </div>
-                          <div className="flex flex-wrap gap-x-4 gap-y-2 text-[13px] text-muted-foreground border-t border-border pt-3">
-                            <span>المدفوع: {formatCurrency(paidCard)}</span>
-                            <span>المتبقي من الأتعاب: {formatCurrency(remainingCard)}</span>
+
+                          <div className="flex flex-wrap items-center justify-between gap-2 border-t pt-3">
+                            <div className="flex flex-wrap gap-2">
+                              <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); openEditForm(c); }}>
+                                <Pencil className="w-3.5 h-3.5 ml-1"/> تعديل القضية
+                              </Button>
+                              <Button size="sm" variant="outline" onClick={(e) => {
+                                e.stopPropagation();
+                                setQuickDelayCase(c); setQuickDelayDate(''); setQuickDelayReason(''); setQuickDelayNotes(''); setQuickDelayOpen(true);
+                              }}>
+                                <Clock className="w-3.5 h-3.5 ml-1"/> تسجيل تأجيل
+                              </Button>
+                            </div>
+                            <span className="text-xs text-primary font-semibold">اضغط على البطاقة لفتح الملف الكامل ←</span>
                           </div>
-                        </>
+                        </div>
                       );
                     })()}
                   </CardContent>
@@ -1352,6 +1369,34 @@ export function Cases() {
         </div>
         </div>
       )}
+
+      <Dialog open={quickDelayOpen} onOpenChange={(open) => { setQuickDelayOpen(open); if (!open) setQuickDelayCase(null); }}>
+        <DialogContent className="max-w-lg" dir="rtl">
+          <DialogHeader><DialogTitle>تسجيل تأجيل — {quickDelayCase?.caseNumber || ''}</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <div><Label>تاريخ الجلسة الجديدة</Label><Input type="date" dir="ltr" value={quickDelayDate} onChange={(e) => setQuickDelayDate(e.target.value)}/></div>
+            <div><Label>سبب التأجيل</Label><Input value={quickDelayReason} onChange={(e) => setQuickDelayReason(e.target.value)} placeholder="مثلاً: طلب مهلة، غياب طرف، إجراء..." /></div>
+            <div><Label>ملاحظات إضافية</Label><Textarea value={quickDelayNotes} onChange={(e) => setQuickDelayNotes(e.target.value)} placeholder="تفاصيل اختيارية"/></div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setQuickDelayOpen(false)}>إلغاء</Button>
+            <Button disabled={!quickDelayCase?.id || !quickDelayDate || savingQuickDelay} onClick={async () => {
+              if (!quickDelayCase?.id || !quickDelayDate) return;
+              setSavingQuickDelay(true);
+              try {
+                const now = new Date().toISOString();
+                await createDelay({caseId: quickDelayCase.id, delayDate: quickDelayDate, reason: quickDelayReason, notes: quickDelayNotes, createdAt: now, updatedAt: now});
+                await mutate('/api/cases');
+                await mutate('/api/delays');
+                toast.success('تم تسجيل التأجيل وتحديث بطاقة القضية');
+                setQuickDelayOpen(false); setQuickDelayCase(null);
+              } catch (error) {
+                toast.error('تعذر تسجيل التأجيل');
+              } finally { setSavingQuickDelay(false); }
+            }}>حفظ التأجيل</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* نافذة إضافة/تعديل القضية */}
       <Dialog open={showForm} onOpenChange={(open) => { setShowForm(open); if (!open) resetForm(); }}>
