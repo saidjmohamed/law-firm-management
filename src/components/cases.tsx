@@ -518,7 +518,12 @@ export function Cases() {
       }
 
       // فرق ذكي للأطراف: تحديث الموجودة، إنشاء الجديدة، حذف المحذوفة
-      const existingParties = caseParties || [];
+      // لا نعتمد على caseParties المرتبطة بصفحة التفاصيل؛ فقد يكون التعديل
+      // قد فُتح مباشرة من بطاقة القضية بينما selectedCaseId غير محدد.
+      // نقرأ الأطراف من القضية الجاري تعديلها ثم نرجع إلى القائمة العامة.
+      const existingParties = editingCase.parties?.length
+        ? editingCase.parties
+        : (allParties || []).filter((party) => party.caseId === editingCase.id);
       // خريطة الأطراف القديمة: id رقمي → PartyType
       const existingById = new Map<number, PartyType>();
       existingParties.forEach((p) => { if (p.id) existingById.set(p.id, p); });
@@ -1406,7 +1411,17 @@ export function Cases() {
                             variant="outline"
                             size="icon"
                             className="h-10 w-10 shrink-0"
-                            onClick={() => { const updated = [...parties]; updated[idx] = { ...updated[idx], name: updated[idx].name || '', side: updated[idx].side || 'for' }; setParties(updated); }}
+                            onClick={() => {
+                              const current = parties[idx];
+                              if (!current?.name?.trim()) {
+                                toast.error('أدخل اسم الطرف أولاً قبل تأكيده');
+                                return;
+                              }
+                              const updated = [...parties];
+                              updated[idx] = { ...updated[idx], name: current.name.trim(), side: current.side || 'for' };
+                              setParties(updated);
+                              toast.success('تم اعتماد الطرف في نموذج القضية؛ سيُحفظ عند حفظ القضية');
+                            }}
                             title="تأكيد بيانات الطرف"
                           >
                             <UserPlus className="w-4 h-4" />
