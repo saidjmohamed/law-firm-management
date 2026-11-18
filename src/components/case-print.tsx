@@ -59,7 +59,7 @@ export function CasePrintButton({ caseData, parties }: CasePrintProps) {
 @page{size:A4 portrait;margin:9mm}
 *{box-sizing:border-box}html,body{margin:0;padding:0}
 body{font-family:Tahoma,"Arial",sans-serif;color:#111;background:#fff;font-size:11.5px;line-height:1.5}
-.sheet{height:279mm;max-height:279mm;overflow:hidden;border:1.5px solid #111;padding:7mm;display:flex;flex-direction:column;gap:8px}
+.sheet{height:270mm;max-height:270mm;overflow:hidden;border:1.5px solid #111;padding:7mm;display:flex;flex-direction:column;gap:8px}
 .head{text-align:center;border-bottom:3px double #111;padding:0 0 8px}
 .head h1{font-size:19px;margin:0 0 2px;font-weight:800}.head h2{font-size:12px;margin:0 0 3px;font-weight:600}
 .contact{font-size:9.5px;color:#333}.main-title{border:2px solid #111;text-align:center;padding:8px 10px;font-size:17px;font-weight:800;letter-spacing:.2px}
@@ -72,7 +72,7 @@ body{font-family:Tahoma,"Arial",sans-serif;color:#111;background:#fff;font-size:
 .party-line{padding:3px 0;border-bottom:1px dotted #aaa}.party-line:last-child{border:0}
 .notes{white-space:pre-wrap;overflow-wrap:anywhere;max-height:34mm;overflow:hidden}
 .footer{margin-top:auto;border-top:1px solid #222;padding-top:5px;display:flex;justify-content:space-between;gap:8px;font-size:9px}
-@media print{html,body{width:210mm;height:297mm}.sheet{break-inside:avoid;page-break-inside:avoid}}
+@media print{html,body{width:auto;height:auto;min-height:0;margin:0;padding:0}.sheet{height:270mm;max-height:270mm;break-inside:avoid;page-break-inside:avoid;page-break-after:avoid}}
 </style></head><body><main class="sheet">
 <header class="head"><h1>${escapeHtml(lawyerName)}</h1><h2>${escapeHtml(lawyerTitle)}</h2>
 <div class="contact">${[lawyerAddress, lawyerPhone ? 'الهاتف: '+lawyerPhone : '', lawyerEmail].filter(Boolean).map(escapeHtml).join(' | ')}</div></header>
@@ -100,9 +100,8 @@ ${caseData.notes ? `<section class="section"><div class="section-title">ملاح
 
       const printWindow = window.open('', '_blank');
       if (printWindow) {
+        printWindow.onload = () => { printWindow.focus(); printWindow.print(); };
         printWindow.document.write(html); printWindow.document.close();
-        printWindow.onload = () => printWindow.print();
-        setTimeout(() => { if (!printWindow.closed) printWindow.print(); }, 700);
         toast.success('تم تجهيز بطاقة القضية للطباعة');
       } else {
         const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
