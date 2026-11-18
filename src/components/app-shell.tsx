@@ -72,7 +72,7 @@ export function AppShell({ children }: AppShellProps) {
 
   const SidebarContent = () => (
     <div className="flex h-full flex-col bg-sidebar text-sidebar-foreground">
-      <div className="flex min-h-[88px] items-center gap-3 border-b border-sidebar-border px-5">
+      <div className="flex min-h-[88px] items-center gap-3 border-b border-sidebar-border px-4 sm:px-5">
         <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-700 to-cyan-600 shadow-md shadow-blue-900/15 text-sidebar-primary-foreground">
           <Scale className="h-[22px] w-[22px]" strokeWidth={1.7} />
         </div>
@@ -149,6 +149,12 @@ export function AppShell({ children }: AppShellProps) {
 
   return (
     <div dir="rtl" className="min-h-screen bg-background text-foreground antialiased">
+      <a
+        href="#main-content"
+        className="sr-only z-[100] rounded-md bg-primary px-4 py-2 text-primary-foreground focus:not-sr-only focus:fixed focus:right-4 focus:top-4"
+      >
+        تجاوز إلى المحتوى الرئيسي
+      </a>
       <aside className="fixed inset-y-0 start-0 z-40 hidden w-[288px] flex-col border-e border-sidebar-border bg-sidebar lg:flex">
         <SidebarContent />
       </aside>
@@ -158,7 +164,7 @@ export function AppShell({ children }: AppShellProps) {
           <div className="flex min-w-0 items-center gap-3">
             <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
               <SheetTrigger asChild>
-                <Button variant="outline" size="icon" className="h-10 w-10 border-border lg:hidden">
+                <Button variant="outline" size="icon" aria-label="فتح قائمة التنقل" className="h-11 w-11 border-border lg:hidden">
                   <Menu className="h-[18px] w-[18px]" />
                   <span className="sr-only">فتح القائمة</span>
                 </Button>
@@ -178,7 +184,7 @@ export function AppShell({ children }: AppShellProps) {
             </div>
           </div>
 
-          <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+          <div className="flex min-w-0 shrink-0 items-center gap-1.5 sm:gap-3">
             <GlobalSearch />
             <DailyTasksDialog />
             <Button
@@ -204,7 +210,7 @@ export function AppShell({ children }: AppShellProps) {
           </div>
         </header>
 
-        <main className="min-h-[calc(100vh-72px)] flex-1 bg-background p-4 sm:p-6 lg:p-8">
+        <main id="main-content" tabIndex={-1} className="min-h-[calc(100vh-72px)] min-w-0 flex-1 bg-background p-3 outline-none sm:p-6 lg:p-8">
           <div className="mx-auto w-full max-w-[1600px]">
             {children}
           </div>
