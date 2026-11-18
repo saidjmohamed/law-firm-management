@@ -1174,6 +1174,8 @@ export function Cases() {
         <div className="relative flex-1">
           <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
+            type="search"
+            aria-label="البحث في ملفات القضايا"
             placeholder="بحث برقم القضية، الموضوع، المحكمة..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
@@ -1198,7 +1200,7 @@ export function Cases() {
       </div>
 
       {/* تبويبات الفلترة */}
-      <div className="flex gap-1 p-1 bg-muted rounded-lg">        {[
+      <div role="tablist" aria-label="تصفية ملفات القضايا" className="flex gap-1 p-1 bg-muted rounded-lg">        {[
           { id: 'active' as const,   label: 'الجارية',            filter: (c: CaseType) => c.status === 'جارية' },
           { id: 'archived' as const, label: 'مؤرشفة / مفصول فيها', filter: (c: CaseType) => c.status === 'مؤرشفة' || c.status === 'مفصول فيها' },
           { id: 'pending' as const,  label: 'للجدولة',             filter: (c: CaseType) => c.status === 'للجدولة' || !c.caseNumber },
@@ -1207,8 +1209,11 @@ export function Cases() {
           return (
             <button
               key={tab.id}
+              type="button"
+              role="tab"
+              aria-selected={activeTab === tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-md text-xs font-semibold transition-all ${
+              className={`min-h-11 flex-1 flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-md text-xs font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
                 activeTab === tab.id
                   ? 'bg-background shadow-sm text-teal-700 dark:text-teal-400'
                   : 'text-muted-foreground hover:text-foreground'
