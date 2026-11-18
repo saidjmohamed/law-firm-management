@@ -7,6 +7,7 @@ import { mutate } from 'swr';
 import { formatCurrency, STATUS_COLORS, CASE_NATURES, CASE_STATUSES, LITIGATION_STAGES, PARTY_ROLES, JUDICIAL_CHAMBERS, WILAYAS, JUDICIARY_TYPES, ORDINARY_COURT_LEVELS, ADMIN_COURT_LEVELS, CHAMBER_NUMBERS, formatDate } from '@/lib/constants';
 import { CasePrintButton } from '@/components/case-print';
 import { CaseAnnouncementButton } from '@/components/case-announcement';
+import { CaseMarkdownExportButton } from '@/components/case-markdown-export';
 import { SelectWithCustom } from '@/components/ui/select-with-custom';
 import { ComboboxInput } from '@/components/ui/combobox-input';
 import { DuplicateAlert, findDuplicateCaseNumbers, findDuplicatePartyNames } from '@/components/ui/duplicate-alert';
@@ -518,7 +519,11 @@ export function Cases() {
       }
 
       // فرق ذكي للأطراف: تحديث الموجودة، إنشاء الجديدة، حذف المحذوفة
-      const existingParties = caseParties || [];
+      // Keep existing parties attached to the case being edited, even when the
+      // edit dialog was opened from a list card rather than the detail view.
+      const existingParties = editingCase.parties?.length
+        ? editingCase.parties
+        : (allParties || []).filter((party) => party.caseId === editingCase.id);
       // خريطة الأطراف القديمة: id رقمي → PartyType
       const existingById = new Map<number, PartyType>();
       existingParties.forEach((p) => { if (p.id) existingById.set(p.id, p); });
@@ -593,7 +598,6 @@ export function Cases() {
       const delaysToUpdate: { row: DelayRow; existing: DelayType }[] = [];
       const delaysToCreate: DelayRow[] = [];
       const updatedDelayIds = new Set<number>();
-
       for (const row of delays) {
         if (!row.delayDate && !row.reason) continue;
         if (isNumericId(row.id)) {
@@ -876,6 +880,7 @@ export function Cases() {
                   caseData={selectedCase}
                   parties={caseParties || []}
                 />
+                <CaseMarkdownExportButton caseId={selectedCase.id} tasks={allTasks || []} />
                 <Button variant="outline" size="sm" onClick={() => openEditForm(selectedCase)} className="touch-target">
                   <Pencil className="w-3 h-3 ml-1" />
                   تعديل
@@ -1193,8 +1198,7 @@ export function Cases() {
       </div>
 
       {/* تبويبات الفلترة */}
-      <div className="flex gap-1 p-1 bg-muted rounded-lg">
-        {[
+      <div className="flex gap-1 p-1 bg-muted rounded-lg">        {[
           { id: 'active' as const,   label: 'الجارية',            filter: (c: CaseType) => c.status === 'جارية' },
           { id: 'archived' as const, label: 'مؤرشفة / مفصول فيها', filter: (c: CaseType) => c.status === 'مؤرشفة' || c.status === 'مفصول فيها' },
           { id: 'pending' as const,  label: 'للجدولة',             filter: (c: CaseType) => c.status === 'للجدولة' || !c.caseNumber },
@@ -1230,13 +1234,13 @@ export function Cases() {
               return (
                 <Card
                   key={c.id}
-                  className={`cursor-pointer transition-all duration-200 border-r-4 ${borderColor} ${index % 2 === 0 ? "bg-[#e8f2fb] dark:bg-slate-800" : "bg-[#f5eee3] dark:bg-slate-700"} hover:shadow-md hover:brightness-[0.99]`}
+                  className={`group cursor-pointer overflow-hidden transition-all duration-200 border-r-[5px] ${borderColor} bg-card hover:-translate-y-0.5 hover:shadow-lg`}
                   onClick={() => {
                     setSelectedCaseId(c.id ?? null);
                     setView('detail');
                   }}
                 >
-                  <CardContent className="p-4 space-y-3">
+                  <CardContent className="p-5 sm:p-6 space-y-4">
                     {(() => {
                       const casePartiesForCard = c.parties || allParties?.filter((p: any) => p.caseId === c.id) || [];
                       const representedPartiesForCard = casePartiesForCard.filter((p: any) => (p.side || 'for') === 'for');
@@ -1266,14 +1270,14 @@ export function Cases() {
                           <div className="flex items-start justify-between gap-3">
                             <div className="min-w-0 flex-1 space-y-1">
                               <div className="flex items-center gap-2 flex-wrap">
-                                <span className="text-sm font-extrabold">{c.caseNumber || '—'}</span>
+                                <span className="text-base sm:text-lg font-extrabold tracking-tight text-foreground">{c.caseNumber || '—'}</span>
                                 <Badge className={`${STATUS_COLORS[c.status || ''] || ''} text-xs`}>{c.status || '—'}</Badge>
                                 {c.caseResult === 'won' && <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400 text-xs">ربحت</Badge>}
                                 {c.caseResult === 'lost' && <Badge className="bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400 text-xs">خسرت</Badge>}
                                 {c.caseNature && <Badge variant="outline" className="text-xs">{c.caseNature}</Badge>}
                               </div>
-                              <p className="text-sm text-muted-foreground">{c.subject || '—'}</p>
-                              <div className="text-xs text-muted-foreground flex flex-wrap gap-x-3 gap-y-1">
+                              <p className="text-[15px] sm:text-base font-semibold text-foreground/90">{c.subject || '—'}</p>
+                              <div className="text-[13px] text-muted-foreground flex flex-wrap gap-x-4 gap-y-2">
                                 <span className="font-semibold text-foreground">الجهة القضائية: {c.courtName || c.councilName || 'غير محددة'}</span>
                                 {judiciaryLabel && <span>درجة/نوع التقاضي: {judiciaryLabel}</span>}
                                 {c.chamber && <span>القسم/الغرفة: {c.chamber}</span>}
@@ -1287,8 +1291,8 @@ export function Cases() {
                             </div>
                           </div>
 
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                            <div className="rounded-lg border p-2.5 space-y-1.5">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <div className="rounded-xl border bg-muted/30 p-3 sm:p-4 space-y-2">
                               <p className="text-xs font-bold text-teal-700 dark:text-teal-400">الأطراف الذين نمثلهم ومحاموهم</p>
                               {representedPartiesForCard.length ? representedPartiesForCard.map((p: any) => (
                                 <div key={p.id} className="text-xs flex flex-wrap gap-x-2 gap-y-0.5">
@@ -1308,7 +1312,7 @@ export function Cases() {
                             </div>
                           </div>
 
-                          <div className="rounded-lg border p-2.5 space-y-2">
+                          <div className="rounded-xl border bg-muted/30 p-3 sm:p-4 space-y-3">
                             <div className="flex items-center justify-between gap-2">
                               <p className="text-xs font-bold">التواريخ والإجراءات الزمنية</p>
                               <span className="text-[11px] text-muted-foreground">{dateRows.length} تاريخ/إجراء</span>
@@ -1327,7 +1331,7 @@ export function Cases() {
                               </div>
                             ) : <p className="text-xs text-muted-foreground">لا توجد تواريخ أو جلسات أو تأجيلات مسجلة</p>}
                           </div>
-                          <div className="flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-muted-foreground">
+                          <div className="flex flex-wrap gap-x-4 gap-y-2 text-[13px] text-muted-foreground border-t border-border pt-3">
                             <span>المدفوع: {formatCurrency(paidCard)}</span>
                             <span>المتبقي من الأتعاب: {formatCurrency(remainingCard)}</span>
                           </div>
@@ -1406,7 +1410,17 @@ export function Cases() {
                             variant="outline"
                             size="icon"
                             className="h-10 w-10 shrink-0"
-                            onClick={() => { const updated = [...parties]; updated[idx] = { ...updated[idx], name: updated[idx].name || '', side: updated[idx].side || 'for' }; setParties(updated); }}
+                            onClick={() => {
+                              const current = parties[idx];
+                              if (!current?.name?.trim()) {
+                                toast.error('أدخل اسم الطرف أولاً قبل تأكيده');
+                                return;
+                              }
+                              const updated = [...parties];
+                              updated[idx] = { ...updated[idx], name: current.name.trim(), side: current.side || 'for' };
+                              setParties(updated);
+                              toast.success('تم اعتماد الطرف في نموذج القضية؛ سيُحفظ عند حفظ القضية');
+                            }}
                             title="تأكيد بيانات الطرف"
                           >
                             <UserPlus className="w-4 h-4" />
@@ -1783,8 +1797,7 @@ export function Cases() {
                       const selectedBody = judicialBodies?.find(b => b.id === formData.courtId);
                       const bodyPhones = selectedBody?.phones ? (() => { try { const p = JSON.parse(selectedBody.phones); return Array.isArray(p) ? p.filter((x: string) => x.trim()) : []; } catch { return []; } })() : [];
                       return bodyPhones.length > 0 ? (
-                        <div className="mt-1.5 flex items-center gap-1.5 flex-wrap">
-                          <Phone className="w-3 h-3 text-teal-600 dark:text-teal-400" />
+                        <div className="mt-1.5 flex items-center gap-1.5 flex-wrap">                          <Phone className="w-3 h-3 text-teal-600 dark:text-teal-400" />
                           {bodyPhones.map((ph: string, i: number) => (
                             <span key={i} className="text-xs font-mono text-teal-700 dark:text-teal-400 dir-ltr">{ph}{i < bodyPhones.length - 1 ? ' /' : ''}</span>
                           ))}

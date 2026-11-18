@@ -76,20 +76,20 @@ export function AppShell({ children }: AppShellProps) {
 
   const SidebarContent = () => (
     <div className="flex h-full flex-col bg-sidebar text-sidebar-foreground">
-      <div className="flex min-h-[84px] items-center gap-3 border-b border-sidebar-border px-5">
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[10px] bg-sidebar-primary text-sidebar-primary-foreground">
+      <div className="flex min-h-[88px] items-center gap-3 border-b border-sidebar-border px-5">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-700 to-cyan-600 shadow-md shadow-blue-900/15 text-sidebar-primary-foreground">
           <Scale className="h-[22px] w-[22px]" strokeWidth={1.7} />
         </div>
         <div className="min-w-0">
-          <h1 className="text-[15px] font-semibold leading-6 text-foreground">إدارة مكتب المحاماة</h1>
-          <p className="text-xs leading-5 text-muted-foreground">نظام تسيير المكتب والقضايا</p>
+          <h1 className="text-[16px] font-bold leading-7 text-foreground">إدارة مكتب المحاماة</h1>
+          <p className="text-[13px] leading-5 text-muted-foreground">نظام تسيير المكتب والقضايا</p>
         </div>
       </div>
 
       <div className="px-5 pb-2 pt-5">
         <p className="text-xs font-medium text-muted-foreground">القائمة الرئيسية</p>
       </div>
-      <nav aria-label="التنقل الرئيسي" className="flex-1 space-y-1 overflow-y-auto px-3 pb-4">
+      <nav aria-label="التنقل الرئيسي" className="flex-1 space-y-1.5 overflow-y-auto px-3 pb-4">
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = activeSection === item.id;
@@ -103,9 +103,9 @@ export function AppShell({ children }: AppShellProps) {
                 setMobileOpen(false);
               }}
               className={cn(
-                'group flex min-h-10 w-full items-center gap-3 rounded-lg px-3 text-right text-[14px] font-medium',
+                'group flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-right text-[15px] font-medium',
                 isActive
-                  ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+                  ? 'bg-sidebar-accent text-sidebar-accent-foreground shadow-sm ring-1 ring-primary/10'
                   : 'text-sidebar-foreground/80 hover:bg-sidebar-accent/70 hover:text-sidebar-foreground'
               )}
             >
@@ -153,12 +153,12 @@ export function AppShell({ children }: AppShellProps) {
 
   return (
     <div dir="rtl" className="min-h-screen bg-background text-foreground antialiased">
-      <aside className="fixed inset-y-0 start-0 z-40 hidden w-[272px] flex-col border-e border-sidebar-border bg-sidebar lg:flex">
+      <aside className="fixed inset-y-0 start-0 z-40 hidden w-[288px] flex-col border-e border-sidebar-border bg-sidebar lg:flex">
         <SidebarContent />
       </aside>
 
-      <div className="flex min-h-screen flex-col lg:ms-[272px]">
-        <header className="sticky top-0 z-30 flex h-[68px] items-center justify-between border-b border-border/80 bg-background/95 px-4 backdrop-blur-sm sm:px-6 lg:px-8">
+      <div className="flex min-h-screen flex-col lg:ms-[288px]">
+        <header className="sticky top-0 z-30 flex h-[72px] items-center justify-between border-b border-border/80 bg-card/95 shadow-sm px-4 backdrop-blur-sm sm:px-6 lg:px-8">
           <div className="flex min-w-0 items-center gap-3">
             <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
               <SheetTrigger asChild>
@@ -208,7 +208,7 @@ export function AppShell({ children }: AppShellProps) {
           </div>
         </header>
 
-        <main className="min-h-[calc(100vh-68px)] flex-1 bg-background p-4 sm:p-5 lg:p-7">
+        <main className="min-h-[calc(100vh-72px)] flex-1 bg-background p-4 sm:p-6 lg:p-8">
           <div className="mx-auto w-full max-w-[1600px]">
             {children}
           </div>
