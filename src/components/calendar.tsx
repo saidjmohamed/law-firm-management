@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useSessions, useCases, useDelays } from '@/lib/api';
-import { SESSION_STATUSES, formatDate, ARABIC_DAYS, ARABIC_MONTHS } from '@/lib/constants';
+import { formatDate, ARABIC_MONTHS } from '@/lib/constants';
 import { useAppStore } from '@/lib/store';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -10,45 +10,42 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Sessions } from '@/components/sessions';
 import { DelaysManager } from '@/components/delays';
-import {
-  ChevronRight,
-  ChevronLeft,
-  CalendarDays,
-} from 'lucide-react';
+import { ChevronRight, ChevronLeft, CalendarDays, Clock3, MapPin, FolderOpen, Scale, FileText } from 'lucide-react';
 
-interface Session {
-  id?: number;
-  date?: string;
-  time?: string;
-  caseNumber?: string;
-  court?: string;
-  chamber?: string;
-  roomNumber?: string;
-  status?: string;
-  result?: string;
-  notes?: string;
-  caseId?: number;
-}
-
-const STATUS_BADGE_CLASSES: Record<string, string> = {
-  scheduled: 'bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-400',
-  completed: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400',
-  postponed: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400',
-  cancelled: 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400',
+type CalendarSession = {
+  id?: number; date?: string; time?: string; caseNumber?: string; court?: string;
+  chamber?: string; roomNumber?: string; status?: string; result?: string;
+  notes?: string; caseId?: number;
 };
+type CalendarDelay = { id?: number; delayDate?: string; reason?: string; notes?: string; caseId?: number };
 
 const STATUS_LABELS: Record<string, string> = {
-  scheduled: 'مجدولة',
-  completed: 'مكتملة',
-  postponed: 'مؤجلة',
-  cancelled: 'ملغاة',
+  scheduled: 'مجدولة', completed: 'مكتملة', postponed: 'مؤجلة', cancelled: 'ملغاة',
 };
+const STATUS_STYLES: Record<string, string> = {
+  scheduled: 'bg-primary/10 text-primary',
+  completed: 'bg-secondary text-secondary-foreground',
+  postponed: 'bg-accent text-accent-foreground',
+  cancelled: 'bg-muted text-muted-foreground',
+};
+
+// API dates arrive as ISO strings. Keep the stored calendar date instead of
+// converting midnight UTC to the previous local day.
+function calendarDateKey(value?: string | Date | null): string | null {
+  if (!value) return null;
+  if (typeof value === 'string') {
+    const match = value.match(/^(\\d{4}-\\d{2}-\\d{2})/);
+    if (match) return match[1];
+  }
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
 
 function CalendarMonthView() {
   const { setSelectedCaseId, setActiveSection } = useAppStore();
-  const [currentDate, setCurrentDate] = useState(new Date());
-  const [selectedDate, setSelectedDate] = useState<string | null>(null);
-
+  const [currentDate, setCurrentDate] = useState(() => new Date());
+  const [selectedDate, setSelectedDate] = useState<string | null>(() => calendarDateKey(new Date()));
   const { sessions } = useSessions();
   const { cases } = useCases();
   const { delays } = useDelays();
@@ -56,164 +53,124 @@ function CalendarMonthView() {
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
   const firstDay = new Date(year, month, 1);
-  const lastDay = new Date(year, month + 1, 0);
-  const daysInMonth = lastDay.getDate();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const startOffset = (firstDay.getDay() + 1) % 7; // Saturday-first calendar
 
-  // يوم بداية الشهر (السبت = 0 لأن الأسبوع يبدأ بالسبت في الجزائر)
-  let startDow = firstDay.getDay(); // 0=Sunday
-  // تحويل لبدء الأسبوع من السبت
-  startDow = startDow === 6 ? 0 : startDow + 1;
-
-  // بناء خريطة الجلسات حسب التاريخ
   const sessionsByDate = useMemo(() => {
-    const map: Record<string, Session[]> = {};
-    sessions.forEach((s) => {
-      if (s.date) {
-        const key = new Date(s.date as any).toISOString().slice(0, 10);
-        if (isNaN(new Date(key).getTime())) return;
-        if (!map[key]) map[key] = [];
-        map[key].push(s);
-      }
+    const map: Record<string, CalendarSession[]> = {};
+    (sessions || []).forEach((session: CalendarSession) => {
+      const key = calendarDateKey(session.date);
+      if (key) (map[key] ||= []).push(session);
     });
+    Object.values(map).forEach(items => items.sort((a, b) => (a.time || '').localeCompare(b.time || '')));
     return map;
   }, [sessions]);
 
-  // خريطة التأجيلات
   const delaysByDate = useMemo(() => {
-    const map: Record<string, number> = {};
-    delays.forEach((d) => {
-      if (d.delayDate) {
-        const key = new Date(d.delayDate as any).toISOString().slice(0, 10);
-        if (isNaN(new Date(key).getTime())) return;
-        map[key] = (map[key] || 0) + 1;
-      }
+    const map: Record<string, CalendarDelay[]> = {};
+    (delays || []).forEach((delay: CalendarDelay) => {
+      const key = calendarDateKey(delay.delayDate);
+      if (key) (map[key] ||= []).push(delay);
     });
     return map;
   }, [delays]);
 
-  // أيام الشهر
-  const calendarDays = useMemo(() => {
-    const days: (number | null)[] = [];
-    // أيام فارغة في البداية
-    for (let i = 0; i < startDow; i++) {
-      days.push(null);
-    }
-    for (let d = 1; d <= daysInMonth; d++) {
-      days.push(d);
-    }
-    return days;
-  }, [startDow, daysInMonth]);
+  const days = useMemo(() => [
+    ...Array.from({ length: startOffset }, () => null as number | null),
+    ...Array.from({ length: daysInMonth }, (_, index) => index + 1),
+  ], [startOffset, daysInMonth]);
 
-  // اليوم
-  const today = new Date();
-  const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+  const todayKey = calendarDateKey(new Date())!;
+  const dateKey = (day: number) => `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+  const selectedSessions = selectedDate ? (sessionsByDate[selectedDate] || []) : [];
+  const selectedDelays = selectedDate ? (delaysByDate[selectedDate] || []) : [];
+  const selectedEventsCount = selectedSessions.length + selectedDelays.length;
 
-  function prevMonth() {
-    setCurrentDate(new Date(year, month - 1, 1));
+  function changeMonth(offset: number) {
+    setCurrentDate(new Date(year, month + offset, 1));
     setSelectedDate(null);
   }
-
-  function nextMonth() {
-    setCurrentDate(new Date(year, month + 1, 1));
-    setSelectedDate(null);
-  }
-
   function goToToday() {
     setCurrentDate(new Date());
-    setSelectedDate(null);
+    setSelectedDate(todayKey);
   }
-
-  function dateStr(day: number): string {
-    return `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+  function openCase(caseId?: number) {
+    if (!caseId) return;
+    setSelectedCaseId(caseId);
+    setActiveSection('cases');
   }
-
-  // الجلسات المحددة لليوم المختار
-  const selectedSessions = selectedDate ? (sessionsByDate[selectedDate] || []) : [];
 
   return (
     <div className="space-y-4">
-      {/* رأس التقويم */}
-      <div className="flex items-center justify-between">
+      <section className="flex flex-wrap items-center justify-between gap-3" aria-label="التنقل بين أشهر التقويم">
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="icon" onClick={prevMonth} className="h-9 w-9">
-            <ChevronRight className="w-4 h-4" />
+          <Button variant="outlined" size="icon" aria-label="الشهر السابق" onClick={() => changeMonth(-1)}>
+            <ChevronRight className="h-4 w-4" />
           </Button>
-          <h3 className="text-base font-extrabold min-w-[160px] text-center">
-            {ARABIC_MONTHS[month]} {year}
-          </h3>
-          <Button variant="outline" size="icon" onClick={nextMonth} className="h-9 w-9">
-            <ChevronLeft className="w-4 h-4" />
+          <div className="min-w-36 text-center">
+            <h2 className="text-title-large font-bold text-foreground">{ARABIC_MONTHS[month]} {year}</h2>
+          </div>
+          <Button variant="outlined" size="icon" aria-label="الشهر التالي" onClick={() => changeMonth(1)}>
+            <ChevronLeft className="h-4 w-4" />
           </Button>
         </div>
-        <Button variant="outline" size="sm" onClick={goToToday} className="text-xs">
-          اليوم
-        </Button>
-      </div>
+        <Button variant="tonal" onClick={goToToday}>العودة إلى اليوم</Button>
+      </section>
 
-      {/* التقويم */}
-      <Card>
-        <CardContent className="p-3">
-          {/* رؤوس الأيام */}
-          <div className="grid grid-cols-7 gap-1 mb-1">
-            {['السبت', 'الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة'].map((day) => (
-              <div key={day} className="text-center text-xs font-bold text-muted-foreground py-1">
-                {day}
-              </div>
+      <Card className="overflow-hidden border-border shadow-none">
+        <CardContent className="p-2 sm:p-4">
+          <div className="mb-2 grid grid-cols-7 gap-1" role="row">
+            {['السبت', 'الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة'].map(day => (
+              <div key={day} className="py-2 text-center text-label-small font-semibold text-muted-foreground">{day}</div>
             ))}
           </div>
-
-          {/* الأيام */}
           <div className="grid grid-cols-7 gap-1">
-            {calendarDays.map((day, idx) => {
-              if (day === null) {
-                return <div key={`empty-${idx}`} className="h-16 md:h-20" />;
-              }
-              const ds = dateStr(day);
-              const daySessions = sessionsByDate[ds] || [];
-              const dayDelays = delaysByDate[ds] || 0;
-              const isToday = ds === todayStr;
-              const isSelected = ds === selectedDate;
-              const hasEvents = daySessions.length > 0 || dayDelays > 0;
-
+            {days.map((day, index) => {
+              if (day === null) return <div key={`empty-${index}`} className="min-h-24 sm:min-h-32 rounded-lg bg-surface-container-low/40" aria-hidden="true" />;
+              const key = dateKey(day);
+              const daySessions = sessionsByDate[key] || [];
+              const dayDelays = delaysByDate[key] || [];
+              const isToday = key === todayKey;
+              const isSelected = key === selectedDate;
+              const total = daySessions.length + dayDelays.length;
               return (
                 <button
-                  key={ds}
-                  onClick={() => setSelectedDate(ds === selectedDate ? null : ds)}
-                  className={`h-16 md:h-20 p-1 rounded-lg text-right transition-all duration-200 relative
-                    ${isSelected ? 'bg-teal-100 dark:bg-teal-900/40 ring-2 ring-teal-500' : ''}
-                    ${isToday && !isSelected ? 'bg-teal-50 dark:bg-teal-950/30' : ''}
-                    ${!isSelected && !isToday ? 'hover:bg-muted/50' : ''}
-                    ${hasEvents ? 'font-bold' : ''}
-                  `}
+                  key={key}
+                  type="button"
+                  aria-pressed={isSelected}
+                  aria-label={`${day} ${ARABIC_MONTHS[month]}: ${daySessions.length} جلسات، ${dayDelays.length} تأجيلات`}
+                  onClick={() => setSelectedDate(isSelected ? null : key)}
+                  className={`group min-h-24 sm:min-h-32 min-w-0 rounded-lg border p-1.5 text-right transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 sm:p-2
+                    ${isSelected ? 'border-primary bg-primary/8' : 'border-outline-variant/60 bg-surface hover:bg-surface-container-low'}
+                    ${isToday ? 'ring-1 ring-inset ring-primary/60' : ''}`}
                 >
-                  <span className={`text-xs md:text-sm ${isToday ? 'text-teal-700 dark:text-teal-400 font-extrabold' : ''}`}>
-                    {day}
-                  </span>
-                  {daySessions.length > 0 && (
-                    <div className="mt-0.5">
-                      <div className="flex flex-wrap gap-0.5">
-                        {daySessions.slice(0, 2).map((s, i) => (
-                          <div
-                            key={i}
-                            className={`w-1.5 h-1.5 rounded-full ${
-                              s.status === 'completed' ? 'bg-emerald-500' :
-                              s.status === 'postponed' ? 'bg-amber-500' :
-                              s.status === 'cancelled' ? 'bg-gray-400' :
-                              'bg-teal-500'
-                            }`}
-                          />
-                        ))}
-                        {daySessions.length > 2 && (
-                          <span className="text-[8px] text-muted-foreground">+{(daySessions.length - 2).toLocaleString('en-US')}</span>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                  {dayDelays > 0 && (
-                    <div className="absolute bottom-1 left-1">
-                      <div className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-                    </div>
-                  )}
+                  <div className="mb-1 flex items-center justify-between gap-1">
+                    <span className={`inline-flex h-7 min-w-7 items-center justify-center rounded-full px-1 text-label-medium font-semibold ${isToday ? 'bg-primary text-primary-foreground' : 'text-foreground'}`}>{day}</span>
+                    {total > 0 && <span className="text-[10px] font-medium text-muted-foreground">{total.toLocaleString('ar-DZ')}</span>}
+                  </div>
+                  <div className="space-y-1">
+                    {daySessions.slice(0, 2).map((session, i) => {
+                      const linkedCase = (cases || []).find((item: any) => item.id === session.caseId);
+                      const number = session.caseNumber || linkedCase?.caseNumber || 'جلسة';
+                      return (
+                        <div key={session.id ?? `session-${i}`} className="truncate rounded-md bg-primary/10 px-1 py-1 text-[9px] leading-tight text-primary sm:text-[11px]" title={`${number} — ${session.time || 'دون توقيت'}`}>
+                          <span className="font-bold">{number}</span>
+                          {session.time && <span className="mr-1 opacity-80">{session.time}</span>}
+                          <span className="hidden sm:inline"> · {linkedCase?.subject || session.court || 'جلسة'}</span>
+                        </div>
+                      );
+                    })}
+                    {dayDelays.slice(0, 1).map((delay, i) => {
+                      const linkedCase = (cases || []).find((item: any) => item.id === delay.caseId);
+                      return (
+                        <div key={delay.id ?? `delay-${i}`} className="truncate rounded-md bg-tertiary/10 px-1 py-1 text-[9px] leading-tight text-tertiary-foreground sm:text-[11px]" title={`تأجيل: ${linkedCase?.caseNumber || ''} ${delay.reason || ''}`}>
+                          <span className="font-semibold">{linkedCase?.caseNumber || 'تأجيل'}</span>
+                          <span className="hidden sm:inline"> · {delay.reason || 'موعد مؤجل'}</span>
+                        </div>
+                      );
+                    })}
+                    {total > 3 && <p className="truncate px-1 text-[9px] text-muted-foreground">+{(total - 3).toLocaleString('ar-DZ')} مواعيد أخرى</p>}
+                  </div>
                 </button>
               );
             })}
@@ -221,105 +178,79 @@ function CalendarMonthView() {
         </CardContent>
       </Card>
 
-      {/* تفاصيل اليوم المختار */}
-      {selectedDate && (
-        <div>
-          <h3 className="text-sm font-bold mb-2 flex items-center gap-2">
-            <CalendarDays className="w-4 h-4 text-teal-500" />
-            جلسات {formatDate(selectedDate)}
-          </h3>
-          {selectedSessions.length > 0 ? (
-            <div className="space-y-2">
-              {selectedSessions.map((session) => {
-                const caseData = cases.find((c) => c.id === session.caseId);
-                return (
-                  <Card
-                    key={session.id}
-                    className="cursor-pointer hover:shadow-md transition-shadow"
-                    onClick={() => {
-                      if (session.caseId) {
-                        setSelectedCaseId(session.caseId);
-                        setActiveSection('cases');
-                      }
-                    }}
-                  >
-                    <CardContent className="p-3">
-                      <div className="flex items-center justify-between">
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-bold">{session.caseNumber || caseData?.caseNumber || '—'}</span>
-                            <Badge className={`${STATUS_BADGE_CLASSES[session.status || 'scheduled'] || ''} text-xs`}>
-                              {STATUS_LABELS[session.status || 'scheduled']}
-                            </Badge>
-                          </div>
-                          {caseData?.subject && (
-                            <p className="text-xs text-muted-foreground truncate mt-0.5">{caseData.subject}</p>
-                          )}
-                          <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground flex-wrap">
-                            {session.court && <span>{session.court}</span>}
-                            {session.chamber && <span>• {session.chamber}</span>}
-                            {session.time && <span>• {session.time}</span>}
-                            {session.roomNumber && <span>• قاعة {session.roomNumber}</span>}
-                          </div>
-                        </div>
-                        {session.time && (
-                          <Badge variant="outline" className="text-xs shrink-0 mr-2 tabular-nums">
-                            {session.time}
-                          </Badge>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
-          ) : (
-            <Card>
-              <CardContent className="p-6 text-center">
-                <p className="text-sm text-muted-foreground">لا توجد جلسات في هذا اليوم</p>
-              </CardContent>
-            </Card>
-          )}
-        </div>
-      )}
-
-      {/* ملخص الشهر */}
-      <Card>
-        <CardContent className="p-4">
-          <div className="flex items-center gap-4 flex-wrap text-sm">
-            <div className="flex items-center gap-1.5">
-              <div className="w-2.5 h-2.5 rounded-full bg-teal-500" />
-              <span className="text-xs text-muted-foreground">مجدولة</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <div className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
-              <span className="text-xs text-muted-foreground">مكتملة</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <div className="w-2.5 h-2.5 rounded-full bg-amber-500" />
-              <span className="text-xs text-muted-foreground">مؤجلة</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <div className="w-2.5 h-2.5 rounded-full bg-gray-400" />
-              <span className="text-xs text-muted-foreground">ملغاة</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <div className="w-2.5 h-2.5 rounded-full bg-amber-500 absolute bottom-1 left-1" style={{position:'relative'}} />
-              <span className="text-xs text-muted-foreground">تأجيل</span>
-            </div>
+      <section aria-live="polite" className="space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <CalendarDays className="h-5 w-5 text-primary" />
+            <h3 className="text-title-medium font-bold">{selectedDate ? `مواعيد يوم ${formatDate(selectedDate)}` : 'تفاصيل المواعيد'}</h3>
+            {selectedDate && <Badge variant="secondary">{selectedEventsCount.toLocaleString('ar-DZ')} موعد</Badge>}
           </div>
-        </CardContent>
-      </Card>
+          {selectedDate && <Button variant="text" size="sm" onClick={() => setSelectedDate(null)}>إلغاء التحديد</Button>}
+        </div>
+
+        {!selectedDate ? (
+          <Card className="border-dashed shadow-none"><CardContent className="p-6 text-center text-sm text-muted-foreground">اختر يوماً من التقويم لعرض جميع تفاصيل جلساته وتأجيلاته والقضايا المرتبطة بها.</CardContent></Card>
+        ) : selectedEventsCount === 0 ? (
+          <Card className="shadow-none"><CardContent className="p-6 text-center text-sm text-muted-foreground">لا توجد جلسات أو تأجيلات مسجلة في هذا اليوم.</CardContent></Card>
+        ) : (
+          <div className="grid gap-3 xl:grid-cols-2">
+            {selectedSessions.map((session, index) => {
+              const caseData = (cases || []).find((item: any) => item.id === session.caseId);
+              const status = session.status || 'scheduled';
+              return (
+                <Card key={session.id ?? `session-detail-${index}`} className="border-border shadow-none">
+                  <CardContent className="space-y-3 p-4">
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="text-label-small text-muted-foreground">جلسة قضائية</p>
+                        <h4 className="break-words text-title-medium font-bold">{session.caseNumber || caseData?.caseNumber || 'قضية غير مرتبطة'}</h4>
+                      </div>
+                      <Badge className={STATUS_STYLES[status] || 'bg-secondary text-secondary-foreground'}>{STATUS_LABELS[status] || status}</Badge>
+                    </div>
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      <div className="flex items-start gap-2 text-sm"><FileText className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" /><span>{caseData?.subject || 'موضوع القضية غير متوفر'}</span></div>
+                      <div className="flex items-start gap-2 text-sm"><Scale className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" /><span>{caseData?.caseNature || 'طبيعة القضية غير محددة'}</span></div>
+                      <div className="flex items-start gap-2 text-sm"><MapPin className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" /><span>{session.court || caseData?.courtName || caseData?.councilName || 'الجهة القضائية غير محددة'}</span></div>
+                      <div className="flex items-start gap-2 text-sm"><Clock3 className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" /><span>{session.time || 'دون توقيت محدد'}{session.roomNumber ? ` · القاعة ${session.roomNumber}` : ''}</span></div>
+                    </div>
+                    {(session.chamber || caseData?.chamber) && <p className="text-sm text-muted-foreground">الغرفة: {session.chamber || caseData?.chamber}</p>}
+                    {caseData?.parties?.length > 0 && <div className="border-t border-outline-variant pt-2"><p className="mb-1 text-label-small font-semibold text-muted-foreground">الأطراف</p><p className="text-sm">{caseData.parties.map((party: any) => party.name).filter(Boolean).join('، ')}</p></div>}
+                    {session.result && <p className="text-sm"><span className="font-semibold">نتيجة الجلسة: </span>{session.result}</p>}
+                    {session.notes && <p className="whitespace-pre-wrap text-sm text-muted-foreground">{session.notes}</p>}
+                    {session.caseId && <Button variant="outlined" className="w-full sm:w-auto" onClick={() => openCase(session.caseId)}><FolderOpen className="ml-2 h-4 w-4" />فتح ملف القضية</Button>}
+                  </CardContent>
+                </Card>
+              );
+            })}
+            {selectedDelays.map((delay, index) => {
+              const caseData = (cases || []).find((item: any) => item.id === delay.caseId);
+              return (
+                <Card key={delay.id ?? `delay-detail-${index}`} className="border-outline-variant shadow-none">
+                  <CardContent className="space-y-3 p-4">
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <div><p className="text-label-small text-muted-foreground">تأجيل / موعد جديد</p><h4 className="text-title-medium font-bold">{caseData?.caseNumber || 'قضية غير مرتبطة'}</h4></div>
+                      <Badge variant="secondary">تأجيل</Badge>
+                    </div>
+                    <p className="text-sm">{caseData?.subject || 'موضوع القضية غير متوفر'}</p>
+                    <p className="text-sm text-muted-foreground">{delay.reason || 'سبب التأجيل غير محدد'}</p>
+                    {(caseData?.courtName || caseData?.councilName) && <p className="text-sm text-muted-foreground">{caseData.courtName || caseData.councilName}</p>}
+                    {delay.notes && <p className="whitespace-pre-wrap text-sm text-muted-foreground">{delay.notes}</p>}
+                    {delay.caseId && <Button variant="outlined" className="w-full sm:w-auto" onClick={() => openCase(delay.caseId)}><FolderOpen className="ml-2 h-4 w-4" />فتح ملف القضية</Button>}
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        )}
+      </section>
     </div>
   );
 }
 
-
-// مركز موحد: التقويم والجلسات والتأجيلات في مساحة واحدة دون نقل أو حذف السجلات.
 export function CalendarView() {
   return (
     <Tabs defaultValue="calendar" dir="rtl" className="space-y-4">
-      <TabsList className="grid w-full grid-cols-3 h-auto">
+      <TabsList className="grid h-auto w-full grid-cols-3">
         <TabsTrigger value="calendar" className="py-2">التقويم العام</TabsTrigger>
         <TabsTrigger value="sessions" className="py-2">الجلسات</TabsTrigger>
         <TabsTrigger value="deadlines" className="py-2">الآجال والتأجيلات</TabsTrigger>
