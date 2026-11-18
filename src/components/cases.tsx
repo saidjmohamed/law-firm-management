@@ -1230,13 +1230,13 @@ export function Cases() {
               return (
                 <Card
                   key={c.id}
-                  className={`cursor-pointer transition-all duration-200 border-r-4 ${borderColor} ${index % 2 === 0 ? "bg-[#e8f2fb] dark:bg-slate-800" : "bg-[#f5eee3] dark:bg-slate-700"} hover:shadow-md hover:brightness-[0.99]`}
+                  className={`group cursor-pointer overflow-hidden transition-all duration-200 border-r-[5px] ${borderColor} bg-card hover:-translate-y-0.5 hover:shadow-lg`}
                   onClick={() => {
                     setSelectedCaseId(c.id ?? null);
                     setView('detail');
                   }}
                 >
-                  <CardContent className="p-4 space-y-3">
+                  <CardContent className="p-5 sm:p-6 space-y-4">
                     {(() => {
                       const casePartiesForCard = c.parties || allParties?.filter((p: any) => p.caseId === c.id) || [];
                       const representedPartiesForCard = casePartiesForCard.filter((p: any) => (p.side || 'for') === 'for');
@@ -1266,14 +1266,14 @@ export function Cases() {
                           <div className="flex items-start justify-between gap-3">
                             <div className="min-w-0 flex-1 space-y-1">
                               <div className="flex items-center gap-2 flex-wrap">
-                                <span className="text-sm font-extrabold">{c.caseNumber || '—'}</span>
+                                <span className="text-base sm:text-lg font-extrabold tracking-tight text-foreground">{c.caseNumber || '—'}</span>
                                 <Badge className={`${STATUS_COLORS[c.status || ''] || ''} text-xs`}>{c.status || '—'}</Badge>
                                 {c.caseResult === 'won' && <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400 text-xs">ربحت</Badge>}
                                 {c.caseResult === 'lost' && <Badge className="bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400 text-xs">خسرت</Badge>}
                                 {c.caseNature && <Badge variant="outline" className="text-xs">{c.caseNature}</Badge>}
                               </div>
-                              <p className="text-sm text-muted-foreground">{c.subject || '—'}</p>
-                              <div className="text-xs text-muted-foreground flex flex-wrap gap-x-3 gap-y-1">
+                              <p className="text-[15px] sm:text-base font-semibold text-foreground/90">{c.subject || '—'}</p>
+                              <div className="text-[13px] text-muted-foreground flex flex-wrap gap-x-4 gap-y-2">
                                 <span className="font-semibold text-foreground">الجهة القضائية: {c.courtName || c.councilName || 'غير محددة'}</span>
                                 {judiciaryLabel && <span>درجة/نوع التقاضي: {judiciaryLabel}</span>}
                                 {c.chamber && <span>القسم/الغرفة: {c.chamber}</span>}
@@ -1287,8 +1287,8 @@ export function Cases() {
                             </div>
                           </div>
 
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                            <div className="rounded-lg border p-2.5 space-y-1.5">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <div className="rounded-xl border bg-muted/30 p-3 sm:p-4 space-y-2">
                               <p className="text-xs font-bold text-teal-700 dark:text-teal-400">الأطراف الذين نمثلهم ومحاموهم</p>
                               {representedPartiesForCard.length ? representedPartiesForCard.map((p: any) => (
                                 <div key={p.id} className="text-xs flex flex-wrap gap-x-2 gap-y-0.5">
@@ -1308,7 +1308,7 @@ export function Cases() {
                             </div>
                           </div>
 
-                          <div className="rounded-lg border p-2.5 space-y-2">
+                          <div className="rounded-xl border bg-muted/30 p-3 sm:p-4 space-y-3">
                             <div className="flex items-center justify-between gap-2">
                               <p className="text-xs font-bold">التواريخ والإجراءات الزمنية</p>
                               <span className="text-[11px] text-muted-foreground">{dateRows.length} تاريخ/إجراء</span>
@@ -1327,7 +1327,7 @@ export function Cases() {
                               </div>
                             ) : <p className="text-xs text-muted-foreground">لا توجد تواريخ أو جلسات أو تأجيلات مسجلة</p>}
                           </div>
-                          <div className="flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-muted-foreground">
+                          <div className="flex flex-wrap gap-x-4 gap-y-2 text-[13px] text-muted-foreground border-t border-border pt-3">
                             <span>المدفوع: {formatCurrency(paidCard)}</span>
                             <span>المتبقي من الأتعاب: {formatCurrency(remainingCard)}</span>
                           </div>
