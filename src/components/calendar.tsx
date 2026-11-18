@@ -2,7 +2,7 @@
 
 import React, { useMemo, useState } from 'react';
 import { useSessions, useCases, useDelays } from '@/lib/api';
-import { formatDate, ARABIC_MONTHS } from '@/lib/constants';
+import { ARABIC_MONTHS } from '@/lib/constants';
 import { useAppStore } from '@/lib/store';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -182,7 +182,7 @@ function CalendarMonthView() {
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <CalendarDays className="h-5 w-5 text-primary" />
-            <h3 className="text-base font-bold">{selectedDate ? `مواعيد يوم ${formatDate(selectedDate)}` : 'تفاصيل المواعيد'}</h3>
+            <h3 className="text-base font-bold">{selectedDate ? `مواعيد يوم ${selectedDate.split('-').reverse().join('/')}` : 'تفاصيل المواعيد'}</h3>
             {selectedDate && <Badge variant="secondary">{selectedEventsCount.toLocaleString('ar-DZ')} موعد</Badge>}
           </div>
           {selectedDate && <Button variant="ghost" size="sm" onClick={() => setSelectedDate(null)}>إلغاء التحديد</Button>}
