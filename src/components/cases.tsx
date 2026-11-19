@@ -1344,7 +1344,7 @@ export function Cases() {
                   </CardContent>
                 </Card>
               );
-
+            })
         ) : (
           <Card>
             <CardContent className="p-8 text-center">
