@@ -1269,15 +1269,29 @@ export function Cases() {
           filteredCases
             .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
             .map((c, index) => {
-              const remaining = (c.totalFees || 0) - (c.paidAmount || 0);
-              const borderColor = STATUS_BORDER_COLORS[c.status || ''] || 'border-r-gray-300';
+              const casePartiesForCard = c.parties || allParties?.filter((p: any) => p.caseId === c.id) || [];
+              const caseDelaysForCard = c.delays || allDelays?.filter((d: any) => d.caseId === c.id) || [];
+              const latestDelay = [...caseDelaysForCard]
+                .filter((d: any) => d.delayDate)
+                .sort((a: any, b: any) => new Date(b.delayDate).getTime() - new Date(a.delayDate).getTime())[0];
+              const cardBackgrounds = [
+                'bg-sky-50 dark:bg-sky-950/35 border-sky-200 dark:border-sky-800',
+                'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800',
+                'bg-violet-50 dark:bg-violet-950/30 border-violet-200 dark:border-violet-800',
+                'bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800',
+                'bg-rose-50 dark:bg-rose-950/30 border-rose-200 dark:border-rose-800',
+                'bg-cyan-50 dark:bg-cyan-950/30 border-cyan-200 dark:border-cyan-800',
+              ];
+              const cardBackground = cardBackgrounds[Math.abs(c.id) % cardBackgrounds.length];
+              const courtHierarchy = [c.councilName, c.courtName, c.chamber]
+                .filter((value, index, values) => Boolean(value) && values.indexOf(value) === index);
               return (
                 <Card
                   key={c.id}
                   role="button"
                   tabIndex={0}
-                  aria-label={`فتح ملف القضية ${c.caseNumber || 'دون رقم'} — ${c.subject || 'دون موضوع'}`}
-                  className={`group cursor-pointer overflow-hidden transition-all duration-200 border-r-[5px] ${borderColor} bg-card hover:-translate-y-0.5 hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2`}
+                  aria-label={`فتح ملف القضية ${c.caseNumber || 'دون رقم'}`}
+                  className={`group cursor-pointer overflow-hidden border-r-[5px] border shadow-sm transition-all duration-200 ${cardBackground} ${STATUS_BORDER_COLORS[c.status || ''] || 'border-r-gray-400'} hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2`}
                   onClick={() => {
                     setSelectedCaseId(c.id ?? null);
                     setView('detail');
@@ -1290,108 +1304,46 @@ export function Cases() {
                     }
                   }}
                 >
-                  <CardContent className="p-5 sm:p-6 space-y-4">
-                    {(() => {
-                      const casePartiesForCard = c.parties || allParties?.filter((p: any) => p.caseId === c.id) || [];
-                      const representedPartiesForCard = casePartiesForCard.filter((p: any) => (p.side || 'for') === 'for');
-                      const opponentsForCard = casePartiesForCard.filter((p: any) => p.side === 'against');
-                      const caseSessionsForCard = c.sessions || allSessions?.filter((s: any) => s.caseId === c.id) || [];
-                      const caseDelaysForCard = c.delays || allDelays?.filter((d: any) => d.caseId === c.id) || [];
-                      const dateRows: { label: string; value: any; detail?: string; kind: string }[] = [];
-                      if (c.registrationDate) dateRows.push({ label: 'التسجيل', value: c.registrationDate, kind: 'base' });
-                      if (c.firstSessionDate) dateRows.push({ label: 'أول جلسة', value: c.firstSessionDate, kind: 'base' });
-                      caseSessionsForCard.filter((x: any) => x.date).forEach((x: any) => dateRows.push({
-                        label: 'جلسة', value: x.date,
-                        detail: [x.time, x.court, x.chamber, x.result, x.status].filter(Boolean).join(' • '), kind: 'session'
-                      }));
-                      caseDelaysForCard.filter((x: any) => x.delayDate).forEach((x: any) => dateRows.push({
-                        label: 'تأجيل', value: x.delayDate,
-                        detail: [x.reason, x.notes].filter(Boolean).join(' — '), kind: 'delay'
-                      }));
-                      if (c.delibDate) dateRows.push({ label: 'المداولة', value: c.delibDate, kind: 'base' });
-                      if (c.judgmentDate) dateRows.push({ label: 'صدور الحكم', value: c.judgmentDate, detail: c.caseResult === 'won' ? 'حكم لصالح الطرف الذي نمثله' : c.caseResult === 'lost' ? 'حكم ضد الطرف الذي نمثله' : undefined, kind: 'judgment' });
-                      dateRows.sort((a, b) => new Date(a.value).getTime() - new Date(b.value).getTime());
-                      const totalFeesCard = Number(c.totalFees || 0);
-                      const paidCard = Number(c.paidAmount || 0);
-                      const remainingCard = totalFeesCard - paidCard;
-                      const judiciaryLabel = [c.litigationStage, c.courtLevel, c.judiciaryType].filter(Boolean).join(' • ');
-                      return (
-                        <>
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="min-w-0 flex-1 space-y-1">
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <span className="text-base sm:text-lg font-extrabold tracking-tight text-foreground">{c.caseNumber || '—'}</span>
-                                <Badge className={`${STATUS_COLORS[c.status || ''] || ''} text-xs`}>{c.status || '—'}</Badge>
-                                {c.caseResult === 'won' && <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400 text-xs">ربحت</Badge>}
-                                {c.caseResult === 'lost' && <Badge className="bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400 text-xs">خسرت</Badge>}
-                                {c.caseNature && <Badge variant="outline" className="text-xs">{c.caseNature}</Badge>}
-                              </div>
-                              <p className="text-[15px] sm:text-base font-semibold text-foreground/90">{c.subject || '—'}</p>
-                              <div className="text-[13px] text-muted-foreground flex flex-wrap gap-x-4 gap-y-2">
-                                <span className="font-semibold text-foreground">الجهة القضائية: {c.courtName || c.councilName || 'غير محددة'}</span>
-                                {judiciaryLabel && <span>درجة/نوع التقاضي: {judiciaryLabel}</span>}
-                                {c.chamber && <span>القسم/الغرفة: {c.chamber}</span>}
-                              </div>
-                            </div>
-                            <div className="text-left shrink-0 space-y-1 min-w-[112px]">
-                              <p className="text-[11px] text-muted-foreground">مجموع الأتعاب</p>
-                              <p className="text-sm font-extrabold tabular-nums">{formatCurrency(totalFeesCard)}</p>
-                              <p className="text-[11px] text-muted-foreground">المتبقي</p>
-                              <p className={`text-sm font-bold tabular-nums ${remainingCard > 0 ? 'text-amber-700 dark:text-amber-400' : 'text-emerald-700 dark:text-emerald-400'}`}>{formatCurrency(remainingCard)}</p>
-                            </div>
-                          </div>
+                  <CardContent className="space-y-3 p-4 sm:p-5">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <p className="text-base sm:text-lg font-extrabold tracking-tight text-foreground">
+                        رقم القضية: {c.caseNumber || 'غير محدد'}
+                      </p>
+                      <span className="text-xs font-extrabold text-muted-foreground">فتح الملف ←</span>
+                    </div>
 
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                            <div className="rounded-xl border bg-muted/30 p-3 sm:p-4 space-y-2">
-                              <p className="text-xs font-bold text-teal-700 dark:text-teal-400">الأطراف الذين نمثلهم ومحاموهم</p>
-                              {representedPartiesForCard.length ? representedPartiesForCard.map((p: any) => (
-                                <div key={p.id} className="text-xs flex flex-wrap gap-x-2 gap-y-0.5">
-                                  <span className="font-semibold">{p.name || 'اسم غير محدد'}</span>
-                                  <span className="text-muted-foreground">المحامي: {p.lawyerName || 'غير محدد'}</span>
-                                </div>
-                              )) : <p className="text-xs text-muted-foreground">لا توجد أطراف نمثلها مسجلة</p>}
-                            </div>
-                            <div className="rounded-lg border p-2.5 space-y-1.5">
-                              <p className="text-xs font-bold text-rose-700 dark:text-rose-400">الخصوم ومحاموهم</p>
-                              {opponentsForCard.length ? opponentsForCard.map((p: any) => (
-                                <div key={p.id} className="text-xs flex flex-wrap gap-x-2 gap-y-0.5">
-                                  <span className="font-semibold">{p.name || 'اسم غير محدد'}</span>
-                                  <span className="text-muted-foreground">المحامي: {p.lawyerName || 'غير محدد'}</span>
-                                </div>
-                              )) : <p className="text-xs text-muted-foreground">لا توجد بيانات خصم مسجلة</p>}
-                            </div>
-                          </div>
+                    <div className="text-sm sm:text-base font-extrabold leading-relaxed text-foreground">
+                      <span>الجهة القضائية: </span>
+                      {courtHierarchy.length ? courtHierarchy.map((name: string, i: number) => (
+                        <React.Fragment key={`${name}-${i}`}>
+                          {i > 0 ? <span className="mx-1">/</span> : null}
+                          <span>{name}</span>
+                        </React.Fragment>
+                      )) : 'غير محددة'}
+                    </div>
 
-                          <div className="rounded-xl border bg-muted/30 p-3 sm:p-4 space-y-3">
-                            <div className="flex items-center justify-between gap-2">
-                              <p className="text-xs font-bold">التواريخ والإجراءات الزمنية</p>
-                              <span className="text-[11px] text-muted-foreground">{dateRows.length} تاريخ/إجراء</span>
-                            </div>
-                            {dateRows.length ? (
-                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2">
-                                {dateRows.map((item, index) => (
-                                  <div key={`${item.kind}-${index}`} className="min-w-0 flex items-start gap-2 text-xs">
-                                    <span className="shrink-0 font-semibold text-foreground">{item.label}:</span>
-                                    <span className="min-w-0">
-                                      <DateDisplay value={item.value as any} />
-                                      {item.detail && <span className="block text-muted-foreground mt-0.5 break-words">{item.detail}</span>}
-                                    </span>
-                                  </div>
-                                ))}
-                              </div>
-                            ) : <p className="text-xs text-muted-foreground">لا توجد تواريخ أو جلسات أو تأجيلات مسجلة</p>}
-                          </div>
-                          <div className="flex flex-wrap gap-x-4 gap-y-2 text-[13px] text-muted-foreground border-t border-border pt-3">
-                            <span>المدفوع: {formatCurrency(paidCard)}</span>
-                            <span>المتبقي من الأتعاب: {formatCurrency(remainingCard)}</span>
-                          </div>
-                        </>
-                      );
-                    })()}
+                    <div className="space-y-2">
+                      {casePartiesForCard.length ? casePartiesForCard.map((p: any) => (
+                        <p key={p.id} className="text-sm sm:text-base font-bold leading-relaxed text-foreground break-words">
+                          <span>{p.side === 'against' ? 'الخصم' : 'اسم الموكل'}: </span>
+                          <span>{p.name || 'غير محدد'}</span>
+                          <span> — مركزه القانوني: </span>
+                          <span>{p.role || 'غير محدد'}</span>
+                          <span> — المحامي: </span>
+                          <span>{p.lawyerName || 'غير محدد'}</span>
+                        </p>
+                      )) : (
+                        <p className="text-sm font-bold text-foreground">لا توجد أطراف مسجلة</p>
+                      )}
+                    </div>
+
+                    <div className="border-t border-current/15 pt-2 text-sm sm:text-base font-extrabold text-foreground">
+                      آخر تأجيل: {latestDelay ? <DateDisplay value={latestDelay.delayDate as any} /> : 'لا يوجد تأجيل مسجل'}
+                    </div>
                   </CardContent>
                 </Card>
               );
-            })
+
         ) : (
           <Card>
             <CardContent className="p-8 text-center">
