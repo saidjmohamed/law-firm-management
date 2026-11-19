@@ -1284,7 +1284,8 @@ export function Cases() {
               ];
               const cardBackground = cardBackgrounds[Math.abs(c.id) % cardBackgrounds.length];
               const courtHierarchy = [c.councilName, c.courtName, c.chamber]
-                .filter((value, index, values) => Boolean(value) && values.indexOf(value) === index);
+                .filter((value): value is string => Boolean(value))
+                .filter((value, index, values) => values.indexOf(value) === index);
               return (
                 <Card
                   key={c.id}
