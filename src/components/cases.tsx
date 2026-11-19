@@ -980,6 +980,17 @@ export function Cases() {
               <DetailField label="تاريخ التسجيل" value={<DateDisplay value={selectedCase.registrationDate as any} />} />
               <DetailField label="أول جلسة" value={<DateDisplay value={selectedCase.firstSessionDate as any} />} />
               <DetailField label="تاريخ المداولة" value={<DateDisplay value={selectedCase.delibDate as any} />} />
+              {(() => {
+                const candidates = [
+                  ...(selectedCase.firstSessionDate ? [{ date: selectedCase.firstSessionDate, label: 'أول جلسة' }] : []),
+                  ...(selectedCase.delibDate ? [{ date: selectedCase.delibDate, label: 'المداولة' }] : []),
+                  ...(selectedCase.judgmentDate ? [{ date: selectedCase.judgmentDate, label: 'الحكم' }] : []),
+                  ...(allDelays || []).filter((item: any) => item.caseId === selectedCase.id && item.delayDate).map((item: any) => ({ date: item.delayDate, label: 'التأجيل' })),
+                  ...(allSessions || []).filter((item: any) => item.caseId === selectedCase.id && item.date).map((item: any) => ({ date: item.date, label: 'الجلسة' })),
+                ];
+                const latest = candidates.filter((item) => !Number.isNaN(new Date(item.date).getTime())).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
+                return latest ? <div className="col-span-2 md:col-span-3 mt-2 rounded-xl border border-red-200 bg-red-50 p-4 text-red-700 dark:border-red-900 dark:bg-red-950/30 dark:text-red-300"><div className="text-xs font-bold">أحدث تاريخ في القضية — {latest.label}</div><div className="mt-1 text-2xl font-black"><DateDisplay value={latest.date as any} /></div></div> : null;
+              })()}
             </div>
 
             {/* منطوق الحكم */}
