@@ -13,7 +13,7 @@ interface Case {
   status?: string; wilayaId?: number; judiciaryType?: string; courtLevel?: string;
   courtId?: number; chamber?: string; chamberNumber?: number; councilName?: string;
   courtName?: string; totalFees?: number; paidAmount?: number; registrationDate?: string;
-  firstSessionDate?: string; delibDate?: string; barPhone?: string; lawyer?: string;
+  firstSessionDate?: string; delibDate?: string; judgmentDate?: string; barPhone?: string; lawyer?: string;
   notes?: string; judgment?: string; caseResult?: string;
   createdAt: Date; updatedAt: Date;
 }
