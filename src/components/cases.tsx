@@ -1271,9 +1271,15 @@ export function Cases() {
             .map((c, index) => {
               const casePartiesForCard = c.parties || allParties?.filter((p: any) => p.caseId === c.id) || [];
               const caseDelaysForCard = c.delays || allDelays?.filter((d: any) => d.caseId === c.id) || [];
-              const latestDelay = [...caseDelaysForCard]
-                .filter((d: any) => d.delayDate)
-                .sort((a: any, b: any) => new Date(b.delayDate).getTime() - new Date(a.delayDate).getTime())[0];
+              const caseSessionsForCard = c.sessions || allSessions?.filter((session: any) => session.caseId === c.id) || [];
+              const dateCandidates = [
+                ...(c.firstSessionDate ? [{ date: c.firstSessionDate, label: 'أول جلسة' }] : []),
+                ...(c.delibDate ? [{ date: c.delibDate, label: 'المداولة' }] : []),
+                ...(c.judgmentDate ? [{ date: c.judgmentDate, label: 'الحكم' }] : []),
+                ...caseDelaysForCard.filter((d: any) => d.delayDate).map((d: any) => ({ date: d.delayDate, label: 'التأجيل' })),
+                ...caseSessionsForCard.filter((session: any) => session.date).map((session: any) => ({ date: session.date, label: 'الجلسة' })),
+              ];
+              const latestCaseDate = dateCandidates.filter((item) => !Number.isNaN(new Date(item.date).getTime())).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
               const cardBackgrounds = [
                 'bg-sky-50 dark:bg-sky-950/35 border-sky-200 dark:border-sky-800',
                 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800',
@@ -1338,9 +1344,11 @@ export function Cases() {
                       )}
                     </div>
 
-                    <div className="border-t border-current/15 pt-2 text-sm sm:text-base font-extrabold text-foreground">
-                      آخر تأجيل: {latestDelay ? <DateDisplay value={latestDelay.delayDate as any} /> : 'لا يوجد تأجيل مسجل'}
-                    </div>
+                    {latestCaseDate && (
+                      <div className="border-t border-current/15 pt-2 text-base sm:text-lg font-extrabold text-red-700 dark:text-red-400">
+                        آخر إجراء: {latestCaseDate.label} — <DateDisplay value={latestCaseDate.date as any} />
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               );
