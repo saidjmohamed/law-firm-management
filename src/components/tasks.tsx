@@ -526,7 +526,7 @@ function TaskCard({ task, onEdit, onDelete, onStatusChange }: {
                 <>
                   {task.startDate && (
                     <div className="flex items-center gap-1.5">
-                      <span className="text-muted-foreground">البداية:</span>
+                      <span className="text-muted-foreground">بدء احتساب الأجل:</span>
                       <DateDisplay value={task.startDate} className="font-medium" />
                     </div>
                   )}
@@ -886,10 +886,10 @@ function TaskFormDialog({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 p-3 rounded-lg bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900">
               <div className="md:col-span-2 flex items-center gap-2 text-emerald-700 dark:text-emerald-400">
                 <Gavel className="w-4 h-4" />
-                <span className="text-sm font-bold">إجراء قانوني — يتطلب تاريخ بداية وأجل نهائي</span>
+                <span className="text-sm font-bold">إجراء قانوني — سجّل واقعة بدء الأجل وتاريخه النهائي</span>
               </div>
               <div>
-                <Label>تاريخ البداية</Label>
+                <Label>تاريخ بدء احتساب الأجل</Label>
                 <Input
                   type="date" dir="ltr"
                   value={toDateInputValue(formData.startDate as any)}
@@ -968,12 +968,12 @@ function TaskFormDialog({
 
           {/* ملاحظات */}
           <div>
-            <Label>ملاحظات</Label>
+            <Label>{isLegal ? "واقعة بدء الأجل والسند القانوني ومصدر التبليغ" : "ملاحظات"}</Label>
             <Textarea
               value={(formData.notes as string) || ''}
               onChange={(e) => update('notes', e.target.value)}
-              rows={2}
-              placeholder="ملاحظات إضافية..."
+              rows={3}
+              placeholder={isLegal ? "مثال: تبليغ رسمي بتاريخ ... / النص القانوني المعتمد ... / مرجع التبليغ ..." : "ملاحظات إضافية..."}
             />
           </div>
         </div>
