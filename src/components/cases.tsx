@@ -1014,6 +1014,85 @@ export function Cases() {
           </CardContent>
         </Card>
 
+        {/* الخط الزمني الموحد للقضية والآجال */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base font-bold flex items-center gap-2">
+              <Clock className="w-4 h-4" />
+              الخط الزمني والإجراءات والآجال
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {(() => {
+              const relatedTasks = (allTasks || []).filter((task: any) => task.relatedCaseId === selectedCase.id);
+              const events: Array<{ id: string; date: string; title: string; detail?: string; kind: 'case' | 'session' | 'delay' | 'deadline' | 'task'; status?: string }> = [];
+              const add = (id: string, date: any, title: string, detail?: string, kind: 'case' | 'session' | 'delay' | 'deadline' | 'task' = 'case', status?: string) => {
+                if (date && !Number.isNaN(new Date(date).getTime())) events.push({ id, date, title, detail, kind, status });
+              };
+
+              add('registration', selectedCase.registrationDate, 'تسجيل القضية', undefined, 'case');
+              add('first-session', selectedCase.firstSessionDate, 'أول جلسة', undefined, 'session');
+              add('deliberation', selectedCase.delibDate, 'المداولة', undefined, 'case');
+              add('judgment', selectedCase.judgmentDate, 'صدور الحكم', selectedCase.judgment || undefined, 'case');
+              (caseSessions || []).forEach((item: any) => add(`session-${item.id}`, item.date, 'جلسة', [item.time, item.court, item.chamber, item.result, item.notes].filter(Boolean).join(' — '), 'session', item.status));
+              (caseDelays || []).forEach((item: any) => add(`delay-${item.id}`, item.delayDate, 'تأجيل', [item.reason, item.notes].filter(Boolean).join(' — '), 'delay'));
+              relatedTasks.forEach((task: any) => {
+                add(`task-start-${task.id}`, task.startDate, `بداية الإجراء: ${task.title}`, task.description || task.notes, 'task', task.status);
+                if (task.legalDeadline) add(`legal-deadline-${task.id}`, task.legalDeadline, `آخر أجل قانوني: ${task.title}`, task.notes || task.description, 'deadline', task.status);
+                else add(`task-due-${task.id}`, task.dueDate, `موعد متابعة: ${task.title}`, task.notes || task.description, 'task', task.status);
+              });
+
+              const ordered = events.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+              const today = new Date();
+              today.setHours(0, 0, 0, 0);
+              const openDeadlines = relatedTasks.filter((task: any) => task.status !== 'completed' && (task.legalDeadline || task.dueDate));
+              const overdueCount = openDeadlines.filter((task: any) => {
+                const target = new Date(task.legalDeadline || task.dueDate);
+                target.setHours(0, 0, 0, 0);
+                return !Number.isNaN(target.getTime()) && target < today;
+              }).length;
+
+              return (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="rounded-xl border bg-muted/40 p-3">
+                      <p className="text-xs text-muted-foreground">الآجال المفتوحة</p>
+                      <p className="mt-1 text-xl font-black tabular-nums">{openDeadlines.length.toLocaleString('ar-DZ')}</p>
+                    </div>
+                    <div className={`rounded-xl border p-3 ${overdueCount ? 'border-red-300 bg-red-50 text-red-800 dark:border-red-900 dark:bg-red-950/30 dark:text-red-300' : 'bg-muted/40'}`}>
+                      <p className="text-xs">الآجال المتجاوزة</p>
+                      <p className="mt-1 text-xl font-black tabular-nums">{overdueCount.toLocaleString('ar-DZ')}</p>
+                    </div>
+                  </div>
+                  {ordered.length ? (
+                    <ol className="relative mr-2 space-y-0 border-r-2 border-border pr-5">
+                      {ordered.map((event) => (
+                        <li key={event.id} className="relative pb-5 last:pb-0">
+                          <span className={`absolute -right-[27px] top-1 h-3 w-3 rounded-full border-2 border-background ${event.kind === 'deadline' ? 'bg-red-600' : event.kind === 'delay' ? 'bg-amber-500' : event.kind === 'session' ? 'bg-blue-600' : 'bg-teal-600'}`} />
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <p className="text-sm font-bold">{event.title}</p>
+                            <DateDisplay value={event.date as any} />
+                          </div>
+                          {event.detail && <p className="mt-1 whitespace-pre-wrap text-xs leading-relaxed text-muted-foreground">{event.detail}</p>}
+                          {event.kind === 'deadline' && (
+                            <Badge variant="destructive" className="mt-2">أجل قانوني مسجل</Badge>
+                          )}
+                          {event.status && <Badge variant="outline" className="mt-2 mr-2">{event.status === 'completed' ? 'منجزة' : event.status === 'in_progress' ? 'قيد التنفيذ' : event.status === 'pending' ? 'قيد الإنجاز' : event.status}</Badge>}
+                        </li>
+                      ))}
+                    </ol>
+                  ) : (
+                    <p className="py-4 text-center text-sm text-muted-foreground">لا توجد إجراءات أو تواريخ مسجلة في الخط الزمني لهذه القضية</p>
+                  )}
+                  <p className="border-t pt-3 text-xs leading-relaxed text-muted-foreground">
+                    الآجال المعروضة هي الآجال التي أدخلها المكتب يدوياً في المهام المرتبطة بالقضية. لا يُحتسب أي أجل قانوني تلقائياً قبل تحديد نوع الإجراء وواقعة بدء الأجل والسند القانوني المعتمد.
+                  </p>
+                </div>
+              );
+            })()}
+          </CardContent>
+        </Card>
+
         {/* التأجيلات */}
         <Card>
           <CardHeader className="pb-3">
