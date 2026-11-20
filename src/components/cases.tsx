@@ -1330,6 +1330,22 @@ export function Cases() {
                       <span className="text-xs font-extrabold text-muted-foreground">فتح الملف ←</span>
                     </div>
 
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="inline-flex items-center rounded-full border border-indigo-300 bg-indigo-100 px-3 py-1 text-sm font-black text-indigo-900 dark:border-indigo-700 dark:bg-indigo-950/70 dark:text-indigo-200">
+                        طبيعة القضية: {c.caseNature || 'غير محددة'}
+                      </span>
+                      {c.litigationStage && (
+                        <span className="inline-flex items-center rounded-full border border-slate-300 bg-slate-100 px-3 py-1 text-sm font-bold text-slate-800 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">
+                          المرحلة: {c.litigationStage}
+                        </span>
+                      )}
+                      {c.status && (
+                        <span className="inline-flex items-center rounded-full border border-current/20 bg-background/70 px-3 py-1 text-sm font-bold text-foreground">
+                          الحالة: {c.status}
+                        </span>
+                      )}
+                    </div>
+
                     <div className="text-sm sm:text-base font-extrabold leading-relaxed text-foreground">
                       <span>الجهة القضائية: </span>
                       {courtHierarchy.length ? courtHierarchy.map((name: string, i: number) => (
