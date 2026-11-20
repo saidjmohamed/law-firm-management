@@ -67,8 +67,9 @@ export const WILAYAS = [
 /** طبيعة القضية */
 export const CASE_NATURES = [
   'جنحة',
-  'مخالفة',
   'جناية',
+  'شكوى',
+  'مخالفة',
   'أحداث',
   'تحقيق / غرفة الاتهام',
   'مدني',
@@ -259,6 +260,15 @@ export const STATUS_COLORS: Record<string, string> = {
 export function formatDate(date: string | Date | undefined | null): string {
   if (!date) return '—';
   try {
+    if (typeof date === 'string') {
+      const value = date.trim();
+      // Date-only values are stored as UTC ISO timestamps. Preserve their
+      // calendar day instead of shifting them to the previous local day.
+      const isoMatch = value.match(/^(\d{4})-(\d{2})-(\d{2})/);
+      if (isoMatch) return `${isoMatch[3]}/${isoMatch[2]}/${isoMatch[1]}`;
+      const dmyMatch = value.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+      if (dmyMatch) return `${dmyMatch[1].padStart(2, '0')}/${dmyMatch[2].padStart(2, '0')}/${dmyMatch[3]}`;
+    }
     const d = typeof date === 'string' ? new Date(date) : date;
     if (isNaN(d.getTime())) return '—';
     const dd = String(d.getDate()).padStart(2, '0');

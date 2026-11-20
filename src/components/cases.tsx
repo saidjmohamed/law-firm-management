@@ -805,6 +805,41 @@ export function Cases() {
           </Button>
         </div>
 
+        <Card className="overflow-hidden border-primary/20 shadow-sm">
+          <CardContent className="space-y-4 p-4 sm:p-5">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-medium text-muted-foreground">بطاقة ملف القضية</p>
+                <h2 className="mt-1 break-words text-xl font-extrabold tracking-tight text-foreground">{selectedCase.caseNumber || 'قضية دون رقم'}</h2>
+                <p className="mt-1 text-sm leading-6 text-muted-foreground">{selectedCase.subject || 'لم يُسجل موضوع القضية بعد'}</p>
+              </div>
+              <Badge className={STATUS_COLORS[selectedCase.status || ''] || ''}>{selectedCase.status || 'الحالة غير محددة'}</Badge>
+            </div>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              <div className="rounded-xl bg-muted/60 p-3">
+                <p className="text-xs text-muted-foreground">طبيعة القضية</p>
+                <p className="mt-1 text-sm font-semibold">{selectedCase.caseNature || '—'}</p>
+              </div>
+              <div className="rounded-xl bg-muted/60 p-3">
+                <p className="text-xs text-muted-foreground">مرحلة التقاضي</p>
+                <p className="mt-1 text-sm font-semibold">{selectedCase.litigationStage || '—'}</p>
+              </div>
+              <div className="rounded-xl bg-muted/60 p-3">
+                <p className="text-xs text-muted-foreground">الأطراف المسجلة</p>
+                <p className="mt-1 text-sm font-semibold tabular-nums">{(caseParties || []).length.toLocaleString('ar-DZ')}</p>
+              </div>
+              <div className="rounded-xl bg-muted/60 p-3">
+                <p className="text-xs text-muted-foreground">الجلسات المسجلة</p>
+                <p className="mt-1 text-sm font-semibold tabular-nums">{(caseSessions || []).length.toLocaleString('ar-DZ')}</p>
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-border pt-3 text-sm">
+              <span className="text-muted-foreground">الجهة القضائية: <strong className="font-semibold text-foreground">{[selectedCase.councilName, selectedCase.courtName].filter(Boolean).join(' — ') || 'غير محددة'}</strong></span>
+              <span className="text-muted-foreground">المتبقي من الأتعاب: <strong className="font-semibold text-foreground">{formatCurrency(remaining)}</strong></span>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* أطراف النزاع */}
         <Card>
           <CardHeader className="pb-3">
@@ -945,6 +980,17 @@ export function Cases() {
               <DetailField label="تاريخ التسجيل" value={<DateDisplay value={selectedCase.registrationDate as any} />} />
               <DetailField label="أول جلسة" value={<DateDisplay value={selectedCase.firstSessionDate as any} />} />
               <DetailField label="تاريخ المداولة" value={<DateDisplay value={selectedCase.delibDate as any} />} />
+              {(() => {
+                const candidates = [
+                  ...(selectedCase.firstSessionDate ? [{ date: selectedCase.firstSessionDate, label: 'أول جلسة' }] : []),
+                  ...(selectedCase.delibDate ? [{ date: selectedCase.delibDate, label: 'المداولة' }] : []),
+                  ...(selectedCase.judgmentDate ? [{ date: selectedCase.judgmentDate, label: 'الحكم' }] : []),
+                  ...(allDelays || []).filter((item: any) => item.caseId === selectedCase.id && item.delayDate).map((item: any) => ({ date: item.delayDate, label: 'التأجيل' })),
+                  ...(allSessions || []).filter((item: any) => item.caseId === selectedCase.id && item.date).map((item: any) => ({ date: item.date, label: 'الجلسة' })),
+                ];
+                const latest = candidates.filter((item) => !Number.isNaN(new Date(item.date).getTime())).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
+                return latest ? <div className="col-span-2 md:col-span-3 mt-2 rounded-xl border border-red-200 bg-red-50 p-4 text-red-700 dark:border-red-900 dark:bg-red-950/30 dark:text-red-300"><div className="text-xs font-bold">أحدث تاريخ في القضية — {latest.label}</div><div className="mt-1 text-2xl font-black"><DateDisplay value={latest.date as any} /></div></div> : null;
+              })()}
             </div>
 
             {/* منطوق الحكم */}
@@ -1174,6 +1220,8 @@ export function Cases() {
         <div className="relative flex-1">
           <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
+            type="search"
+            aria-label="البحث في القضايا برقم القضية أو الموضوع أو المحكمة أو الطرف"
             placeholder="بحث برقم القضية، الموضوع، المحكمة..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
@@ -1198,7 +1246,7 @@ export function Cases() {
       </div>
 
       {/* تبويبات الفلترة */}
-      <div className="flex gap-1 p-1 bg-muted rounded-lg">        {[
+      <div role="tablist" aria-label="تصفية القضايا حسب الحالة" className="flex gap-1 p-1 bg-muted rounded-lg">        {[
           { id: 'active' as const,   label: 'الجارية',            filter: (c: CaseType) => c.status === 'جارية' },
           { id: 'archived' as const, label: 'مؤرشفة / مفصول فيها', filter: (c: CaseType) => c.status === 'مؤرشفة' || c.status === 'مفصول فيها' },
           { id: 'pending' as const,  label: 'للجدولة',             filter: (c: CaseType) => c.status === 'للجدولة' || !c.caseNumber },
@@ -1207,6 +1255,9 @@ export function Cases() {
           return (
             <button
               key={tab.id}
+              type="button"
+              role="tab"
+              aria-selected={activeTab === tab.id}
               onClick={() => setActiveTab(tab.id)}
               className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-md text-xs font-semibold transition-all ${
                 activeTab === tab.id
@@ -1229,115 +1280,102 @@ export function Cases() {
           filteredCases
             .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
             .map((c, index) => {
-              const remaining = (c.totalFees || 0) - (c.paidAmount || 0);
-              const borderColor = STATUS_BORDER_COLORS[c.status || ''] || 'border-r-gray-300';
+              const casePartiesForCard = c.parties || allParties?.filter((p: any) => p.caseId === c.id) || [];
+              const caseDelaysForCard = c.delays || allDelays?.filter((d: any) => d.caseId === c.id) || [];
+              const caseSessionsForCard = c.sessions || allSessions?.filter((session: any) => session.caseId === c.id) || [];
+              const dateCandidates = [
+                ...(c.firstSessionDate ? [{ date: c.firstSessionDate, label: 'أول جلسة' }] : []),
+                ...(c.delibDate ? [{ date: c.delibDate, label: 'المداولة' }] : []),
+                ...(c.judgmentDate ? [{ date: c.judgmentDate, label: 'الحكم' }] : []),
+                ...caseDelaysForCard.filter((d: any) => d.delayDate).map((d: any) => ({ date: d.delayDate, label: 'التأجيل' })),
+                ...caseSessionsForCard.filter((session: any) => session.date).map((session: any) => ({ date: session.date, label: 'الجلسة' })),
+              ];
+              const latestCaseDate = dateCandidates.filter((item) => !Number.isNaN(new Date(item.date).getTime())).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
+              const cardBackgrounds = [
+                'bg-sky-50 dark:bg-sky-950/35 border-sky-200 dark:border-sky-800',
+                'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800',
+                'bg-violet-50 dark:bg-violet-950/30 border-violet-200 dark:border-violet-800',
+                'bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800',
+                'bg-rose-50 dark:bg-rose-950/30 border-rose-200 dark:border-rose-800',
+                'bg-cyan-50 dark:bg-cyan-950/30 border-cyan-200 dark:border-cyan-800',
+              ];
+              const cardBackground = cardBackgrounds[Math.abs(c.id) % cardBackgrounds.length];
+              const courtHierarchy = [c.councilName, c.courtName, c.chamber]
+                .filter((value): value is string => Boolean(value))
+                .filter((value, index, values) => values.indexOf(value) === index);
               return (
                 <Card
                   key={c.id}
-                  className={`group cursor-pointer overflow-hidden transition-all duration-200 border-r-[5px] ${borderColor} bg-card hover:-translate-y-0.5 hover:shadow-lg`}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`فتح ملف القضية ${c.caseNumber || 'دون رقم'}`}
+                  className={`group cursor-pointer overflow-hidden border-r-[5px] border shadow-sm transition-all duration-200 ${cardBackground} ${STATUS_BORDER_COLORS[c.status || ''] || 'border-r-gray-400'} hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2`}
                   onClick={() => {
                     setSelectedCaseId(c.id ?? null);
                     setView('detail');
                   }}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault();
+                      setSelectedCaseId(c.id ?? null);
+                      setView('detail');
+                    }
+                  }}
                 >
-                  <CardContent className="p-5 sm:p-6 space-y-4">
-                    {(() => {
-                      const casePartiesForCard = c.parties || allParties?.filter((p: any) => p.caseId === c.id) || [];
-                      const representedPartiesForCard = casePartiesForCard.filter((p: any) => (p.side || 'for') === 'for');
-                      const opponentsForCard = casePartiesForCard.filter((p: any) => p.side === 'against');
-                      const caseSessionsForCard = c.sessions || allSessions?.filter((s: any) => s.caseId === c.id) || [];
-                      const caseDelaysForCard = c.delays || allDelays?.filter((d: any) => d.caseId === c.id) || [];
-                      const dateRows: { label: string; value: any; detail?: string; kind: string }[] = [];
-                      if (c.registrationDate) dateRows.push({ label: 'التسجيل', value: c.registrationDate, kind: 'base' });
-                      if (c.firstSessionDate) dateRows.push({ label: 'أول جلسة', value: c.firstSessionDate, kind: 'base' });
-                      caseSessionsForCard.filter((x: any) => x.date).forEach((x: any) => dateRows.push({
-                        label: 'جلسة', value: x.date,
-                        detail: [x.time, x.court, x.chamber, x.result, x.status].filter(Boolean).join(' • '), kind: 'session'
-                      }));
-                      caseDelaysForCard.filter((x: any) => x.delayDate).forEach((x: any) => dateRows.push({
-                        label: 'تأجيل', value: x.delayDate,
-                        detail: [x.reason, x.notes].filter(Boolean).join(' — '), kind: 'delay'
-                      }));
-                      if (c.delibDate) dateRows.push({ label: 'المداولة', value: c.delibDate, kind: 'base' });
-                      if (c.judgmentDate) dateRows.push({ label: 'صدور الحكم', value: c.judgmentDate, detail: c.caseResult === 'won' ? 'حكم لصالح الطرف الذي نمثله' : c.caseResult === 'lost' ? 'حكم ضد الطرف الذي نمثله' : undefined, kind: 'judgment' });
-                      dateRows.sort((a, b) => new Date(a.value).getTime() - new Date(b.value).getTime());
-                      const totalFeesCard = Number(c.totalFees || 0);
-                      const paidCard = Number(c.paidAmount || 0);
-                      const remainingCard = totalFeesCard - paidCard;
-                      const judiciaryLabel = [c.litigationStage, c.courtLevel, c.judiciaryType].filter(Boolean).join(' • ');
-                      return (
-                        <>
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="min-w-0 flex-1 space-y-1">
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <span className="text-base sm:text-lg font-extrabold tracking-tight text-foreground">{c.caseNumber || '—'}</span>
-                                <Badge className={`${STATUS_COLORS[c.status || ''] || ''} text-xs`}>{c.status || '—'}</Badge>
-                                {c.caseResult === 'won' && <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400 text-xs">ربحت</Badge>}
-                                {c.caseResult === 'lost' && <Badge className="bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400 text-xs">خسرت</Badge>}
-                                {c.caseNature && <Badge variant="outline" className="text-xs">{c.caseNature}</Badge>}
-                              </div>
-                              <p className="text-[15px] sm:text-base font-semibold text-foreground/90">{c.subject || '—'}</p>
-                              <div className="text-[13px] text-muted-foreground flex flex-wrap gap-x-4 gap-y-2">
-                                <span className="font-semibold text-foreground">الجهة القضائية: {c.courtName || c.councilName || 'غير محددة'}</span>
-                                {judiciaryLabel && <span>درجة/نوع التقاضي: {judiciaryLabel}</span>}
-                                {c.chamber && <span>القسم/الغرفة: {c.chamber}</span>}
-                              </div>
-                            </div>
-                            <div className="text-left shrink-0 space-y-1 min-w-[112px]">
-                              <p className="text-[11px] text-muted-foreground">مجموع الأتعاب</p>
-                              <p className="text-sm font-extrabold tabular-nums">{formatCurrency(totalFeesCard)}</p>
-                              <p className="text-[11px] text-muted-foreground">المتبقي</p>
-                              <p className={`text-sm font-bold tabular-nums ${remainingCard > 0 ? 'text-amber-700 dark:text-amber-400' : 'text-emerald-700 dark:text-emerald-400'}`}>{formatCurrency(remainingCard)}</p>
-                            </div>
-                          </div>
+                  <CardContent className="space-y-3 p-4 sm:p-5">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <p className="text-base sm:text-lg font-extrabold tracking-tight text-foreground">
+                        رقم القضية: {c.caseNumber || 'غير محدد'}
+                      </p>
+                      <span className="text-xs font-extrabold text-muted-foreground">فتح الملف ←</span>
+                    </div>
 
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                            <div className="rounded-xl border bg-muted/30 p-3 sm:p-4 space-y-2">
-                              <p className="text-xs font-bold text-teal-700 dark:text-teal-400">الأطراف الذين نمثلهم ومحاموهم</p>
-                              {representedPartiesForCard.length ? representedPartiesForCard.map((p: any) => (
-                                <div key={p.id} className="text-xs flex flex-wrap gap-x-2 gap-y-0.5">
-                                  <span className="font-semibold">{p.name || 'اسم غير محدد'}</span>
-                                  <span className="text-muted-foreground">المحامي: {p.lawyerName || 'غير محدد'}</span>
-                                </div>
-                              )) : <p className="text-xs text-muted-foreground">لا توجد أطراف نمثلها مسجلة</p>}
-                            </div>
-                            <div className="rounded-lg border p-2.5 space-y-1.5">
-                              <p className="text-xs font-bold text-rose-700 dark:text-rose-400">الخصوم ومحاموهم</p>
-                              {opponentsForCard.length ? opponentsForCard.map((p: any) => (
-                                <div key={p.id} className="text-xs flex flex-wrap gap-x-2 gap-y-0.5">
-                                  <span className="font-semibold">{p.name || 'اسم غير محدد'}</span>
-                                  <span className="text-muted-foreground">المحامي: {p.lawyerName || 'غير محدد'}</span>
-                                </div>
-                              )) : <p className="text-xs text-muted-foreground">لا توجد بيانات خصم مسجلة</p>}
-                            </div>
-                          </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="inline-flex items-center rounded-full border border-indigo-300 bg-indigo-100 px-3 py-1 text-sm font-black text-indigo-900 dark:border-indigo-700 dark:bg-indigo-950/70 dark:text-indigo-200">
+                        طبيعة القضية: {c.caseNature || 'غير محددة'}
+                      </span>
+                      {c.litigationStage && (
+                        <span className="inline-flex items-center rounded-full border border-slate-300 bg-slate-100 px-3 py-1 text-sm font-bold text-slate-800 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">
+                          المرحلة: {c.litigationStage}
+                        </span>
+                      )}
+                      {c.status && (
+                        <span className="inline-flex items-center rounded-full border border-current/20 bg-background/70 px-3 py-1 text-sm font-bold text-foreground">
+                          الحالة: {c.status}
+                        </span>
+                      )}
+                    </div>
 
-                          <div className="rounded-xl border bg-muted/30 p-3 sm:p-4 space-y-3">
-                            <div className="flex items-center justify-between gap-2">
-                              <p className="text-xs font-bold">التواريخ والإجراءات الزمنية</p>
-                              <span className="text-[11px] text-muted-foreground">{dateRows.length} تاريخ/إجراء</span>
-                            </div>
-                            {dateRows.length ? (
-                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2">
-                                {dateRows.map((item, index) => (
-                                  <div key={`${item.kind}-${index}`} className="min-w-0 flex items-start gap-2 text-xs">
-                                    <span className="shrink-0 font-semibold text-foreground">{item.label}:</span>
-                                    <span className="min-w-0">
-                                      <DateDisplay value={item.value as any} />
-                                      {item.detail && <span className="block text-muted-foreground mt-0.5 break-words">{item.detail}</span>}
-                                    </span>
-                                  </div>
-                                ))}
-                              </div>
-                            ) : <p className="text-xs text-muted-foreground">لا توجد تواريخ أو جلسات أو تأجيلات مسجلة</p>}
-                          </div>
-                          <div className="flex flex-wrap gap-x-4 gap-y-2 text-[13px] text-muted-foreground border-t border-border pt-3">
-                            <span>المدفوع: {formatCurrency(paidCard)}</span>
-                            <span>المتبقي من الأتعاب: {formatCurrency(remainingCard)}</span>
-                          </div>
-                        </>
-                      );
-                    })()}
+                    <div className="text-sm sm:text-base font-extrabold leading-relaxed text-foreground">
+                      <span>الجهة القضائية: </span>
+                      {courtHierarchy.length ? courtHierarchy.map((name: string, i: number) => (
+                        <React.Fragment key={`${name}-${i}`}>
+                          {i > 0 ? <span className="mx-1">/</span> : null}
+                          <span>{name}</span>
+                        </React.Fragment>
+                      )) : 'غير محددة'}
+                    </div>
+
+                    <div className="space-y-2">
+                      {casePartiesForCard.length ? casePartiesForCard.map((p: any) => (
+                        <p key={p.id} className="text-sm sm:text-base font-bold leading-relaxed text-foreground break-words">
+                          <span>{p.side === 'against' ? 'الخصم' : 'اسم الموكل'}: </span>
+                          <span>{p.name || 'غير محدد'}</span>
+                          <span> — مركزه القانوني: </span>
+                          <span>{p.role || 'غير محدد'}</span>
+                          <span> — المحامي: </span>
+                          <span>{p.lawyerName || 'غير محدد'}</span>
+                        </p>
+                      )) : (
+                        <p className="text-sm font-bold text-foreground">لا توجد أطراف مسجلة</p>
+                      )}
+                    </div>
+
+                    {latestCaseDate && (
+                      <div className="border-t border-current/15 pt-2 text-base sm:text-lg font-extrabold text-red-700 dark:text-red-400">
+                        آخر إجراء: {latestCaseDate.label} — <DateDisplay value={latestCaseDate.date as any} />
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               );

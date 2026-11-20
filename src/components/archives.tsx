@@ -50,7 +50,14 @@ export function ArchivesManager() {
   const { archives } = useArchives();
 
   const selectedArchive = archives.find((a) => a.id === viewingArchive);
-  const archiveData = selectedArchive ? JSON.parse(selectedArchive.caseData) : null;
+  const archiveData = selectedArchive ? (() => {
+    try {
+      const parsed = JSON.parse(selectedArchive.caseData);
+      return parsed && typeof parsed === 'object' ? parsed : null;
+    } catch {
+      return null;
+    }
+  })() : null;
 
   async function restoreFromArchive(archiveId: number) {
     const archive = archives.find((a) => a.id === archiveId);

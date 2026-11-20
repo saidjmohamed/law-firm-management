@@ -13,9 +13,9 @@ type Props = {
 const value = (input: unknown): string => {
   if (input === null || input === undefined || input === '') return 'غير محدد';
   if (input instanceof Date) return input.toLocaleDateString('en-CA');
-  if (typeof input === 'string' && /^\\d{4}-\\d{2}-\\d{2}T/.test(input)) {
+  if (typeof input === 'string' && /^\d{4}-\d{2}-\d{2}T/.test(input)) {
     const date = new Date(input);
-    return Number.isNaN(date.getTime()) ? input : date.toLocaleDateString('en-CA');
+    return Number.isNaN(date.getTime()) ? input : input.slice(0, 10);
   }
   return String(input).trim() || 'غير محدد';
 };
