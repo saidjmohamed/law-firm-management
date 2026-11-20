@@ -92,8 +92,47 @@ export const URGENCY_LABELS: Record<TaskUrgency, string> = {
 };
 
 // ============================================================================
+// توحيد التعامل مع التواريخ دون انزياح بسبب المنطقة الزمنية
+// ============================================================================
+
+function calendarKey(value: Date | string | null | undefined): string | null {
+  if (!value) return null;
+  if (typeof value === 'string') {
+    const match = value.match(/^(\\d{4})-(\\d{2})-(\\d{2})/);
+    if (match) return `${match[1]}-${match[2]}-${match[3]}`;
+  }
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function keyToUtcDay(key: string): number {
+  const [year, month, day] = key.split('-').map(Number);
+  return Date.UTC(year, month - 1, day) / 86400000;
+}
+
+function todayKey(): string {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+}
+
+function shiftCalendarKey(key: string, days: number): string {
+  const shifted = new Date(keyToUtcDay(key) * 86400000 + days * 86400000);
+  return `${shifted.getUTCFullYear()}-${String(shifted.getUTCMonth() + 1).padStart(2, '0')}-${String(shifted.getUTCDate()).padStart(2, '0')}`;
+}
+
+function localDateFromKey(key: string): Date {
+  const [year, month, day] = key.split('-').map(Number);
+  return new Date(year, month - 1, day);
+}
+
+// ============================================================================
 // حساب حالة الإلحاح من تاريخ الاستحقاق
 // ============================================================================
+
 export function getTaskUrgency(task: {
   status?: string | null;
   dueDate?: Date | string | null;
@@ -101,23 +140,9 @@ export function getTaskUrgency(task: {
   priority?: string | null;
 }): TaskUrgency {
   if (task.status === 'completed') return 'completed';
-
-  const now = new Date();
-  now.setHours(0, 0, 0, 0);
-
-  // استخدم legalDeadline إذا كان إجراءً قانونياً، وإلا dueDate
-  const target = task.legalDeadline ?? task.dueDate;
-  if (!target) {
-    // مهمة بدون تاريخ — استعجلية فقط إذا الأولوية عالية
-    return task.priority === 'high' ? 'urgent' : 'normal';
-  }
-
-  const d = new Date(target);
-  if (isNaN(d.getTime())) return 'normal';
-  d.setHours(0, 0, 0, 0);
-
-  const diffDays = Math.round((d.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-
+  const targetKey = calendarKey(task.legalDeadline ?? task.dueDate);
+  if (!targetKey) return task.priority === 'high' ? 'urgent' : 'normal';
+  const diffDays = keyToUtcDay(targetKey) - keyToUtcDay(todayKey());
   if (diffDays < 0) return 'overdue';
   if (diffDays === 0) return 'today';
   if (diffDays <= 7) return 'week';
@@ -127,18 +152,13 @@ export function getTaskUrgency(task: {
 // ============================================================================
 // عدد الأيام المتبقية (سلبي = متأخر)
 // ============================================================================
+
 export function daysRemaining(
   dueDate: Date | string | null | undefined,
   legalDeadline?: Date | string | null | undefined
 ): number | null {
-  const target = legalDeadline ?? dueDate;
-  if (!target) return null;
-  const d = new Date(target);
-  if (isNaN(d.getTime())) return null;
-  const now = new Date();
-  now.setHours(0, 0, 0, 0);
-  d.setHours(0, 0, 0, 0);
-  return Math.round((d.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+  const targetKey = calendarKey(legalDeadline ?? dueDate);
+  return targetKey ? keyToUtcDay(targetKey) - keyToUtcDay(todayKey()) : null;
 }
 
 // ============================================================================
@@ -160,10 +180,8 @@ export function computeTaskStats(tasks: any[]): TaskStats {
     completed: 0, urgent: 0, total: 0, pending: 0,
   };
 
-  const now = new Date();
-  now.setHours(0, 0, 0, 0);
-  const weekEnd = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
-  weekEnd.setHours(23, 59, 59, 999);
+  const today = keyToUtcDay(todayKey());
+  const weekEnd = today + 7;
 
   for (const t of tasks) {
     stats.total++;
@@ -172,15 +190,12 @@ export function computeTaskStats(tasks: any[]): TaskStats {
 
     if (t.priority === 'high') stats.urgent++;
 
-    const target = t.legalDeadline ?? t.dueDate;
-    if (!target) continue;
-    const d = new Date(target);
-    if (isNaN(d.getTime())) continue;
-    d.setHours(0, 0, 0, 0);
-
-    if (d < now) stats.overdue++;
-    else if (d.getTime() === now.getTime()) stats.today++;
-    else if (d >= now && d <= weekEnd) stats.thisWeek++;
+    const targetKey = calendarKey(t.legalDeadline ?? t.dueDate);
+    if (!targetKey) continue;
+    const targetDay = keyToUtcDay(targetKey);
+    if (targetDay < today) stats.overdue++;
+    else if (targetDay === today) stats.today++;
+    else if (targetDay <= weekEnd) stats.thisWeek++;
   }
 
   return stats;
@@ -215,21 +230,17 @@ export function getActiveReminders(
 ): ActiveReminder[] {
   const target = legalDeadline ?? dueDate;
   if (!target) return [];
-  const base = new Date(target);
-  if (isNaN(base.getTime())) return [];
+  const baseKey = calendarKey(target);
+  if (!baseKey) return [];
 
   const offsets = parseReminderOffsets(reminderOffsets);
-  const now = new Date();
-  now.setHours(0, 0, 0, 0);
+  const today = keyToUtcDay(todayKey());
 
   return offsets.map((offsetDays) => {
-    const date = new Date(base.getTime() - offsetDays * 24 * 60 * 60 * 1000);
-    date.setHours(0, 0, 0, 0);
-    const today = new Date(now);
-    today.setHours(0, 0, 0, 0);
-    let status: 'past' | 'today' | 'future' = 'future';
-    if (date.getTime() < today.getTime()) status = 'past';
-    else if (date.getTime() === today.getTime()) status = 'today';
-    return { offsetDays, date, status };
+    const reminderKey = shiftCalendarKey(baseKey, -offsetDays);
+    const reminderDay = keyToUtcDay(reminderKey);
+    const status: 'past' | 'today' | 'future' =
+      reminderDay < today ? 'past' : reminderDay === today ? 'today' : 'future';
+    return { offsetDays, date: localDateFromKey(reminderKey), status };
   });
 }
