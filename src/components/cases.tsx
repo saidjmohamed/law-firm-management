@@ -257,6 +257,7 @@ export function Cases() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [filterNature, setFilterNature] = useState<string>('all');
+  const [filterStage, setFilterStage] = useState<string>('all');
   const [activeTab, setActiveTab] = useState<'active' | 'archived' | 'pending'>('active');
 
   // بيانات النموذج
@@ -391,6 +392,18 @@ export function Cases() {
       .sort((a, b) => a.value.localeCompare(b.value, 'ar'));
   }, [cases]);
 
+  // مراحل التقاضي المسجلة فعلياً في ملفات المكتب فقط
+  const existingLitigationStages = useMemo(() => {
+    const values = new Map<string, number>();
+    (cases || []).forEach((item) => {
+      const stage = typeof item.litigationStage === 'string' ? item.litigationStage.trim() : '';
+      if (stage) values.set(stage, (values.get(stage) || 0) + 1);
+    });
+    return Array.from(values.entries())
+      .map(([value, count]) => ({ value, count }))
+      .sort((a, b) => a.value.localeCompare(b.value, 'ar'));
+  }, [cases]);
+
   // تصفية القضايا
   const filteredCases = useMemo(() => {
     if (!cases) return [];
@@ -409,9 +422,11 @@ export function Cases() {
         allParties?.some((p: any) => p.caseId === c.id && p.name?.toLowerCase().includes(searchTerm.toLowerCase()));
       const currentNature = typeof c.caseNature === 'string' ? c.caseNature.trim() : '';
       const matchNature = filterNature === 'all' || currentNature === filterNature;
-      return matchTab && matchSearch && matchNature;
+      const currentStage = typeof c.litigationStage === 'string' ? c.litigationStage.trim() : '';
+      const matchStage = filterStage === 'all' || currentStage === filterStage;
+      return matchTab && matchSearch && matchNature && matchStage;
     });
-  }, [cases, allParties, searchTerm, activeTab, filterNature]);
+  }, [cases, allParties, searchTerm, activeTab, filterNature, filterStage]);
 
   // عدد القضايا لكل حالة (للفلاتر)
   const statusCounts = useMemo(() => {
@@ -1321,17 +1336,32 @@ export function Cases() {
           />
         </div>
         <Select value={filterNature} onValueChange={setFilterNature}>
-          <SelectTrigger className="w-full sm:w-auto h-11 min-w-[140px]">
-            <SelectValue placeholder="الطبيعة" />
+          <SelectTrigger className="w-full sm:w-auto h-11 min-w-[150px]">
+            <SelectValue placeholder="طبيعة القضية" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">كل الأنواع</SelectItem>
+            <SelectItem value="all">كل الطبائع المسجلة</SelectItem>
             {existingCaseNatures.length > 0 ? existingCaseNatures.map(({ value, count }) => (
               <SelectItem key={value} value={value}>
                 {value} ({count.toLocaleString('ar-DZ')})
               </SelectItem>
             )) : (
-              <SelectItem value="__no_case_natures__" disabled>لا توجد أنواع قضايا مسجلة</SelectItem>
+              <SelectItem value="__no_case_natures__" disabled>لا توجد طبيعة مسجلة</SelectItem>
+            )}
+          </SelectContent>
+        </Select>
+        <Select value={filterStage} onValueChange={setFilterStage}>
+          <SelectTrigger className="w-full sm:w-auto h-11 min-w-[150px]">
+            <SelectValue placeholder="مرحلة التقاضي" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">كل المراحل المسجلة</SelectItem>
+            {existingLitigationStages.length > 0 ? existingLitigationStages.map(({ value, count }) => (
+              <SelectItem key={value} value={value}>
+                {value} ({count.toLocaleString('ar-DZ')})
+              </SelectItem>
+            )) : (
+              <SelectItem value="__no_litigation_stages__" disabled>لا توجد مرحلة مسجلة</SelectItem>
             )}
           </SelectContent>
         </Select>
