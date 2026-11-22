@@ -3,6 +3,7 @@ import { IBM_Plex_Sans_Arabic } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "next-themes";
+import { PwaInstallPrompt } from "@/components/pwa-install-prompt";
 
 const ibmPlex = IBM_Plex_Sans_Arabic({
   subsets: ["arabic"],
@@ -17,12 +18,13 @@ export const metadata: Metadata = {
     template: "%s - منظومة إدارة مكتب المحاماة",
   },
   description: "منظومة متكاملة لإدارة القضايا والجلسات والعملاء للمحامين – مكتب المحاماة",
-  applicationName: "منظومة إدارة مكتب المحاماة",
+  applicationName: "الشامل – إدارة مكتب المحاماة",
+  manifest: "/manifest.webmanifest",
   authors: [{ name: "مكتب المحاماة" }],
   keywords: ["محاماة", "قضايا", "جلسات", "إدارة مكتب", "محامين", "الجزائر"],
   icons: {
-    icon: "/icon-192.svg",
-    apple: "/icon-192.svg",
+    icon: "/icon-192.png",
+    apple: "/icon-192.png",
   },
   formatDetection: {
     telephone: false,
@@ -56,6 +58,7 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           {children}
+          <PwaInstallPrompt />
           <Toaster position="top-center" richColors />
         </ThemeProvider>
       </body>
