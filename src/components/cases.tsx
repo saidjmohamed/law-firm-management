@@ -407,7 +407,8 @@ export function Cases() {
         c.courtName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         c.councilName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         allParties?.some((p: any) => p.caseId === c.id && p.name?.toLowerCase().includes(searchTerm.toLowerCase()));
-      const currentNature = typeof c.caseNature === 'string' ? c.caseNature.trim() : '';\n      const matchNature = filterNature === 'all' || currentNature === filterNature;
+      const currentNature = typeof c.caseNature === 'string' ? c.caseNature.trim() : '';
+      const matchNature = filterNature === 'all' || currentNature === filterNature;
       return matchTab && matchSearch && matchNature;
     });
   }, [cases, allParties, searchTerm, activeTab, filterNature]);
