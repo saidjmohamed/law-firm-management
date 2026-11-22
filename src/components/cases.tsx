@@ -379,6 +379,18 @@ export function Cases() {
     }
   }, [selectedCaseId]);
 
+  // أنواع القضايا الموجودة فعلياً في قاعدة بيانات المكتب فقط
+  const existingCaseNatures = useMemo(() => {
+    const values = new Map<string, number>();
+    (cases || []).forEach((item) => {
+      const nature = typeof item.caseNature === 'string' ? item.caseNature.trim() : '';
+      if (nature) values.set(nature, (values.get(nature) || 0) + 1);
+    });
+    return Array.from(values.entries())
+      .map(([value, count]) => ({ value, count }))
+      .sort((a, b) => a.value.localeCompare(b.value, 'ar'));
+  }, [cases]);
+
   // تصفية القضايا
   const filteredCases = useMemo(() => {
     if (!cases) return [];
@@ -395,7 +407,7 @@ export function Cases() {
         c.courtName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         c.councilName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         allParties?.some((p: any) => p.caseId === c.id && p.name?.toLowerCase().includes(searchTerm.toLowerCase()));
-      const matchNature = filterNature === 'all' || c.caseNature === filterNature;
+      const currentNature = typeof c.caseNature === 'string' ? c.caseNature.trim() : '';\n      const matchNature = filterNature === 'all' || currentNature === filterNature;
       return matchTab && matchSearch && matchNature;
     });
   }, [cases, allParties, searchTerm, activeTab, filterNature]);
@@ -1313,9 +1325,13 @@ export function Cases() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">كل الأنواع</SelectItem>
-            {CASE_NATURES.map((n) => (
-              <SelectItem key={n} value={n}>{n}</SelectItem>
-            ))}
+            {existingCaseNatures.length > 0 ? existingCaseNatures.map(({ value, count }) => (
+              <SelectItem key={value} value={value}>
+                {value} ({count.toLocaleString('ar-DZ')})
+              </SelectItem>
+            )) : (
+              <SelectItem value="__no_case_natures__" disabled>لا توجد أنواع قضايا مسجلة</SelectItem>
+            )}
           </SelectContent>
         </Select>
         <Button onClick={openAddForm} className="bg-teal-600 hover:bg-teal-700 shrink-0 h-11 touch-target">
