@@ -303,7 +303,14 @@ export function formatDateTime(date: string | Date | undefined | null): string {
  */
 export function toDateInput(value: string | Date | undefined | null): string {
   if (!value) return '';
-  if (value instanceof Date) return value.toISOString().slice(0, 10);
+  const formatLocalDate = (d: Date): string => {
+    if (isNaN(d.getTime())) return '';
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  };
+  if (value instanceof Date) return formatLocalDate(value);
   const s = String(value).trim();
   if (!s) return '';
   // ISO YYYY-MM-DD
@@ -318,7 +325,7 @@ export function toDateInput(value: string | Date | undefined | null): string {
   }
   // محاولة عامة
   const d = new Date(s);
-  if (!isNaN(d.getTime())) return d.toISOString().slice(0, 10);
+  if (!isNaN(d.getTime())) return formatLocalDate(d);
   return '';
 }
 
