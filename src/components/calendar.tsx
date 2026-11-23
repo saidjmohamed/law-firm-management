@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
-import { useSessions, useCases, useDelays } from '@/lib/api';
+import { useSessions, useCases, useDelays, useTasks } from '@/lib/api';
 import { ARABIC_MONTHS } from '@/lib/constants';
 import { useAppStore } from '@/lib/store';
 import { Card, CardContent } from '@/components/ui/card';
@@ -18,6 +18,7 @@ type CalendarSession = {
   notes?: string; caseId?: number;
 };
 type CalendarDelay = { id?: number; delayDate?: string; reason?: string; notes?: string; caseId?: number };
+type CalendarTask = { id?: number; title?: string; description?: string; dueDate?: string; legalDeadline?: string; status?: string; relatedCaseId?: number; sourceType?: string };
 
 const STATUS_LABELS: Record<string, string> = {
   scheduled: 'مجدولة', completed: 'مكتملة', postponed: 'مؤجلة', cancelled: 'ملغاة',
@@ -49,6 +50,7 @@ function CalendarMonthView() {
   const { sessions } = useSessions();
   const { cases } = useCases();
   const { delays } = useDelays();
+  const { tasks } = useTasks();
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
@@ -75,6 +77,16 @@ function CalendarMonthView() {
     return map;
   }, [delays]);
 
+  const tasksByDate = useMemo(() => {
+    const map: Record<string, CalendarTask[]> = {};
+    (tasks || []).forEach((task: CalendarTask) => {
+      if (task.status === 'completed' || task.sourceType === 'session') return;
+      const key = calendarDateKey(task.legalDeadline || task.dueDate);
+      if (key) (map[key] ||= []).push(task);
+    });
+    return map;
+  }, [tasks]);
+
   const days = useMemo(() => [
     ...Array.from({ length: startOffset }, () => null as number | null),
     ...Array.from({ length: daysInMonth }, (_, index) => index + 1),
@@ -84,7 +96,8 @@ function CalendarMonthView() {
   const dateKey = (day: number) => `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
   const selectedSessions = selectedDate ? (sessionsByDate[selectedDate] || []) : [];
   const selectedDelays = selectedDate ? (delaysByDate[selectedDate] || []) : [];
-  const selectedEventsCount = selectedSessions.length + selectedDelays.length;
+  const selectedTasks = selectedDate ? (tasksByDate[selectedDate] || []) : [];
+  const selectedEventsCount = selectedSessions.length + selectedDelays.length + selectedTasks.length;
 
   function changeMonth(offset: number) {
     setCurrentDate(new Date(year, month + offset, 1));
@@ -130,9 +143,10 @@ function CalendarMonthView() {
               const key = dateKey(day);
               const daySessions = sessionsByDate[key] || [];
               const dayDelays = delaysByDate[key] || [];
+              const dayTasks = tasksByDate[key] || [];
               const isToday = key === todayKey;
               const isSelected = key === selectedDate;
-              const total = daySessions.length + dayDelays.length;
+              const total = daySessions.length + dayDelays.length + dayTasks.length;
               return (
                 <button
                   key={key}
@@ -169,6 +183,7 @@ function CalendarMonthView() {
                         </div>
                       );
                     })}
+                    {dayTasks.slice(0, 1).map((task, i) => <div key={task.id || ('task-' + i)} className="truncate rounded-md bg-violet-100 px-1 py-1 text-[9px] text-violet-900 dark:bg-violet-900/30 dark:text-violet-200 sm:text-[11px]">{task.title || 'مهمة قانونية'}</div>)}
                     {total > 3 && <p className="truncate px-1 text-[9px] text-muted-foreground">+{(total - 3).toLocaleString('ar-DZ')} مواعيد أخرى</p>}
                   </div>
                 </button>
@@ -189,9 +204,9 @@ function CalendarMonthView() {
         </div>
 
         {!selectedDate ? (
-          <Card className="border-dashed shadow-none"><CardContent className="p-6 text-center text-sm text-muted-foreground">اختر يوماً من التقويم لعرض جميع تفاصيل جلساته وتأجيلاته والقضايا المرتبطة بها.</CardContent></Card>
+          <Card className="border-dashed shadow-none"><CardContent className="p-6 text-center text-sm text-muted-foreground">اختر يوماً لعرض تفاصيل الجلسات والتأجيلات والمهام القانونية المرتبطة بالقضايا.</CardContent></Card>
         ) : selectedEventsCount === 0 ? (
-          <Card className="shadow-none"><CardContent className="p-6 text-center text-sm text-muted-foreground">لا توجد جلسات أو تأجيلات مسجلة في هذا اليوم.</CardContent></Card>
+          <Card className="shadow-none"><CardContent className="p-6 text-center text-sm text-muted-foreground">لا توجد جلسات أو تأجيلات أو مهام مسجلة في هذا اليوم.</CardContent></Card>
         ) : (
           <div className="grid gap-3 xl:grid-cols-2">
             {selectedSessions.map((session, index) => {
@@ -221,6 +236,11 @@ function CalendarMonthView() {
                   </CardContent>
                 </Card>
               );
+            })}
+
+            {selectedTasks.map((task, index) => {
+              const caseData = (cases || []).find((item: any) => item.id === task.relatedCaseId);
+              return <Card key={task.id || ('task-' + index)} className="border-violet-200 shadow-none"><CardContent className="space-y-3 p-4"><div className="flex items-start justify-between gap-2"><div><p className="text-xs text-muted-foreground">إجراء / مهمة قانونية</p><h4 className="font-bold">{task.title || 'مهمة دون عنوان'}</h4></div><Badge>{task.status === 'in_progress' ? 'قيد الإنجاز' : 'معلقة'}</Badge></div>{caseData && <p className="text-sm font-semibold">القضية: {caseData.caseNumber} — {caseData.subject}</p>}{task.description && <p className="text-sm text-muted-foreground">{task.description}</p>}{task.legalDeadline && <p className="text-sm font-semibold text-destructive">الأجل القانوني: {calendarDateKey(task.legalDeadline)?.split('-').reverse().join('/')}</p>}{task.relatedCaseId && <Button variant="outline" onClick={() => openCase(task.relatedCaseId)}><FolderOpen className="ml-2 h-4 w-4" />فتح ملف القضية</Button>}</CardContent></Card>;
             })}
             {selectedDelays.map((delay, index) => {
               const caseData = (cases || []).find((item: any) => item.id === delay.caseId);

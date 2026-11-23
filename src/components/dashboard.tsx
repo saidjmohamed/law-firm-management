@@ -134,50 +134,45 @@ export function Dashboard() {
     })
     .slice(0, 10);
 
-  // القضايا القادمة في 7 أيام — على أساس آخر تاريخ لكل قضية
+  // أجندة المكتب خلال 30 يوماً: كل جلسة وتأجيل وإجراء قانوني يظهر كسجل مستقل.
   const allUpcoming = (() => {
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const horizon = new Date(today); horizon.setDate(horizon.getDate() + 30); horizon.setHours(23, 59, 59, 999);
+    const active = cases.filter((c: any) => c.status !== 'مؤرشفة');
     const result: any[] = [];
-
-    cases.filter((c: any) => c.status !== 'مؤرشفة').forEach((c: any) => {
-      const allDates: { date: Date; source: string; label: string; sourceData: any }[] = [];
-
-      const caseDelays = delays.filter((d: any) => d.caseId === c.id && d.delayDate);
-      caseDelays.forEach((d: any) => {
-        const dd = new Date(d.delayDate);
-        if (!isNaN(dd.getTime())) allDates.push({ date: dd, source: 'delay', label: d.reason || 'تأجيل', sourceData: d });
-      });
-
-      const caseSessions = sessions.filter((s: any) => s.caseId === c.id && s.date);
-      caseSessions.forEach((s: any) => {
-        const sd = new Date(s.date);
-        if (!isNaN(sd.getTime())) allDates.push({ date: sd, source: 'session', label: 'جلسة', sourceData: s });
-      });
-
-      if (c.delibDate) {
-        const dd = new Date(c.delibDate);
-        if (!isNaN(dd.getTime())) allDates.push({ date: dd, source: 'delib', label: 'مداولة', sourceData: c });
-      }
-
-      if (allDates.length === 0) return;
-
-      const latest = allDates.sort((a, b) => b.date.getTime() - a.date.getTime())[0];
-
-      if (latest.date >= todayStart && latest.date <= nextWeekDate) {
-        result.push({
-          id: latest.sourceData.id,
-          caseId: c.id,
-          caseData: c,
-          delayDate: latest.date,
-          date: latest.date,
-          reason: latest.label,
-          source: latest.source,
-        });
-      }
+    const add = (entry: any, raw: any) => {
+      if (!raw) return;
+      const date = new Date(typeof raw === 'string' && raw.length === 10 ? raw + 'T12:00:00' : raw);
+      if (!Number.isNaN(date.getTime()) && date >= today && date <= horizon) result.push({ ...entry, date, delayDate: date });
+    };
+    (sessions || []).forEach((x: any) => {
+      if (x.status === 'completed' || x.status === 'cancelled') return;
+      const c = active.find((v: any) => v.id === x.caseId); if (!c) return;
+      add({ id: 'session-' + x.id, caseId: c.id, caseData: c, source: 'session', reason: 'جلسة قضائية', court: x.court || c.courtName, time: x.time, detail: x.chamber || x.notes }, x.date);
     });
-
-    return result.sort((a, b) => new Date(a.delayDate).getTime() - new Date(b.delayDate).getTime());
+    (delays || []).forEach((x: any) => {
+      const c = active.find((v: any) => v.id === x.caseId); if (!c) return;
+      add({ id: 'delay-' + x.id, caseId: c.id, caseData: c, source: 'delay', reason: x.reason || 'موعد مؤجل', detail: x.notes, court: c.courtName }, x.delayDate);
+    });
+    (tasks || []).forEach((x: any) => {
+      if (x.status === 'completed' || x.sourceType === 'session') return;
+      const c = active.find((v: any) => v.id === x.relatedCaseId); if (!c) return;
+      add({ id: 'task-' + x.id, caseId: c.id, caseData: c, source: 'task', reason: x.title || 'إجراء قانوني واجب', detail: x.description, court: c.courtName, taskStatus: x.status, legalDeadline: x.legalDeadline }, x.legalDeadline || x.dueDate);
+    });
+    active.forEach((c: any) => {
+      const addDate = (field: string, label: string) => {
+        const value = c[field]; if (!value) return;
+        const key = String(value).slice(0, 10);
+        if ((sessions || []).some((x: any) => x.caseId === c.id && x.status !== 'cancelled' && String(x.date || '').slice(0, 10) === key)) return;
+        add({ id: 'case-' + c.id + '-' + field, caseId: c.id, caseData: c, source: 'case', reason: label, court: c.courtName }, value);
+      };
+      addDate('firstSessionDate', 'أول جلسة مسجلة بملف القضية');
+      addDate('delibDate', 'تاريخ المداولة');
+      addDate('judgmentDate', 'تاريخ الحكم');
+    });
+    const unique = new Map<string, any>(); result.forEach(x => unique.set(String(x.id), x));
+    return [...unique.values()].sort((x, y) => x.date.getTime() - y.date.getTime());
   })();
-
   // حساب الأيام المتبقية
   function daysUntil(dateStr: string | Date) {
     let target: Date;
@@ -539,7 +534,7 @@ export function Dashboard() {
           <CardHeader className="pb-3">
             <CardTitle className="text-base font-bold flex items-center gap-2">
               <Calendar className="w-4 h-4 text-amber-500" />
-              القضايا القادمة (7 أيام)
+              أجندة القضايا والإجراءات القادمة (30 يوماً)
               <Badge variant="secondary" className="text-xs bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
                 {allUpcoming.length.toLocaleString('en-US')}
               </Badge>
@@ -556,7 +551,7 @@ export function Dashboard() {
                 const isUrgent = days <= 1;
                 return (
                   <div
-                    key={`${item.source}-${item.id}`}
+                    key={item.id}
                     className={`p-5 rounded-xl border-2 cursor-pointer transition-all duration-200 hover:shadow-lg hover:scale-[1.02] ${
                       isToday
                         ? 'bg-destructive/5 border-destructive/35 hover:border-destructive/60'
@@ -613,6 +608,9 @@ export function Dashboard() {
                         <span className="truncate font-medium">{item.reason || item.court || '—'}</span>
                       </div>
                     )}
+                    {item.time && <p className="mt-1 text-xs text-muted-foreground">الساعة: {item.time}</p>}
+                    {item.detail && <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{item.detail}</p>}
+                    {item.taskStatus && <Badge variant="outline" className="mt-2">{item.taskStatus === 'in_progress' ? 'قيد الإنجاز' : 'معلقة'}</Badge>}
                     {caseData?.courtName && (
                       <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
                         <Scale className="w-4 h-4 shrink-0" />
@@ -632,8 +630,8 @@ export function Dashboard() {
         <Card className="border-gray-200 dark:border-gray-800/40">
           <CardContent className="py-8 text-center">
             <Calendar className="w-12 h-12 text-muted-foreground/30 mx-auto mb-3" />
-            <p className="text-base font-medium text-muted-foreground">لا توجد قضايا قادمة خلال 7 أيام</p>
-            <p className="text-sm text-muted-foreground/70 mt-1">ستظهر هنا القضايا المؤجلة والجلسات القادمة</p>
+            <p className="text-base font-medium text-muted-foreground">لا توجد قضايا أو إجراءات قادمة خلال 30 يوماً</p>
+            <p className="text-sm text-muted-foreground/70 mt-1">ستظهر هنا الجلسات والتأجيلات والآجال والمهام القانونية المرتبطة بملفات القضايا</p>
           </CardContent>
         </Card>
       )}
