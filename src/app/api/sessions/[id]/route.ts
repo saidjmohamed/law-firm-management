@@ -47,7 +47,8 @@ export async function PUT(
         if (key === 'date') {
           cleanData[key] = toDateOrNull(body[key]);
         } else if (key === 'caseId') {
-          cleanData[key] = body[key] === '' ? null : parseInt(String(body[key]));
+          const parsedCaseId = body[key] === '' || body[key] === null ? null : parseInt(String(body[key]), 10);
+          if (parsedCaseId === null || !Number.isNaN(parsedCaseId)) { cleanData[key] = parsedCaseId; }
         } else {
           cleanData[key] = body[key];
         }
@@ -87,9 +88,8 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params;
-    await prisma.session.delete({
-      where: { id: parseInt(id) },
-    });
+    const sessionId = parseInt(id, 10);
+    await prisma.$transaction([prisma.task.deleteMany({ where: { sourceType: 'session', sourceId: sessionId } }), prisma.session.delete({ where: { id: sessionId } })]);
 
     return NextResponse.json({ message: 'Session deleted' });
   } catch (error) {
