@@ -8,8 +8,12 @@ import useSWR, { mutate } from 'swr';
 const fetcher = async (url: string) => {
   const res = await fetch(url);
   if (!res.ok) {
-    const error = await res.json().catch(() => ({ message: 'حدث خطأ في الشبكة' }));
-    throw new Error(error.message || 'حدث خطأ في الشبكة');
+    let message = res.statusText;
+    try {
+      const data = await res.json();
+      message = data?.error || data?.message || res.statusText;
+      } catch {}
+    throw new Error(message || 'Request failed');
   }
   return res.json();
 };
@@ -84,6 +88,7 @@ export async function createSession(data: Record<string, unknown>) {
   if (!res.ok) throw new Error('فشل في إنشاء الجلسة');
   const result = await res.json();
   await mutate('/api/sessions');
+  await mutate('/api/cases');
   return result;
 }
 
@@ -96,6 +101,7 @@ export async function updateSession(id: number, data: Record<string, unknown>) {
   if (!res.ok) throw new Error('فشل في تحديث الجلسة');
   const result = await res.json();
   await mutate('/api/sessions');
+  await mutate('/api/cases');
   return result;
 }
 
@@ -103,6 +109,7 @@ export async function deleteSession(id: number) {
   const res = await fetch(`/api/sessions/${id}`, { method: 'DELETE' });
   if (!res.ok) throw new Error('فشل في حذف الجلسة');
   await mutate('/api/sessions');
+  await mutate('/api/cases');
 }
 
 // ============================================================================
@@ -122,6 +129,7 @@ export async function createPayment(data: Record<string, unknown>) {
   if (!res.ok) throw new Error('فشل في إنشاء الدفعة');
   const result = await res.json();
   await mutate('/api/payments');
+  await mutate('/api/cases');
   return result;
 }
 
@@ -134,6 +142,7 @@ export async function updatePayment(id: number, data: Record<string, unknown>) {
   if (!res.ok) throw new Error('فشل في تحديث الدفعة');
   const result = await res.json();
   await mutate('/api/payments');
+  await mutate('/api/cases');
   return result;
 }
 
@@ -141,6 +150,7 @@ export async function deletePayment(id: number) {
   const res = await fetch(`/api/payments/${id}`, { method: 'DELETE' });
   if (!res.ok) throw new Error('فشل في حذف الدفعة');
   await mutate('/api/payments');
+  await mutate('/api/cases');
 }
 
 // ============================================================================
@@ -160,6 +170,7 @@ export async function createDelay(data: Record<string, unknown>) {
   if (!res.ok) throw new Error('فشل في إنشاء الأجل');
   const result = await res.json();
   await mutate('/api/delays');
+  await mutate('/api/cases');
   return result;
 }
 
@@ -172,6 +183,7 @@ export async function updateDelay(id: number, data: Record<string, unknown>) {
   if (!res.ok) throw new Error('فشل في تحديث الأجل');
   const result = await res.json();
   await mutate('/api/delays');
+  await mutate('/api/cases');
   return result;
 }
 
@@ -179,6 +191,7 @@ export async function deleteDelay(id: number) {
   const res = await fetch(`/api/delays/${id}`, { method: 'DELETE' });
   if (!res.ok) throw new Error('فشل في حذف الأجل');
   await mutate('/api/delays');
+  await mutate('/api/cases');
 }
 
 // ============================================================================
