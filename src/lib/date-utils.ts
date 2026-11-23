@@ -16,7 +16,9 @@ export function toDateOrNull(value: string | Date | null | undefined): Date | nu
   const isoMatch = s.match(/^(\d{4})-(\d{2})-(\d{2})(T.*)?$/);
   if (isoMatch) {
     const d = new Date(s);
-    return isNaN(d.getTime()) ? null : d;
+    if (isNaN(d.getTime())) return null;
+    if (!isoMatch[4] && (d.getUTCFullYear() !== Number(isoMatch[1]) || d.getUTCMonth() + 1 !== Number(isoMatch[2]) || d.getUTCDate() !== Number(isoMatch[3]))) return null;
+    return d;
   }
 
   // DD/MM/YYYY
@@ -26,7 +28,9 @@ export function toDateOrNull(value: string | Date | null | undefined): Date | nu
     const mm = dmyMatch[2].padStart(2, '0');
     const yyyy = dmyMatch[3];
     const d = new Date(`${yyyy}-${mm}-${dd}T00:00:00Z`);
-    return isNaN(d.getTime()) ? null : d;
+    if (isNaN(d.getTime())) return null;
+    if (d.getUTCFullYear() !== Number(yyyy) || d.getUTCMonth() + 1 !== Number(mm) || d.getUTCDate() !== Number(dd)) return null;
+    return d;
   }
 
   // محاولة عامة
