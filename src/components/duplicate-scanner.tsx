@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { useLawyers, useJudicialBodies, useCases, useParties, deleteParty, deleteLawyer, deleteJudicialBody } from '@/lib/api';
+import { useLawyers, useJudicialBodies, useCases, useParties, deleteParty, deleteLawyer, deleteJudicialBody , deleteCase} from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -29,10 +29,11 @@ import {
   ChevronUp,
 } from 'lucide-react';
 import { WILAYAS } from '@/lib/constants';
+type EntityType = 'party' | 'lawyer' | 'judicialBody' | 'case';
 
 interface DuplicateGroup {
   key: string;
-  entityType: string;
+  entityType: EntityType;
   field: string;
   items: any[];
 }
@@ -43,7 +44,7 @@ interface DuplicateGroup {
  */
 export function DuplicateScanner() {
   const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
-  const [deleteConfirm, setDeleteConfirm] = useState<{ type: string; id: number } | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ type: EntityType; id: number } | null>(null);
 
   const { lawyers, isLoading: lawyersLoading } = useLawyers();
   const { judicialBodies, isLoading: bodiesLoading } = useJudicialBodies();
@@ -65,7 +66,7 @@ export function DuplicateScanner() {
       partyNameMap[key].push(party);
     });
     Object.entries(partyNameMap).forEach(([key, items]) => {
-      if (items.length > 1) groups.push({ key: `party-name-${key}`, entityType: 'أطراف', field: 'الاسم داخل القضية', items });
+      if (items.length > 1) groups.push({ key: `party-name-${key}`, entityType: 'party', field: 'الاسم داخل القضية', items });
     });
 
     // 2. تكرار الهاتف داخل القضية نفسها.
@@ -77,7 +78,7 @@ export function DuplicateScanner() {
       partyPhoneMap[key].push(party);
     });
     Object.entries(partyPhoneMap).forEach(([key, items]) => {
-      if (items.length > 1) groups.push({ key: `party-phone-${key}`, entityType: 'أطراف', field: 'الهاتف داخل القضية', items });
+      if (items.length > 1) groups.push({ key: `party-phone-${key}`, entityType: 'party', field: 'الهاتف داخل القضية', items });
     });
 
     // 3. تكرار المحامين بالاسم
@@ -92,7 +93,7 @@ export function DuplicateScanner() {
       if (items.length > 1) {
         groups.push({
           key: `lawyer-name-${key}`,
-          entityType: 'محامون',
+          entityType: 'lawyer',
           field: 'الاسم',
           items,
         });
@@ -110,7 +111,7 @@ export function DuplicateScanner() {
       if (items.length > 1) {
         groups.push({
           key: `lawyer-bar-${key}`,
-          entityType: 'محامون',
+          entityType: 'lawyer',
           field: 'رقم القيد',
           items,
         });
@@ -129,7 +130,7 @@ export function DuplicateScanner() {
       if (items.length > 1) {
         groups.push({
           key: `body-${key}`,
-          entityType: 'هيئات قضائية',
+          entityType: 'judicialBody',
           field: 'الاسم والنوع',
           items,
         });
@@ -147,7 +148,7 @@ export function DuplicateScanner() {
       if (items.length > 1) {
         groups.push({
           key: `case-num-${key}`,
-          entityType: 'قضايا',
+          entityType: 'case',
           field: 'رقم القضية',
           items,
         });
@@ -159,38 +160,39 @@ export function DuplicateScanner() {
 
   const totalDuplicates = duplicateGroups.length;
 
-  const entityIcon = (type: string) => {
+  const entityIcon = (type: EntityType) => {
     switch (type) {
-      case 'أطراف': return Users;
-      case 'محامون': return Scale;
-      case 'هيئات قضائية': return Building2;
-      case 'قضايا': return Briefcase;
+      case 'party': return Users;
+      case 'lawyer': return Scale;
+      case 'judicialBody': return Building2;
+      case 'case': return Briefcase;
       default: return AlertTriangle;
     }
   };
 
-  const entityColor = (type: string) => {
+  const entityColor = (type: EntityType) => {
     switch (type) {
-      case 'أطراف': return 'text-teal-600 dark:text-teal-400';
-      case 'محامون': return 'text-indigo-600 dark:text-indigo-400';
-      case 'هيئات قضائية': return 'text-rose-600 dark:text-rose-400';
-      case 'قضايا': return 'text-amber-600 dark:text-amber-400';
+      case 'party': return 'text-teal-600 dark:text-teal-400';
+      case 'lawyer': return 'text-indigo-600 dark:text-indigo-400';
+      case 'judicialBody': return 'text-rose-600 dark:text-rose-400';
+      case 'case': return 'text-amber-600 dark:text-amber-400';
       default: return 'text-muted-foreground';
     }
   };
 
-  async function handleDeleteDuplicate(type: string, id: number) {
+  async function handleDeleteDuplicate(type: EntityType, id: number) {
     try {
       switch (type) {
-        case 'أطراف':
+        case 'party':
           await deleteParty(id);
           break;
-        case 'محامون':
+        case 'lawyer':
           await deleteLawyer(id);
           break;
-        case 'هيئات قضائية':
+        case 'judicialBody':
           await deleteJudicialBody(id);
           break;
+      case 'case': await deleteCase(id); break;
       }
       setDeleteConfirm(null);
       toast.success('تم حذف العنصر المكرر');
@@ -199,7 +201,8 @@ export function DuplicateScanner() {
       toast.error('فشل في حذف العنصر');
     }
   }
-
+  const entityLabel = (type: EntityType) => { switch (type) { case 'party': return 'أطراف'; case 'lawyer': return 'محامون'; case 'judicialBody': return 'جهات قضائية'; case 'case': return 'قضايا'; default: return ''; } };
+  
   if (isLoading) {
     return (
       <div className="space-y-3">
@@ -245,7 +248,7 @@ export function DuplicateScanner() {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Icon className={`w-4 h-4 ${colorClass}`} />
-                  <Badge variant="outline" className="text-xs">{group.entityType}</Badge>
+                  <Badge variant="outline" className="text-xs">{entityLabel(group.entityType)}</Badge>
                   <span className="text-sm font-medium">
                     تكرار في {group.field}: <span className="font-bold">{group.items[0]?.name || group.items[0]?.caseNumber || '—'}</span>
                   </span>
