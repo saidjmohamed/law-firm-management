@@ -135,15 +135,16 @@ export function BackupManager() {
    * التحقق من بنية النسخة الاحتياطية قبل الاستيراد
    */
   function validateBackup(data: any): { ok: boolean; error?: string; counts?: Record<string, number> } {
-    if (!data || typeof data !== 'object') {
+    if (!data || typeof data !== 'object' || Array.isArray(data)) {
       return { ok: false, error: 'الملف غير صالح' };
     }
-    const expectedArrays = ['cases', 'sessions', 'payments', 'delays', 'parties', 'archives', 'tasks', 'lawyers', 'judicialBodies'];
+    const expectedArrays = ['cases', 'sessions', 'payments', 'delays', 'parties', 'archives', 'tasks', 'lawyers', 'courts', 'judicialBodies'];
     for (const key of expectedArrays) {
       if (data[key] !== undefined && !Array.isArray(data[key])) {
         return { ok: false, error: `الحقل ${key} يجب أن يكون مصفوفة` };
       }
-    }
+    } 
+    if (!expectedArrays.some((key) => Array.isArray(data[key]))) { return { ok: false, error: 'الملف لا يحتوي على بيانات نسخة احتياطية صالحة' }; }
     return {
       ok: true,
       counts: {
@@ -486,7 +487,8 @@ export function BackupManager() {
                 if (file) {
                   setSelectedFile(file);
                   setImportConfirm(true);
-                }
+                } 
+                e.target.value = '';
               }}
             />
             <Button variant="outline" onClick={() => jsonInputRef.current?.click()}>
