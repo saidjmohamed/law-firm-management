@@ -8,8 +8,12 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
+const numericId = parseInt(id, 10);
+if (isNaN(numericId) || numericId <= 0 || String(numericId) !== id) {
+return NextResponse.json({ error: 'Invalid payment ID' }, { status: 400 });
+}
     const payment = await prisma.payment.findUnique({
-      where: { id: parseInt(id) },
+      where: { id:numericId },
       include: {
         case: {
           select: {
@@ -38,16 +42,20 @@ export async function PUT(
   try {
     const { id } = await params;
     const body = await request.json();
+    const numericId = parseInt(id, 10);
+    if (isNaN(numericId) || numericId <= 0 || String(numericId) !== id) {
+      return NextResponse.json({ error: 'Invalid payment ID' }, { status: 400 });
+    }
 
     // جلب بيانات الدفعة قبل التحديث لإعادة حساب paidAmount
-    const oldPayment = await prisma.payment.findUnique({
-      where: { id: parseInt(id) },
-    });
-
+  
     // تنظيف البيانات - فقط الحقول المسموح بتحديثها
     const { id: _id, createdAt: _ca, updatedAt: _ua, case: _case, ...updateData } = body;
     if (updateData.amount !== undefined && updateData.amount !== null) {
       updateData.amount = parseInt(String(updateData.amount));
+      if (isNaN(updateData.amount) || updateData.amount <= 0) {
+        return NextResponse.json({ error: 'Amount must be a positive number' }, { status: 400 });
+      }
     }
     if (updateData.date !== undefined) {
       updateData.date = toDateOrNull(updateData.date);
@@ -55,27 +63,36 @@ export async function PUT(
     if (updateData.caseId !== undefined) {
       updateData.caseId = updateData.caseId === '' ? null : updateData.caseId;
     }
+    const payment = await prisma.$transaction(async (tx) => {
+      const oldPayment = await tx.payment.findUnique({
+        where: { id: numericId },
+      });
 
-    const payment = await prisma.payment.update({
-      where: { id: parseInt(id) },
-      data: updateData,
+      const updatedPayment = await tx.payment.update({
+        where: { id: numericId },
+        data: updateData,
+      });
+
+      const caseIds = new Set(
+        [oldPayment?.caseId, updatedPayment.caseId].filter(Boolean) as number[]
+      );
+
+      for (const caseId of caseIds) {
+        const totalPaid = await tx.payment.aggregate({
+          where: {
+            caseId,
+            type: 'income',
+          },
+          _sum: { amount: true },
+        });
+        await tx.case.update({
+          where: { id: caseId },
+          data: { paidAmount: totalPaid._sum.amount || 0 },
+        });
+      }
+
+      return updatedPayment;
     });
-
-    // إعادة حساب paidAmount إذا تغير المبلغ أو النوع أو القضية
-    const caseId = payment.caseId || oldPayment?.caseId;
-    if (caseId) {
-      const totalPaid = await prisma.payment.aggregate({
-        where: {
-          caseId,
-          type: 'income',
-        },
-        _sum: { amount: true },
-      });
-      await prisma.case.update({
-        where: { id: caseId },
-        data: { paidAmount: totalPaid._sum.amount || 0 },
-      });
-    }
 
     return NextResponse.json(payment);
   } catch (error) {
@@ -91,30 +108,34 @@ export async function DELETE(
   try {
     const { id } = await params;
 
-    // جلب بيانات الدفعة قبل الحذف لإعادة حساب paidAmount
-    const payment = await prisma.payment.findUnique({
-      where: { id: parseInt(id) },
-    });
-
-    await prisma.payment.delete({
-      where: { id: parseInt(id) },
-    });
-
-    // إعادة حساب paidAmount للقضية
-    if (payment?.caseId && payment.type === 'income') {
-      const totalPaid = await prisma.payment.aggregate({
-        where: {
-          caseId: payment.caseId,
-          type: 'income',
-        },
-        _sum: { amount: true },
-      });
-      await prisma.case.update({
-        where: { id: payment.caseId },
-        data: { paidAmount: totalPaid._sum.amount || 0 },
-      });
+      const numericId = parseInt(id, 10);
+    if (isNaN(numericId) || numericId <= 0 || String(numericId) !== id) {
+      return NextResponse.json({ error: 'Invalid payment ID' }, { status: 400 });
     }
 
+    await prisma.$transaction(async (tx) => {
+      const payment = await tx.payment.findUnique({
+        where: { id: numericId },
+      });
+
+      await tx.payment.delete({
+        where: { id: numericId },
+      });
+
+      if (payment?.caseId && payment.type === 'income') {
+        const totalPaid = await tx.payment.aggregate({
+          where: {
+            caseId: payment.caseId,
+            type: 'income',
+          },
+          _sum: { amount: true },
+        });
+        await tx.case.update({
+          where: { id: payment.caseId },
+          data: { paidAmount: totalPaid._sum.amount || 0 },
+        });
+      }
+    });
     return NextResponse.json({ message: 'Payment deleted' });
   } catch (error) {
     console.error('Error deleting payment:', error);
