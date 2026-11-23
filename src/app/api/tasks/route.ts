@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
     const tasks = await prisma.task.findMany({
       where,
       orderBy: [
-        { status: 'asc' },        // pending أولاً
+        { status: 'desc'},        // pending أولاً
         { dueDate: 'asc' },        // الأقرب أولاً
         { legalDeadline: 'asc' },
         { createdAt: 'desc' },
@@ -57,9 +57,10 @@ export async function POST(request: NextRequest) {
       priority: body.priority || 'medium',
       status: body.status || 'pending',
       dueDate: toDateOrNull(body.dueDate),
+      completedAt: body.status === 'completed' ? new Date() : null,
       startDate: toDateOrNull(body.startDate),
       legalDeadline: toDateOrNull(body.legalDeadline),
-      reminderOffsets: JSON.stringify(body.reminderOffsets ?? [7, 1, 0]),
+      reminderOffsets: typeof body.reminderOffsets === 'string' ? body.reminderOffsets : JSON.stringify(body.reminderOffsets ?? [7, 1, 0]),
       sourceType: body.sourceType || 'manual',
       sourceId: body.sourceId ?? null,
       relatedCaseId: body.relatedCaseId ?? null,
