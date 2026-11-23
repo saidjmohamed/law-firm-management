@@ -27,32 +27,33 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { caseId, caseNumber, amount, type, category, date, notes } = body;
 
-    const payment = await prisma.payment.create({
-      data: {
-        caseId: caseId ?? null,
-        caseNumber: caseNumber ?? '',
-        amount: amount ?? 0,
-        type: type ?? 'income',
-        category: category ?? '',
-        date: toDateOrNull(date),
-        notes: notes ?? '',
-      },
-    });
-
-    // تحديث paidAmount في القضية عند إضافة دفعة من نوع income
-    if (caseId && type === 'income') {
-      const totalPaid = await prisma.payment.aggregate({
-        where: {
-          caseId: parseInt(String(caseId)),
-          type: 'income',
+    const payment = await prisma.$transaction(async (tx) => {
+      const created = await tx.payment.create({
+        data: {
+          caseId: caseId ?? null,
+          caseNumber: caseNumber ?? '',
+          amount: amount ?? 0,
+          type: type ?? 'income',
+          category: category ?? '',
+          date: toDateOrNull(date),
+          notes: notes ?? '',
         },
-        _sum: { amount: true },
       });
-      await prisma.case.update({
-        where: { id: parseInt(String(caseId)) },
-        data: { paidAmount: totalPaid._sum.amount || 0 },
-      });
-    }
+
+      // اعتمد النوع الفعلي بعد تطبيق القيمة الافتراضية، ثم حدّث رصيد القضية ذرياً.
+      if (created.caseId && created.type === 'income') {
+        const totalPaid = await tx.payment.aggregate({
+          where: { caseId: created.caseId, type: 'income' },
+          _sum: { amount: true },
+        });
+        await tx.case.update({
+          where: { id: created.caseId },
+          data: { paidAmount: totalPaid._sum.amount || 0 },
+        });
+      }
+
+      return created;
+    });
 
     return NextResponse.json(payment, { status: 201 });
   } catch (error) {
