@@ -7,9 +7,9 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params;
+    const { id } = await params; const delayId = parseInt(id, 10); if (Number.isNaN(delayId)) { return NextResponse.json({ error: 'Invalid ID' }, { status: 400 }); }
     const delay = await prisma.delay.findUnique({
-      where: { id: parseInt(id) },
+      where: { id: delayId},
       include: {
         case: {
           select: {
@@ -38,7 +38,7 @@ export async function PUT(
 ) {
   try {
     const { id } = await params;
-    const body = await request.json();
+    const body = await request.json(); const delayId = parseInt(id, 10); if (Number.isNaN(delayId)) { return NextResponse.json({ error: 'Invalid ID' }, { status: 400 }); }
 
     // تصفية الحقول - فقط الحقول المسموح بتحديثها
     const allowedFields = ['caseId', 'delayDate', 'reason', 'notes'];
@@ -48,7 +48,7 @@ export async function PUT(
         if (key === 'delayDate') {
           cleanData[key] = toDateOrNull(body[key]);
         } else if (key === 'caseId') {
-          cleanData[key] = body[key] === '' ? null : parseInt(String(body[key]));
+          if (body[key] === '' || body[key] === null) { return NextResponse.json({ error: 'Invalid caseId' }, { status: 400 }); } const parsedCaseId = parseInt(String(body[key]), 10); if (Number.isNaN(parsedCaseId)) { return NextResponse.json({ error: 'Invalid caseId' }, { status: 400 }); } cleanData[key] = parsedCaseId;
         } else {
           cleanData[key] = body[key];
         }
@@ -56,7 +56,7 @@ export async function PUT(
     }
 
     const delay = await prisma.delay.update({
-      where: { id: parseInt(id) },
+      where: { id: delayId },
       data: cleanData,
     });
 
@@ -72,9 +72,9 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params;
+    const { id } = await params; const delayId = parseInt(id, 10); if (Number.isNaN(delayId)) { return NextResponse.json({ error: 'Invalid ID' }, { status: 400 }); }
     await prisma.delay.delete({
-      where: { id: parseInt(id) },
+      where: { id: delayId },
     });
 
     return NextResponse.json({ message: 'Delay deleted' });
