@@ -157,7 +157,7 @@ export async function createJudgmentExtractTask(
         taskType: 'judgment_extract',
         priority: 'high',
         status: 'pending',
-        sourceType: 'judgment',
+        sourceType: 'judgment_extract',
         sourceId: caseId,
         relatedCaseId: caseId,
       },
