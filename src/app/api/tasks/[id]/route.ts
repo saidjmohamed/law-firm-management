@@ -62,19 +62,19 @@ export async function PUT(
         cleanData[key] = typeof val === 'string' ? val : JSON.stringify(val ?? [7, 1, 0]);
       } else if (key === 'relatedCaseId' || key === 'sourceId') {
         cleanData[key] = body[key] === '' || body[key] === null ? null : parseInt(String(body[key]));
-      } else if (key === 'status') {
-        // عند التحويل إلى completed، سجّل completedAt تلقائياً
-        cleanData[key] = body[key];
-        if (body[key] === 'completed' && !body.completedAt) {
-          cleanData.completedAt = new Date();
-        } else if (body[key] !== 'completed') {
-          cleanData.completedAt = null;
-        }
-      } else {
+            } else {
         cleanData[key] = body[key];
       }
     }
 
+
+    if (body.status !== undefined) {
+      if (body.status === 'completed' && !cleanData.completedAt) {
+        cleanData.completedAt = new Date();
+      } else if (body.status !== 'completed') {
+        cleanData.completedAt = null;
+      }
+    
     const task = await prisma.task.update({
       where: { id: parseInt(id) },
       data: cleanData,
