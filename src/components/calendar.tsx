@@ -19,6 +19,7 @@ type CalendarSession = {
 };
 type CalendarDelay = { id?: number; delayDate?: string; reason?: string; notes?: string; caseId?: number };
 type CalendarTask = { id?: number; title?: string; description?: string; dueDate?: string; legalDeadline?: string; status?: string; relatedCaseId?: number; sourceType?: string };
+type CalendarCaseEvent = { id: string; caseId: number; caseNumber?: string; subject?: string; date: string; eventType: 'firstSession' | 'deliberation' | 'judgment' };
 
 const STATUS_LABELS: Record<string, string> = {
   scheduled: 'مجدولة', completed: 'مكتملة', postponed: 'مؤجلة', cancelled: 'ملغاة',
@@ -77,6 +78,40 @@ function CalendarMonthView() {
     return map;
   }, [delays]);
 
+  // بعض المواعيد محفوظة مباشرة داخل ملف القضية، ولا يلزم أن يكون لها سجل جلسة مستقل.
+  // لا نكرر الموعد إذا كان موجوداً بالفعل في جدول الجلسات لنفس القضية والتاريخ.
+  const caseEventsByDate = useMemo(() => {
+    const map: Record<string, CalendarCaseEvent[]> = {};
+    (cases || []).forEach((item: any) => {
+      if (item.status === 'مؤرشفة') return;
+      const milestones: Array<[string, CalendarCaseEvent['eventType']]> = [
+        [item.firstSessionDate, 'firstSession'],
+        [item.delibDate, 'deliberation'],
+        [item.judgmentDate, 'judgment'],
+      ];
+      milestones.forEach(([rawDate, eventType]) => {
+        const key = calendarDateKey(rawDate);
+        if (!key) return;
+        const alreadyHasSession = (sessions || []).some((session: CalendarSession) =>
+          session.caseId === item.id && calendarDateKey(session.date) === key
+        );
+        const alreadyHasMilestone = (map[key] || []).some(event =>
+          event.caseId === item.id && event.eventType === eventType
+        );
+        if (alreadyHasSession || alreadyHasMilestone) return;
+        (map[key] ||= []).push({
+          id: `case-${item.id}-${eventType}-${key}`,
+          caseId: item.id,
+          caseNumber: item.caseNumber,
+          subject: item.subject,
+          date: key,
+          eventType,
+        });
+      });
+    });
+    return map;
+  }, [cases, sessions]);
+
   const tasksByDate = useMemo(() => {
     const map: Record<string, CalendarTask[]> = {};
     (tasks || []).forEach((task: CalendarTask) => {
@@ -97,7 +132,8 @@ function CalendarMonthView() {
   const selectedSessions = selectedDate ? (sessionsByDate[selectedDate] || []) : [];
   const selectedDelays = selectedDate ? (delaysByDate[selectedDate] || []) : [];
   const selectedTasks = selectedDate ? (tasksByDate[selectedDate] || []) : [];
-  const selectedEventsCount = selectedSessions.length + selectedDelays.length + selectedTasks.length;
+  const selectedCaseEvents = selectedDate ? (caseEventsByDate[selectedDate] || []) : [];
+  const selectedEventsCount = selectedSessions.length + selectedDelays.length + selectedTasks.length + selectedCaseEvents.length;
 
   function changeMonth(offset: number) {
     setCurrentDate(new Date(year, month + offset, 1));
@@ -144,9 +180,10 @@ function CalendarMonthView() {
               const daySessions = sessionsByDate[key] || [];
               const dayDelays = delaysByDate[key] || [];
               const dayTasks = tasksByDate[key] || [];
+              const dayCaseEvents = caseEventsByDate[key] || [];
               const isToday = key === todayKey;
               const isSelected = key === selectedDate;
-              const total = daySessions.length + dayDelays.length + dayTasks.length;
+              const total = daySessions.length + dayDelays.length + dayTasks.length + dayCaseEvents.length;
               return (
                 <button
                   key={key}
@@ -184,6 +221,7 @@ function CalendarMonthView() {
                       );
                     })}
                     {dayTasks.slice(0, 1).map((task, i) => <div key={task.id || ('task-' + i)} className="truncate rounded-md bg-violet-100 px-1 py-1 text-[9px] text-violet-900 dark:bg-violet-900/30 dark:text-violet-200 sm:text-[11px]">{task.title || 'مهمة قانونية'}</div>)}
+                    {dayCaseEvents.slice(0, 1).map(event => <div key={event.id} className="truncate rounded-md bg-sky-100 px-1 py-1 text-[9px] text-sky-900 dark:bg-sky-900/30 dark:text-sky-200 sm:text-[11px]">{event.eventType === 'firstSession' ? 'أول جلسة' : event.eventType === 'deliberation' ? 'مداولة' : 'حكم'} · {event.caseNumber || 'قضية'}</div>)}
                     {total > 3 && <p className="truncate px-1 text-[9px] text-muted-foreground">+{(total - 3).toLocaleString('ar-DZ')} مواعيد أخرى</p>}
                   </div>
                 </button>
@@ -238,6 +276,19 @@ function CalendarMonthView() {
               );
             })}
 
+            {selectedCaseEvents.map(event => (
+              <Card key={event.id} className="border-sky-200 shadow-none">
+                <CardContent className="space-y-2 p-4">
+                  <div className="flex items-start justify-between gap-2">
+                    <div><p className="text-xs text-muted-foreground">موعد مسجل في ملف القضية</p><h4 className="font-bold">{event.caseNumber || 'قضية'}</h4></div>
+                    <Badge variant="secondary">{event.eventType === 'firstSession' ? 'أول جلسة' : event.eventType === 'deliberation' ? 'مداولة' : 'النطق بالحكم'}</Badge>
+                  </div>
+                  {event.subject && <p className="text-sm text-muted-foreground">{event.subject}</p>}
+                  <p className="text-sm">التاريخ: {event.date.split('-').reverse().join('/')}</p>
+                  <Button variant="outline" onClick={() => openCase(event.caseId)}><FolderOpen className="ml-2 h-4 w-4" />فتح ملف القضية</Button>
+                </CardContent>
+              </Card>
+            ))}
             {selectedTasks.map((task, index) => {
               const caseData = (cases || []).find((item: any) => item.id === task.relatedCaseId);
               return <Card key={task.id || ('task-' + index)} className="border-violet-200 shadow-none"><CardContent className="space-y-3 p-4"><div className="flex items-start justify-between gap-2"><div><p className="text-xs text-muted-foreground">إجراء / مهمة قانونية</p><h4 className="font-bold">{task.title || 'مهمة دون عنوان'}</h4></div><Badge>{task.status === 'in_progress' ? 'قيد الإنجاز' : 'معلقة'}</Badge></div>{caseData && <p className="text-sm font-semibold">القضية: {caseData.caseNumber} — {caseData.subject}</p>}{task.description && <p className="text-sm text-muted-foreground">{task.description}</p>}{task.legalDeadline && <p className="text-sm font-semibold text-destructive">الأجل القانوني: {calendarDateKey(task.legalDeadline)?.split('-').reverse().join('/')}</p>}{task.relatedCaseId && <Button variant="outline" onClick={() => openCase(task.relatedCaseId)}><FolderOpen className="ml-2 h-4 w-4" />فتح ملف القضية</Button>}</CardContent></Card>;
