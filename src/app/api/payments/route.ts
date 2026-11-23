@@ -27,11 +27,18 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { caseId, caseNumber, amount, type, category, date, notes } = body;
 
-    const payment = await prisma.payment.create({
+
+    const parsedAmount = Number(amount);
+    if (amount === '' || amount === null || typeof amount === 'boolean' || !Number.isFinite(parsedAmount) || parsedAmount <= 0) {
+      return NextResponse.json({ error: 'Invalid amount' }, { status: 400 });
+    }
+
+    const payment = await prisma.$transaction(async (tx) => {
+    const payment = await tx.payment.create({
       data: {
         caseId: caseId ?? null,
         caseNumber: caseNumber ?? '',
-        amount: amount ?? 0,
+        amount: parsedAmount,
         type: type ?? 'income',
         category: category ?? '',
         date: toDateOrNull(date),
@@ -40,19 +47,22 @@ export async function POST(request: NextRequest) {
     });
 
     // تحديث paidAmount في القضية عند إضافة دفعة من نوع income
-    if (caseId && type === 'income') {
-      const totalPaid = await prisma.payment.aggregate({
+    if (caseId && payment.type === 'income') {
+      const totalPaid = await tx.payment.aggregate({
         where: {
           caseId: parseInt(String(caseId)),
           type: 'income',
         },
         _sum: { amount: true },
       });
-      await prisma.case.update({
+      await tx.case.update({
         where: { id: parseInt(String(caseId)) },
         data: { paidAmount: totalPaid._sum.amount || 0 },
       });
     }
+
+      return payment;
+    });
 
     return NextResponse.json(payment, { status: 201 });
   } catch (error) {
