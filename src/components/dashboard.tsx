@@ -211,7 +211,7 @@ export function Dashboard() {
             </Card>
           ))}
         </div>
-        <div className="grid md:grid-cols-2 gap-6">
+        <div className="grid gap-4 xl:grid-cols-2">
           <Card>
             <CardHeader className="pb-3">
               <Skeleton className="h-5 w-40" />
@@ -248,8 +248,21 @@ export function Dashboard() {
       {/* تنبيهات فورية في الأعلى — ثابتة دائماً */}
       <FlashNotifications />
 
-      {/* بطاقات الإحصائيات */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+      {/* عنوان لوحة المكتب */}
+      <section className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <p className="mb-1 text-xs font-semibold tracking-wide text-primary">LAW FIRM · OVERVIEW</p>
+          <h1 className="text-2xl font-extrabold tracking-tight text-foreground sm:text-3xl">نظرة عامة على المكتب</h1>
+          <p className="mt-1 text-sm text-muted-foreground">ملخص القضايا، النشاط اليومي، والمواعيد القانونية</p>
+        </div>
+        <Badge variant="outline" className="rounded-full px-3 py-1.5 text-xs">
+          <Calendar className="ml-1.5 h-3.5 w-3.5" />
+          متابعة المكتب
+        </Badge>
+      </section>
+
+      {/* بطاقات الإحصائيات — تنظيم مستوحى من Square UI */}
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 2xl:grid-cols-6">
         <StatCard
           title="إجمالي القضايا"
           value={(totalCases).toLocaleString('en-US')}
@@ -368,7 +381,7 @@ export function Dashboard() {
       </div>
 
       {/* ============== Widget: المهام والإجراءات ============== */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
         <TaskStatBox
           label="مهام متأخرة" value={taskStats.overdue}
           icon={AlertTriangle} color="red"
@@ -530,7 +543,7 @@ export function Dashboard() {
 
       {/* القضايا القادمة في 7 أيام — بطاقات كبيرة */}
       {allUpcoming.length > 0 && (
-        <Card className="border-amber-200 dark:border-amber-800/40">
+        <Card className="overflow-hidden rounded-2xl border-amber-200/70 shadow-sm dark:border-amber-800/40">
           <CardHeader className="pb-3">
             <CardTitle className="text-base font-bold flex items-center gap-2">
               <Calendar className="w-4 h-4 text-amber-500" />
@@ -627,7 +640,7 @@ export function Dashboard() {
 
       {/* لا توجد قضايا قادمة — إظهار رسالة */}
       {allUpcoming.length === 0 && (
-        <Card className="border-gray-200 dark:border-gray-800/40">
+        <Card className="rounded-2xl border-dashed shadow-sm">
           <CardContent className="py-8 text-center">
             <Calendar className="w-12 h-12 text-muted-foreground/30 mx-auto mb-3" />
             <p className="text-base font-medium text-muted-foreground">لا توجد قضايا أو إجراءات قادمة خلال 30 يوماً</p>
@@ -738,23 +751,23 @@ function StatCard({
   color: string;
 }) {
   const iconClasses: Record<string, string> = {
-    teal: 'bg-secondary text-secondary-foreground',
-    emerald: 'bg-secondary text-secondary-foreground',
-    amber: 'bg-secondary text-secondary-foreground',
-    gray: 'bg-secondary text-secondary-foreground',
-    blue: 'bg-secondary text-secondary-foreground',
+    teal: 'bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-300',
+    emerald: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300',
+    amber: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300',
+    gray: 'bg-muted text-muted-foreground',
+    blue: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
   };
 
   return (
-    <Card className="stat-card-hover border-border shadow-sm hover:border-primary/40">
-      <CardContent className="p-5">
-        <div className="flex items-start gap-3.5">
-          <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 transition-transform duration-200 group-hover:scale-105 ${iconClasses[color]}`}>
+    <Card className="group stat-card-hover overflow-hidden rounded-2xl border-border/70 bg-card shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md">
+      <CardContent className="p-4">
+        <div className="flex items-start gap-3">
+          <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-transform duration-200 group-hover:scale-105 ${iconClasses[color]}`}>
             <Icon className="w-6 h-6" />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-[13px] text-muted-foreground truncate leading-relaxed mb-1">{title}</p>
-            <p className="text-lg font-extrabold truncate tabular-nums text-foreground leading-tight">{value}</p>
+            <p className="mb-1 truncate text-xs font-medium leading-relaxed text-muted-foreground">{title}</p>
+            <p className="truncate text-xl font-extrabold leading-tight tracking-tight text-foreground tabular-nums">{value}</p>
           </div>
         </div>
       </CardContent>
