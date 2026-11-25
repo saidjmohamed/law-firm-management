@@ -150,8 +150,8 @@ function CalendarMonthView() {
   }
 
   return (
-    <div className="space-y-4">
-      <section className="flex flex-wrap items-center justify-between gap-3" aria-label="التنقل بين أشهر التقويم">
+    <div className="space-y-5">
+      <section className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border/70 bg-card p-3 shadow-sm sm:p-4" aria-label="التنقل بين أشهر التقويم">
         <div className="flex items-center gap-2">
           <Button variant="outline" size="icon" aria-label="الشهر السابق" onClick={() => changeMonth(-1)}>
             <ChevronRight className="h-4 w-4" />
@@ -166,14 +166,14 @@ function CalendarMonthView() {
         <Button variant="secondary" onClick={goToToday}>العودة إلى اليوم</Button>
       </section>
 
-      <Card className="overflow-hidden border-border shadow-none">
-        <CardContent className="p-2 sm:p-4">
-          <div className="mb-2 grid grid-cols-7 gap-1" role="row">
+      <Card className="overflow-hidden rounded-2xl border-border/70 shadow-sm">
+        <CardContent className="p-3 sm:p-4">
+          <div className="mb-2 grid grid-cols-7 gap-1.5" role="row">
             {['السبت', 'الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة'].map(day => (
               <div key={day} className="py-2 text-center text-xs font-semibold text-muted-foreground">{day}</div>
             ))}
           </div>
-          <div className="grid grid-cols-7 gap-1">
+          <div className="grid grid-cols-7 gap-1.5">
             {days.map((day, index) => {
               if (day === null) return <div key={`empty-${index}`} className="min-h-24 sm:min-h-32 rounded-lg bg-muted/40" aria-hidden="true" />;
               const key = dateKey(day);
@@ -191,8 +191,8 @@ function CalendarMonthView() {
                   aria-pressed={isSelected}
                   aria-label={`${day} ${ARABIC_MONTHS[month]}: ${daySessions.length} جلسات، ${dayDelays.length} تأجيلات`}
                   onClick={() => setSelectedDate(isSelected ? null : key)}
-                  className={`group min-h-24 sm:min-h-32 min-w-0 rounded-lg border p-1.5 text-right transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 sm:p-2
-                    ${isSelected ? 'border-primary bg-primary/8' : 'border-border bg-card hover:bg-muted/60'}
+                  className={`group min-h-24 min-w-0 rounded-xl border p-1.5 text-right transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 sm:min-h-32 sm:p-2
+                    ${isSelected ? 'border-primary bg-primary/5 shadow-sm ring-1 ring-primary/20' : 'border-border/70 bg-card hover:border-primary/30 hover:bg-muted/40 hover:shadow-sm'}
                     ${isToday ? 'ring-1 ring-inset ring-primary/60' : ''}`}
                 >
                   <div className="mb-1 flex items-center justify-between gap-1">
@@ -231,7 +231,7 @@ function CalendarMonthView() {
         </CardContent>
       </Card>
 
-      <section aria-live="polite" className="space-y-3">
+      <section aria-live="polite" className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <CalendarDays className="h-5 w-5 text-primary" />
@@ -251,7 +251,7 @@ function CalendarMonthView() {
               const caseData = (cases || []).find((item: any) => item.id === session.caseId);
               const status = session.status || 'scheduled';
               return (
-                <Card key={session.id ?? `session-detail-${index}`} className="border-border shadow-none">
+                <Card key={session.id ?? `session-detail-${index}`} className="rounded-2xl border-border/70 shadow-sm">
                   <CardContent className="space-y-3 p-4">
                     <div className="flex flex-wrap items-start justify-between gap-2">
                       <div className="min-w-0">
@@ -277,7 +277,7 @@ function CalendarMonthView() {
             })}
 
             {selectedCaseEvents.map(event => (
-              <Card key={event.id} className="border-sky-200 shadow-none">
+              <Card key={event.id} className="rounded-2xl border-sky-200 shadow-sm">
                 <CardContent className="space-y-2 p-4">
                   <div className="flex items-start justify-between gap-2">
                     <div><p className="text-xs text-muted-foreground">موعد مسجل في ملف القضية</p><h4 className="font-bold">{event.caseNumber || 'قضية'}</h4></div>
@@ -291,7 +291,7 @@ function CalendarMonthView() {
             ))}
             {selectedTasks.map((task, index) => {
               const caseData = (cases || []).find((item: any) => item.id === task.relatedCaseId);
-              return <Card key={task.id || ('task-' + index)} className="border-violet-200 shadow-none"><CardContent className="space-y-3 p-4"><div className="flex items-start justify-between gap-2"><div><p className="text-xs text-muted-foreground">إجراء / مهمة قانونية</p><h4 className="font-bold">{task.title || 'مهمة دون عنوان'}</h4></div><Badge>{task.status === 'in_progress' ? 'قيد الإنجاز' : 'معلقة'}</Badge></div>{caseData && <p className="text-sm font-semibold">القضية: {caseData.caseNumber} — {caseData.subject}</p>}{task.description && <p className="text-sm text-muted-foreground">{task.description}</p>}{task.legalDeadline && <p className="text-sm font-semibold text-destructive">الأجل القانوني: {calendarDateKey(task.legalDeadline)?.split('-').reverse().join('/')}</p>}{task.relatedCaseId && <Button variant="outline" onClick={() => openCase(task.relatedCaseId)}><FolderOpen className="ml-2 h-4 w-4" />فتح ملف القضية</Button>}</CardContent></Card>;
+              return <Card key={task.id || ('task-' + index)} className="rounded-2xl border-violet-200 shadow-sm"><CardContent className="space-y-3 p-4"><div className="flex items-start justify-between gap-2"><div><p className="text-xs text-muted-foreground">إجراء / مهمة قانونية</p><h4 className="font-bold">{task.title || 'مهمة دون عنوان'}</h4></div><Badge>{task.status === 'in_progress' ? 'قيد الإنجاز' : 'معلقة'}</Badge></div>{caseData && <p className="text-sm font-semibold">القضية: {caseData.caseNumber} — {caseData.subject}</p>}{task.description && <p className="text-sm text-muted-foreground">{task.description}</p>}{task.legalDeadline && <p className="text-sm font-semibold text-destructive">الأجل القانوني: {calendarDateKey(task.legalDeadline)?.split('-').reverse().join('/')}</p>}{task.relatedCaseId && <Button variant="outline" onClick={() => openCase(task.relatedCaseId)}><FolderOpen className="ml-2 h-4 w-4" />فتح ملف القضية</Button>}</CardContent></Card>;
             })}
             {selectedDelays.map((delay, index) => {
               const caseData = (cases || []).find((item: any) => item.id === delay.caseId);
